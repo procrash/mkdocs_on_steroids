@@ -1,93 +1,84 @@
-# API Documentation for `main` Function
+# API Documentation
 
 ## main
-**Signature**: `int main(int argc, char const* argv[])`
 
-**Description**: The `main` function is the entry point of the bt-get application, which downloads a torrent using a magnet link. This function initializes the libtorrent session, processes the command-line arguments, and attempts to download the specified torrent. It demonstrates basic usage of the libtorrent library for downloading files via magnet links.
-
-**Parameters**:
-- `argc` (int): The number of command-line arguments passed to the program. Must be exactly 2 (program name + magnet URL).
-- `argv` (char const*): An array of C-style strings containing the command-line arguments. The second argument should be the magnet URL.
-
-**Return Value**:
-- Returns `0` if the program completes successfully (torrent download initiated).
-- Returns `1` if there's an error in program execution (typically incorrect number of arguments).
-
-**Exceptions/Errors**:
-- Throws `std::exception` if libtorrent encounters an error during session initialization or torrent addition.
-- The function may throw `std::bad_alloc` if memory allocation fails.
-- The function assumes the magnet link is valid; invalid magnet links will result in libtorrent throwing an exception.
-
-**Example**:
+- **Signature**: `int main(int argc, char const* argv[])`
+- **Description**: The main entry point of the bt-get application, which downloads a torrent from a magnet URL. This function initializes the libtorrent session, adds the torrent, and monitors the download progress until completion.
+- **Parameters**:
+  - `argc` (int): The number of command line arguments. Must be exactly 2 for proper operation.
+  - `argv` (char const*[]): Array of command line arguments. The first argument is the program name, the second must be a valid magnet URL.
+- **Return Value**:
+  - `0`: Success - the download completed successfully.
+  - `1`: Failure - the function returned due to invalid arguments or other errors.
+- **Exceptions/Errors**:
+  - Throws `std::exception` if libtorrent initialization fails.
+  - Throws `std::invalid_argument` if the magnet URL is invalid.
+  - Throws `std::runtime_error` if torrent addition fails.
+- **Example**:
 ```cpp
-// Example usage of the main function
-int result = main(2, (char*[]){"bt-get", "magnet:?xt=urn:btih:..."});
-if (result == 0) {
-    std::cout << "Torrent download started successfully." << std::endl;
-} else {
-    std::cerr << "Failed to start torrent download." << std::endl;
+int main(int argc, char const* argv[]) try {
+    if (argc != 2) {
+        std::cerr << "usage: " << argv[0] << " <magnet-url>" << std::endl;
+        return 1;
+    }
+    // ... rest of the function
+} catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+    return 1;
 }
 ```
-
-**Preconditions**:
-- The program must be called with exactly two arguments: the program name and a valid magnet URL.
-- The magnet URL must be properly formatted and contain the required information (info hash, trackers, etc.).
-- The libtorrent library must be properly linked and initialized.
-- The system must have network connectivity and sufficient disk space.
-
-**Postconditions**:
-- If successful, a libtorrent session will be created and the torrent will be added to the session.
-- The function will exit with status 0 if successful.
-- If unsuccessful, the function will print an error message and exit with status 1.
-
-**Thread Safety**: The function is not thread-safe and should be called from a single thread. The libtorrent session is created and used within the same thread.
-
-**Complexity**: O(1) for basic setup; actual complexity depends on the torrent being downloaded, which can range from O(1) to O(n) where n is the number of peers or pieces.
-
-**See Also**: 
-- `lt::session` - The core libtorrent session class
-- `lt::add_torrent_params` - Parameters for adding a torrent
-- `lt::settings_pack` - Configuration for libtorrent session settings
+- **Preconditions**: 
+  - The program must be called with exactly two arguments.
+  - The second argument must be a valid magnet URL string.
+  - The libtorrent library must be properly linked and initialized.
+- **Postconditions**: 
+  - The function returns 0 if the download completes successfully.
+  - The function returns 1 if it fails to initialize or add the torrent.
+  - The downloaded torrent data is saved to the default download directory.
+- **Thread Safety**: This function is not thread-safe as it creates and uses a single libtorrent session.
+- **Complexity**: 
+  - Time: O(n) where n is the number of pieces in the torrent.
+  - Space: O(m) where m is the total size of the torrent data.
 
 ## Usage Examples
 
 ### Basic Usage
 ```cpp
-// Compile and run: ./bt-get "magnet:?xt=urn:btih:..."
-// This will download the torrent and save it to the default directory
-int result = main(2, (char*[]){"bt-get", "magnet:?xt=urn:btih:..."});
+// Download a torrent from a magnet URL
+./bt-get "magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678"
 ```
 
 ### Error Handling
 ```cpp
-// Handle potential errors from main function
 int main(int argc, char const* argv[]) try {
     if (argc != 2) {
         std::cerr << "usage: " << argv[0] << " <magnet-url>" << std::endl;
         return 1;
     }
     
-    // Initialize libtorrent session
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::status
-        | lt::alert_category::error);
-    lt::session ses(p);
-
-    // Add torrent to session
-    lt::add_torrent_params params;
-    params.ti = std::make_shared<lt::torrent_info>(lt::parse_magnet_uri(argv[1]));
-    params.save_path = "./downloads";
-    
-    ses.add_torrent(params);
-    
-    std::cout << "Torrent added successfully. Press Ctrl+C to stop." << std::endl;
-    while (true) {
-        // Process alerts and update status
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+    // Validate magnet URL format
+    if (!isValidMagnetUrl(argv[1])) {
+        std::cerr << "Invalid magnet URL format" << std::endl;
+        return 1;
     }
     
+    lt::settings_pack p;
+    p.set_int(lt::alert_category::status | lt::alert_category::error);
+    lt::session ses(p);
+    
+    lt::add_torrent_params params;
+    params.url = argv[1];
+    lt::torrent_handle h = ses.add_torrent(params);
+    
+    // Monitor download progress
+    while (!h.is_seed()) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        // Print download progress
+    }
+    
+    std::cout << "Download completed successfully" << std::endl;
     return 0;
-} catch (std::exception const& e) {
+} catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;
 }
@@ -95,212 +86,185 @@ int main(int argc, char const* argv[]) try {
 
 ### Edge Cases
 ```cpp
-// Handle invalid magnet links
 int main(int argc, char const* argv[]) try {
     if (argc != 2) {
         std::cerr << "usage: " << argv[0] << " <magnet-url>" << std::endl;
         return 1;
     }
     
-    // Validate magnet link format
-    try {
-        lt::parse_magnet_uri(argv[1]);
-    } catch (std::exception const& e) {
-        std::cerr << "Invalid magnet link: " << e.what() << std::endl;
+    // Handle empty magnet URL
+    if (std::string(argv[1]).empty()) {
+        std::cerr << "Error: Empty magnet URL" << std::endl;
         return 1;
     }
     
-    // Initialize session with appropriate settings
+    // Handle invalid magnet URL
+    if (!isMagnetUrlValid(argv[1])) {
+        std::cerr << "Error: Invalid magnet URL format" << std::endl;
+        return 1;
+    }
+    
+    // Handle very large torrents
+    if (getTorrentSize(argv[1]) > 1000 * 1024 * 1024) {
+        std::cout << "Warning: This is a large torrent (>1GB)" << std::endl;
+    }
+    
     lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::status
-        | lt::alert_category::error);
+    p.set_int(lt::alert_mask, lt::alert_category::status | lt::alert_category::error);
     lt::session ses(p);
     
-    // Add torrent with error handling
     lt::add_torrent_params params;
-    try {
-        params.ti = std::make_shared<lt::torrent_info>(lt::parse_magnet_uri(argv[1]));
-    } catch (std::exception const& e) {
-        std::cerr << "Failed to parse magnet link: " << e.what() << std::endl;
-        return 1;
+    params.url = argv[1];
+    lt::torrent_handle h = ses.add_torrent(params);
+    
+    // Handle case where torrent is already added
+    if (h.is_valid()) {
+        std::cout << "Torrent already added" << std::endl;
+        return 0;
     }
     
-    params.save_path = "./downloads";
-    ses.add_torrent(params);
+    // Monitor download
+    while (!h.is_seed()) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
     
-    std::cout << "Download started successfully." << std::endl;
+    std::cout << "Download completed" << std::endl;
     return 0;
-} catch (std::exception const& e) {
-    std::cerr << "Application error: " << e.what() << std::endl;
+} catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
     return 1;
 }
 ```
 
 ## Best Practices
 
-1. **Always validate input**: Ensure the magnet link is properly formatted before attempting to parse it.
-2. **Use proper error handling**: Wrap libtorrent operations in try-catch blocks to handle potential exceptions.
-3. **Configure appropriate settings**: Set the alert mask to receive relevant notifications about download progress and errors.
-4. **Use appropriate save paths**: Specify a meaningful save path for downloaded files.
-5. **Handle session lifetime**: Ensure the session is properly maintained while the download is in progress.
-6. **Monitor download progress**: Process alerts from the session to track download status and handle events.
+1. **Always validate input parameters** - Check argc/argv validity and magnet URL format.
+2. **Use try-catch blocks** - Wrap the main function in exception handling to gracefully handle errors.
+3. **Add proper error messages** - Provide clear usage instructions and error descriptions.
+4. **Monitor download progress** - Implement a loop to check download status and provide feedback.
+5. **Handle edge cases** - Consider empty URLs, invalid URLs, and very large torrents.
+6. **Use const correctness** - Mark parameters as const where appropriate.
+7. **Avoid magic numbers** - Use named constants for configuration values.
 
 ## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
-**Function**: `main`
-**Issue**: The function is incomplete and the code snippet ends abruptly with `lt::add`. This is not a working implementation.
-**Severity**: Critical
-**Impact**: The code cannot be compiled or executed as shown, making it unusable.
-**Fix**: Complete the implementation by adding the missing code:
+**Security:**
+- **Function**: `main`
+- **Issue**: Insufficient input validation for magnet URLs
+- **Severity**: Medium
+- **Impact**: Could lead to parsing errors or security vulnerabilities with malformed URLs
+- **Fix**: Add proper validation for magnet URL format:
 ```cpp
-int main(int argc, char const* argv[]) try
-{
-    if (argc != 2) {
-        std::cerr << "usage: " << argv[0] << " <magnet-url>" << std::endl;
-        return 1;
-    }
-    
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::status
-        | lt::alert_category::error);
-    lt::session ses(p);
+bool isValidMagnetUrl(const char* url) {
+    return url && std::string(url).find("magnet:?xt=urn:btih:") == 0;
+}
+```
 
-    lt::add_torrent_params params;
-    params.ti = std::make_shared<lt::torrent_info>(lt::parse_magnet_uri(argv[1]));
-    params.save_path = "./downloads";
-    
-    ses.add_torrent(params);
-    
-    std::cout << "Torrent added successfully." << std::endl;
-    
-    // Keep the session alive to allow download to proceed
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-    
-    return 0;
-} catch (std::exception const& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+**Performance:**
+- **Function**: `main`
+- **Issue**: Inefficient download monitoring loop
+- **Severity**: Medium
+- **Impact**: High CPU usage due to busy-waiting
+- **Fix**: Use proper sleep intervals and add more sophisticated monitoring:
+```cpp
+while (!h.is_seed()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // Check for alerts and update UI if needed
+}
+```
+
+**Correctness:**
+- **Function**: `main`
+- **Issue**: Unchecked return value from ses.add_torrent()
+- **Severity**: High
+- **Impact**: Could fail silently if torrent addition fails
+- **Fix**: Check the return value from add_torrent:
+```cpp
+lt::add_torrent_params params;
+params.url = argv[1];
+lt::torrent_handle h = ses.add_torrent(params);
+if (!h.is_valid()) {
+    std::cerr << "Failed to add torrent" << std::endl;
     return 1;
 }
 ```
 
-**Function**: `main`
-**Issue**: The function doesn't handle the case where the magnet link might be invalid or the torrent info can't be parsed.
-**Severity**: High
-**Impact**: The application might crash or behave unexpectedly when encountering invalid magnet links.
-**Fix**: Add proper error handling around magnet link parsing:
+**Code Quality:**
+- **Function**: `main`
+- **Issue**: Missing proper error handling for libtorrent functions
+- **Severity**: Medium
+- **Impact**: Poor user experience with vague error messages
+- **Fix**: Add specific error handling and use descriptive error messages:
 ```cpp
-int main(int argc, char const* argv[]) try
-{
-    if (argc != 2) {
-        std::cerr << "usage: " << argv[0] << " <magnet-url>" << std::endl;
-        return 1;
-    }
-    
-    try {
-        lt::parse_magnet_uri(argv[1]);
-    } catch (std::exception const& e) {
-        std::cerr << "Invalid magnet link: " << e.what() << std::endl;
-        return 1;
-    }
-    
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::status
-        | lt::alert_category::error);
-    lt::session ses(p);
-
-    lt::add_torrent_params params;
-    try {
-        params.ti = std::make_shared<lt::torrent_info>(lt::parse_magnet_uri(argv[1]));
-    } catch (std::exception const& e) {
-        std::cerr << "Failed to parse torrent info: " << e.what() << std::endl;
-        return 1;
-    }
-    
-    params.save_path = "./downloads";
-    ses.add_torrent(params);
-    
-    std::cout << "Torrent added successfully." << std::endl;
-    return 0;
-} catch (std::exception const& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+try {
+    // ... torrent addition code
+} catch (const lt::invalid_handle& e) {
+    std::cerr << "Invalid torrent handle: " << e.what() << std::endl;
+    return 1;
+} catch (const lt::alert_exception& e) {
+    std::cerr << "Alert exception: " << e.what() << std::endl;
     return 1;
 }
 ```
 
 ### Modernization Opportunities
 
-**Function**: `main`
-**Opportunity**: Use C++17 features like `std::optional` for error handling and `std::filesystem` for path handling.
-**Suggestion**: 
+- **Add [[nodiscard]] attribute** to the function to indicate that the return value is important:
 ```cpp
-#include <optional>
-#include <filesystem>
+[[nodiscard]] int main(int argc, char const* argv[])
+```
 
-int main(int argc, char const* argv[]) try {
-    if (argc != 2) {
-        std::cerr << "usage: " << argv[0] << " <magnet-url>" << std::endl;
-        return 1;
-    }
-    
-    std::optional<lt::torrent_info> torrent_info;
-    try {
-        torrent_info = lt::parse_magnet_uri(argv[1]);
-    } catch (std::exception const& e) {
-        std::cerr << "Invalid magnet link: " << e.what() << std::endl;
-        return 1;
-    }
-    
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::status
-        | lt::alert_category::error);
-    lt::session ses(p);
+- **Use std::string_view** for command line arguments to avoid string copying:
+```cpp
+int main(int argc, std::string_view argv[])
+```
 
-    lt::add_torrent_params params;
-    params.ti = std::make_shared<lt::torrent_info>(*torrent_info);
-    params.save_path = "./downloads";
-    ses.add_torrent(params);
-    
-    std::cout << "Torrent added successfully." << std::endl;
-    return 0;
-} catch (std::exception const& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
-}
+- **Use constexpr for constants** where appropriate:
+```cpp
+constexpr int MIN_ARGS = 2;
+```
+
+- **Use std::expected (C++23) or std::optional** for error handling:
+```cpp
+std::expected<int, std::string> runDownload(std::string_view magnetUrl)
 ```
 
 ### Refactoring Suggestions
 
-**Function**: `main`
-**Suggestion**: Split the function into smaller, more focused functions:
-1. `parse_magnet_link` - Extract magnet link parsing logic
-2. `configure_session` - Handle session configuration
-3. `add_torrent` - Handle torrent addition
-4. `handle_download` - Manage the download process
+1. **Split into smaller functions**:
+   - `parseArguments(int argc, char const* argv[])`
+   - `validateMagnetUrl(std::string_view url)`
+   - `createSession()`
+   - `addTorrent(lt::session& ses, std::string_view url)`
+   - `monitorDownload(lt::torrent_handle& handle)`
+   - `handleErrors(std::exception const& e)`
 
-This would make the code more modular and easier to test.
+2. **Move torrent handling logic into a separate class**:
+   - Create a `TorrentDownloader` class with methods for adding, monitoring, and managing torrents.
+
+3. **Extract configuration into a separate function**:
+   - Move session configuration to a `createSessionSettings()` function.
 
 ### Performance Optimizations
 
-**Function**: `main`
-**Opportunity**: Use move semantics for the torrent info object.
-**Suggestion**: 
+1. **Use move semantics** for string parameters:
 ```cpp
-// Instead of copying the torrent info, move it
-params.ti = std::make_shared<lt::torrent_info>(std::move(torrent_info));
+int main(int argc, std::string_view argv)
 ```
 
-**Function**: `main`
-**Opportunity**: Add noexcept specifications for functions that don't throw.
-**Suggestion**: 
+2. **Return by value for RVO** where appropriate:
 ```cpp
-[[nodiscard]] int main(int argc, char const* argv[]) try {
-    // Implementation...
-} catch (std::exception const& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
-}
+std::optional<std::string> getDownloadPath() const
+```
+
+3. **Use string_view for read-only string parameters**:
+```cpp
+void processMagnetUrl(std::string_view url)
+```
+
+4. **Add noexcept where applicable**:
+```cpp
+int main(int argc, char const* argv[]) noexcept
 ```

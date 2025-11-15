@@ -3,218 +3,264 @@
 ## print_usage
 
 - **Signature**: `[[noreturn]] void print_usage()`
-- **Description**: Displays usage information for the dump_torrent utility program. This function prints the command-line syntax and available options to stderr and then terminates the program using `[[noreturn]]` attribute.
+- **Description**: Outputs the usage information for the dump_torrent command-line utility to standard error. This function is designed to be called when the user provides invalid command-line arguments or requests help. It displays the correct syntax and available options for using the tool. The function terminates the program after printing usage information.
 - **Parameters**: None
-- **Return Value**: This function does not return as it is marked with `[[noreturn]]` and terminates the program by calling `std::exit()` or similar mechanism.
-- **Exceptions/Errors**: This function does not throw exceptions but terminates the program execution.
+- **Return Value**: 
+  - This function is marked as `[[noreturn]]`, meaning it does not return to the caller. It terminates the program execution after printing usage information.
+- **Exceptions/Errors**: 
+  - This function does not throw exceptions. It uses `std::cerr` to output to standard error and then terminates the program.
 - **Example**:
 ```cpp
-print_usage();
-// This will print usage information and exit the program
+// This function is typically called when command-line arguments are invalid
+if (argc < 2) {
+    print_usage();
+}
 ```
-- **Preconditions**: None
-- **Postconditions**: The program terminates after printing usage information.
-- **Thread Safety**: This function is thread-safe as it only writes to stderr and does not modify shared state.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: main()
+- **Preconditions**: 
+  - The function must be called before any other operations that depend on valid command-line arguments.
+- **Postconditions**: 
+  - The program terminates after printing usage information to standard error.
+- **Thread Safety**: 
+  - This function is thread-safe as it only writes to standard error and does not modify global state.
+- **Complexity**: 
+  - Time Complexity: O(1) - constant time as it only outputs a fixed string.
+  - Space Complexity: O(1) - constant space as it only uses a fixed amount of stack space.
+- **See Also**: `main()`
 
 ## main
 
 - **Signature**: `int main(int argc, char const* argv[])`
-- **Description**: The main entry point of the dump_torrent utility program. This function parses command-line arguments, validates input, and processes the torrent file according to the specified options.
+- **Description**: The entry point of the dump_torrent utility. This function parses command-line arguments, processes the torrent file, and displays its contents. It handles the overall flow of the application, including argument validation, file loading, and output formatting. The function returns an exit code to the operating system.
 - **Parameters**:
-  - `argc` (int): The number of command-line arguments.
-  - `argv` (char const*): An array of pointers to the command-line arguments.
+  - `argc` (int): The number of command-line arguments passed to the program.
+  - `argv` (char const*): An array of pointers to null-terminated strings representing the command-line arguments.
 - **Return Value**: 
-  - Returns 0 if the program executes successfully.
-  - Returns a non-zero value if there is an error in parsing arguments or processing the torrent file.
+  - Returns 0 on successful execution.
+  - Returns 1 on error (such as invalid arguments or file I/O errors).
 - **Exceptions/Errors**: 
-  - Throws exceptions if there are issues with file I/O or if the torrent file cannot be loaded.
-  - May throw std::exception or derived exceptions from libtorrent library.
+  - This function is wrapped in a try-catch block to handle any exceptions that might occur during execution.
+  - Can throw exceptions related to file I/O, memory allocation, or invalid arguments.
 - **Example**:
 ```cpp
-int result = main(argc, argv);
-if (result != 0) {
-    std::cerr << "Failed to process torrent file" << std::endl;
-}
-```
-- **Preconditions**: The function should be called with valid command-line arguments.
-- **Postconditions**: If successful, the function processes the torrent file and outputs its contents.
-- **Thread Safety**: This function is not thread-safe as it may modify global state.
-- **Complexity**: O(n) time complexity where n is the size of the torrent file.
-- **See Also**: print_usage()
-
-## Usage Examples
-
-### Basic Usage
-```cpp
-// Basic command-line usage
-// dump_torrent torrent_file.torrent
-
 int main(int argc, char const* argv[]) {
-    return main(argc, argv);
-}
-```
-
-### Error Handling
-```cpp
-int main(int argc, char const* argv[]) {
-    try {
-        int result = main(argc, argv);
-        if (result != 0) {
-            std::cerr << "Error processing torrent file" << std::endl;
-            return result;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Exception occurred: " << e.what() << std::endl;
-        return 1;
-    }
+    // Process command-line arguments and display torrent information
     return 0;
 }
 ```
+- **Preconditions**: 
+  - The program must be compiled and linked correctly.
+  - The torrent file specified as the first argument must exist and be accessible.
+- **Postconditions**: 
+  - The function processes the torrent file and outputs its contents to standard output.
+  - The function returns an exit code indicating success or failure.
+- **Thread Safety**: 
+  - This function is thread-safe as it does not modify global state and only uses local variables.
+- **Complexity**: 
+  - Time Complexity: O(n) where n is the size of the torrent file, as it needs to parse the entire file.
+  - Space Complexity: O(n) where n is the size of the torrent file, as it needs to store the parsed data.
+- **See Also**: `print_usage()`, `lt::load_torrent_limits`, `lt::span`
 
-### Edge Cases
-```cpp
-// Using with invalid filename
-// dump_torrent non_existent.torrent
+# Usage Examples
 
-// Using with missing arguments
-// dump_torrent
-
-// Using with valid options
-// dump_torrent torrent_file.torrent --items-limit 100 --depth-limit 5
+## Basic Usage
+```bash
+# Dump the contents of a torrent file
+dump_torrent my_torrent.torrent
 ```
 
-## Best Practices
+## Error Handling
+```bash
+# Handle invalid command-line arguments
+dump_torrent
 
-### How to Use These Functions Effectively
-1. Always validate command-line arguments before processing.
-2. Use try-catch blocks to handle exceptions thrown by libtorrent.
-3. Check return values for error conditions.
+# Handle non-existent file
+dump_torrent non_existent.torrent
+```
 
-### Common Mistakes to Avoid
-1. Forgetting to check if `argc` is greater than 1 before accessing `argv[1]`.
-2. Not handling exceptions from libtorrent library.
-3. Passing invalid filenames to the program.
+## Edge Cases
+```bash
+# Handle torrent file with no items (empty torrent)
+dump_torrent empty_torrent.torrent
 
-### Performance Tips
-1. Use `std::span` for efficient array handling.
-2. Avoid unnecessary string copying by using `std::string_view` where possible.
-3. Process torrent files in chunks if they are large.
+# Handle torrent file with very deep structure
+dump_torrent deep_torrent.torrent --depth-limit 100
+```
 
-## Code Review & Improvement Suggestions
+# Best Practices
 
-### Potential Issues
+## How to Use Effectively
+- Always provide a torrent file as the first argument.
+- Use the `--items-limit` and `--depth-limit` options to control the amount of data displayed when dealing with large torrent files.
+- Ensure the torrent file is accessible and not corrupted.
 
-**Security:**
-- **Function**: `print_usage()`
-- **Issue**: No input validation for `argc` and `argv`
-- **Severity**: Low
-- **Impact**: Could cause undefined behavior if called with invalid parameters
-- **Fix**: Add validation for command-line arguments:
+## Common Mistakes to Avoid
+- Forgetting to include the torrent file as the first argument.
+- Using invalid options or providing incorrect values for options.
+- Not handling exceptions properly in the main function.
+
+## Performance Tips
+- Use the `--items-limit` and `--depth-limit` options to limit the output when dealing with large torrent files.
+- Process torrent files sequentially to avoid loading the entire file into memory at once.
+
+# Code Review & Improvement Suggestions
+
+## Potential Issues
+
+**Function**: `print_usage`
+**Issue**: The function is incomplete - the documentation shows only the beginning of the options list, and the function signature is missing the `const` qualifier for the function parameters.
+**Severity**: Low
+**Impact**: The function is incomplete and may cause confusion for users or developers.
+**Fix**: Complete the documentation and function signature:
 ```cpp
-void print_usage(int argc, char const* argv[]) {
-    if (argc == 0) {
-        std::cerr << "Invalid command-line arguments" << std::endl;
-        std::exit(1);
-    }
+[[noreturn]] void print_usage() {
     std::cerr << R"(usage: dump_torrent torrent-file [options]
     OPTIONS:
     --items-limit <count>    set the upper limit of the number of bencode items
                              in the torrent file.
-    --depth-limit <count>    set the recursion limit in the bde
-    )";
+    --depth-limit <count>    set the recursion limit in the bencode
+                             decoder.
+    --show-pad               show pad data in the output)" << std::endl;
     std::exit(1);
 }
 ```
 
-**Performance:**
-- **Function**: `main()`
-- **Issue**: Passing raw pointers to `std::span<char const*>` creates unnecessary copies
-- **Severity**: Medium
-- **Impact**: Inefficient memory usage and potential performance impact
-- **Fix**: Use `std::span` directly:
+**Function**: `main`
+**Issue**: The function is incomplete - the code snippet ends abruptly with `using names`, which is not valid C++ and suggests the code is incomplete.
+**Severity**: Critical
+**Impact**: The code will not compile and cannot be used as-is.
+**Fix**: Complete the function with proper implementation:
 ```cpp
 int main(int argc, char const* argv[]) try {
     lt::span<char const*> args(argv, argc);
-    // Process args
-} catch (const std::exception& e) {
+    
+    // strip executable name
+    args = args.subspan(1);
+    
+    lt::load_torrent_limits cfg;
+    bool show_pad = false;
+    
+    if (args.empty()) print_usage();
+    
+    char const* filename = args[0];
+    args = args.subspan(1);
+    
+    // Parse options
+    while (!args.empty() && args[0][0] == '-') {
+        if (args[0] == "--items-limit") {
+            if (args.size() < 2) print_usage();
+            cfg.max_items = std::stoi(args[1]);
+            args = args.subspan(2);
+        } else if (args[0] == "--depth-limit") {
+            if (args.size() < 2) print_usage();
+            cfg.max_depth = std::stoi(args[1]);
+            args = args.subspan(2);
+        } else if (args[0] == "--show-pad") {
+            show_pad = true;
+            args = args.subspan(1);
+        } else {
+            std::cerr << "Unknown option: " << args[0] << std::endl;
+            print_usage();
+        }
+    }
+    
+    if (args.size() > 0) print_usage();
+    
+    // Load and dump torrent
+    lt::torrent_info ti(filename, lt::load_torrent_limits{cfg});
+    // Display torrent information
+    std::cout << "Torrent name: " << ti.name() << std::endl;
+    // ... (other information)
+    
+    return 0;
+} catch (std::exception const& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;
 }
 ```
 
-**Correctness:**
-- **Function**: `main()`
-- **Issue**: Missing error handling for file loading
-- **Severity**: High
-- **Impact**: Could crash the program or produce incorrect results
-- **Fix**: Add proper error handling:
+## Modernization Opportunities
+
+**Function**: `print_usage`
+**Issue**: The function could benefit from using `std::string_view` for the output string to improve performance and avoid unnecessary string copies.
+**Fix**:
 ```cpp
-int main(int argc, char const* argv[]) try {
+[[nodiscard]] void print_usage() {
+    constexpr std::string_view usage = R"(usage: dump_torrent torrent-file [options]
+    OPTIONS:
+    --items-limit <count>    set the upper limit of the number of bencode items
+                             in the torrent file.
+    --depth-limit <count>    set the recursion limit in the bencode
+                             decoder.
+    --show-pad               show pad data in the output)";
+    std::cerr << usage << std::endl;
+    std::exit(1);
+}
+```
+
+**Function**: `main`
+**Issue**: The function could benefit from using `std::expected` (C++23) for error handling to provide more detailed error information.
+**Fix**:
+```cpp
+#include <expected>
+
+auto main(int argc, char const* argv[]) -> std::expected<int, std::string> try {
     lt::span<char const*> args(argv, argc);
     args = args.subspan(1);
     
+    lt::load_torrent_limits cfg;
+    bool show_pad = false;
+    
     if (args.empty()) {
-        print_usage();
+        return std::unexpected("Missing torrent file argument");
     }
     
     char const* filename = args[0];
     args = args.subspan(1);
     
-    // Add file existence check
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Cannot open file: " << filename << std::endl;
-        return 1;
+    while (!args.empty() && args[0][0] == '-') {
+        if (args[0] == "--items-limit") {
+            if (args.size() < 2) return std::unexpected("Missing value for --items-limit");
+            cfg.max_items = std::stoi(args[1]);
+            args = args.subspan(2);
+        } else if (args[0] == "--depth-limit") {
+            if (args.size() < 2) return std::unexpected("Missing value for --depth-limit");
+            cfg.max_depth = std::stoi(args[1]);
+            args = args.subspan(2);
+        } else if (args[0] == "--show-pad") {
+            show_pad = true;
+            args = args.subspan(1);
+        } else {
+            return std::unexpected("Unknown option: " + std::string(args[0]));
+        }
     }
     
-    // Process torrent file
-    // ...
+    if (args.size() > 0) return std::unexpected("Unexpected arguments");
     
+    // Load and dump torrent
+    lt::torrent_info ti(filename, lt::load_torrent_limits{cfg});
+    std::cout << "Torrent name: " << ti.name() << std::endl;
+    // ... (other information)
+    
+    return 0;
 } catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
+    return std::unexpected(e.what());
 }
 ```
 
-### Modernization Opportunities
+## Refactoring Suggestions
 
-**Function**: `print_usage()`
-**Modernization**: Use `[[nodiscard]]` attribute for better code quality
+**Function**: `main`
+**Suggestion**: The `main` function should be split into smaller functions to improve readability and maintainability:
+- `parse_arguments` to handle command-line argument parsing
+- `load_torrent` to handle loading the torrent file
+- `dump_torrent` to handle displaying the torrent information
+- `error_handler` to handle error reporting
+
+## Performance Optimizations
+
+**Function**: `main`
+**Suggestion**: Use move semantics for large objects that are passed around. Since `lt::torrent_info` is a complex object that may be expensive to copy, ensure it's moved rather than copied:
 ```cpp
-[[nodiscard]] void print_usage(int argc, char const* argv[]) {
-    // Implementation
-}
-```
-
-**Function**: `main()`
-**Modernization**: Use `std::expected` (C++23) for better error handling
-```cpp
-[[nodiscard]] std::expected<int, std::string> main(int argc, char const* argv[]) {
-    // Implementation
-}
-```
-
-### Refactoring Suggestions
-
-**Function**: `main()`
-**Suggestion**: Split into smaller functions for better maintainability
-```cpp
-int parse_arguments(int argc, char const* argv[], std::string& filename, lt::load_torrent_limits& cfg);
-int process_torrent_file(const std::string& filename, const lt::load_torrent_limits& cfg);
-```
-
-### Performance Optimizations
-
-**Function**: `main()`
-**Optimization**: Use `std::string_view` for command-line arguments
-```cpp
-int main(int argc, char const* argv[]) try {
-    lt::span<char const*> args(argv, argc);
-    // Process arguments
-} catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
-}
+auto ti = lt::torrent_info(filename, lt::load_torrent_limits{cfg});
+// Use move semantics when passing ti to other functions
 ```

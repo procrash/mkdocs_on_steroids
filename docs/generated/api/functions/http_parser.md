@@ -1,596 +1,380 @@
-# HTTP Parser API Documentation
+# HTTP Parser Fuzzing API Documentation
 
-## Class: http_parser
+## Function: feed_bytes
 
-The `http_parser` class provides a comprehensive interface for parsing HTTP messages, including headers, status codes, and body content. It supports various HTTP features such as chunked encoding, content length tracking, and header extraction.
-
-### http_parser (Constructor)
+- **Signature**: `void feed_bytes(lt::http_parser& parser, lt::string_view str)`
+- **Description**: This function is designed to test the HTTP parser by feeding it a string view of data in multiple small chunks. It iterates through various chunk sizes (1 to 69) and feeds the data to the parser in those chunks, effectively simulating network packet fragmentation. This is primarily used for fuzzing the HTTP parser to ensure it can handle various input patterns and edge cases.
+- **Parameters**:
+  - `parser` (lt::http_parser&): Reference to an HTTP parser object that will process the data. The parser must be in a valid state and should not be used concurrently with other operations during this function call. The function will reset the parser state before each iteration.
+  - `str` (lt::string_view): The string view containing the data to be fed to the parser. This should contain valid HTTP protocol data for testing purposes. The function will process the data in chunks, so the string can be of any length.
+- **Return Value**:
+  - This function returns `void`, meaning it does not return any value. It is a utility function for testing and does not provide direct feedback about the parsing outcome.
+- **Exceptions/Errors**:
+  - This function does not throw exceptions. However, the underlying HTTP parser might throw exceptions or return error codes during parsing, but this function does not handle them directly.
+  - Potential issues include invalid HTTP data causing parsing errors, which will be handled by the parser's internal error handling mechanisms.
+- **Example**:
 ```cpp
-explicit http_parser(int flags = 0);
+lt::http_parser parser;
+std::string http_data = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n";
+feed_bytes(parser, {http_data.data(), http_data.size()});
 ```
+- **Preconditions**:
+  - The `parser` object must be properly constructed and in a valid state.
+  - The `str` parameter must be a valid string view containing data to be parsed.
+- **Postconditions**:
+  - The `parser` object will have processed the data in chunks as specified by the function.
+  - The parser's internal state will be updated to reflect the parsed data.
+- **Thread Safety**:
+  - This function is not thread-safe. It modifies the state of the provided `lt::http_parser` instance, so concurrent access to the same parser from multiple threads could lead to undefined behavior.
+- **Complexity**:
+  - **Time Complexity**: O(n * m) where n is the length of the input string and m is the number of chunks (up to 69).
+  - **Space Complexity**: O(1) additional space, as the function only uses a string view and a few integer variables.
+- **See Also**: `LLVMFuzzerTestOneInput`, `lt::http_parser`
 
-**Description**: Constructs a new HTTP parser with optional configuration flags. The parser can be configured to skip chunk parsing if needed.
+## Function: LLVMFuzzerTestOneInput
 
-**Parameters**:
-- `flags` (int): Configuration flags for the parser. Valid values include `dont_parse_chunks` to skip parsing chunked content. Default is 0 (no special flags).
-
-**Return Value**: 
-- Constructs and initializes a new `http_parser` instance.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-
-**Example**:
+- **Signature**: `int LLVMFuzzerTestOneInput(uint8_t const* data, size_t size)`
+- **Description**: This is a fuzzing entry point function that tests the HTTP parser with arbitrary input data. It creates a new HTTP parser instance and feeds the input data to it using the `feed_bytes` function. This function is designed to be used with the LLVM fuzzer framework to automatically discover bugs in the HTTP parser by providing it with various inputs.
+- **Parameters**:
+  - `data` (uint8_t const*): A pointer to the raw data to be tested. This data can be any arbitrary bytes and will be interpreted as potential HTTP protocol data. The function will treat this data as a sequence of bytes to be fed to the parser.
+  - `size` (size_t): The size of the data in bytes. This must be a valid size value, and the function will process exactly this many bytes from the data pointer.
+- **Return Value**:
+  - This function returns an integer value, typically 0 to indicate successful execution. In the context of fuzzing, returning 0 indicates that the fuzzer should continue testing with different inputs. Non-zero return values might indicate that the fuzzer should stop, but this is not standard behavior for LLVM fuzzer test functions.
+- **Exceptions/Errors**:
+  - This function does not throw exceptions. However, the HTTP parser may encounter parsing errors when processing malformed input data, which will be handled internally by the parser.
+  - The function itself does not validate the input data, so invalid or malformed inputs may cause the parser to behave unexpectedly.
+- **Example**:
 ```cpp
-// Create a parser with default settings
-http_parser parser;
-
-// Create a parser that skips chunk parsing
-http_parser parser(http_parser::dont_parse_chunks);
-```
-
-**Preconditions**: None
-**Postconditions**: The parser is initialized and ready to parse HTTP messages
-**Thread Safety**: Not thread-safe (constructors should not be called concurrently)
-**Complexity**: O(1)
-
-### ~http_parser (Destructor)
-```cpp
-~http_parser();
-```
-
-**Description**: Destroys the HTTP parser instance, releasing any allocated resources.
-
-**Parameters**: None
-
-**Return Value**: None
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-
-**Example**:
-```cpp
-{
-    http_parser parser;
-    // Use parser...
-} // parser is automatically destroyed here
-```
-
-**Preconditions**: The parser must be in a valid state
-**Postconditions**: All resources are released
-**Thread Safety**: Not thread-safe
-**Complexity**: O(1)
-
-### header
-```cpp
-std::string const& header(string_view key) const;
-```
-
-**Description**: Retrieves the value of a specific HTTP header field. This method provides access to the parsed header values.
-
-**Parameters**:
-- `key` (string_view): The name of the header field to retrieve. Case-sensitive.
-
-**Return Value**:
-- Returns a reference to the header value as a `std::string`. If the header is not found, the behavior is undefined (implementation-dependent).
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- If the header is not present, the returned string may be empty or contain garbage (implementation-dependent).
-
-**Example**:
-```cpp
-http_parser parser;
-// Assume parser has been populated with HTTP data
-auto content_type = parser.header("Content-Type");
-if (!content_type.empty()) {
-    std::cout << "Content-Type: " << content_type << std::endl;
+// This function is typically not called directly but is used by the LLVM fuzzer
+int result = LLVMFuzzerTestOneInput(fuzz_data, fuzz_size);
+if (result == 0) {
+    // Fuzzing continued successfully
 }
 ```
+- **Preconditions**:
+  - The `data` pointer must be valid and point to at least `size` bytes of memory.
+  - The `size` parameter must be non-negative and represent a valid memory size.
+- **Postconditions**:
+  - The HTTP parser will have processed the input data in multiple chunks as defined by the `feed_bytes` function.
+  - The parser's internal state will be updated based on the input data.
+- **Thread Safety**:
+  - This function is thread-safe in the sense that it operates on a local parser instance. However, in a multithreaded environment, multiple instances of this function should not share the same parser or memory region.
+- **Complexity**:
+  - **Time Complexity**: O(n * m) where n is the size of the input data and m is the number of chunks (up to 69).
+  - **Space Complexity**: O(1) additional space, as the function only uses a local parser instance and a few variables.
+- **See Also**: `feed_bytes`, `lt::http_parser`
 
-**Preconditions**: The parser must have been initialized and parsed at least one HTTP message
-**Postconditions**: Returns a valid string reference to the header value
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(log n) where n is the number of headers
+# Usage Examples
 
-### header_duration
+## Basic Usage
+
 ```cpp
-boost::optional<seconds32> header_duration(string_view key) const;
-```
-
-**Description**: Retrieves a header value and parses it as a duration (time interval). This is useful for headers like "Timeout" or "Keep-Alive" that specify time durations.
-
-**Parameters**:
-- `key` (string_view): The name of the header field to parse as a duration.
-
-**Return Value**:
-- Returns a `boost::optional<seconds32>` containing the parsed duration if successful.
-- Returns `boost::none` if the header doesn't exist or cannot be parsed as a duration.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- Returns `boost::none` for invalid values or missing headers.
-
-**Example**:
-```cpp
-http_parser parser;
-auto timeout = parser.header_duration("Keep-Alive");
-if (timeout) {
-    std::cout << "Keep-Alive timeout: " << *timeout << " seconds" << std::endl;
-} else {
-    std::cout << "No Keep-Alive header or invalid value" << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized and parsed at least one HTTP message
-**Postconditions**: Returns a valid optional duration or boost::none
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(log n) where n is the number of headers
-
-### protocol
-```cpp
-std::string const& protocol() const;
-```
-
-**Description**: Returns the HTTP protocol version (e.g., "HTTP/1.1") of the parsed message.
-
-**Parameters**: None
-
-**Return Value**: Returns a reference to the protocol string (e.g., "HTTP/1.1").
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- The returned string is valid as long as the parser instance exists.
-
-**Example**:
-```cpp
-http_parser parser;
-std::string protocol_version = parser.protocol();
-std::cout << "Protocol: " << protocol_version << std::endl;
-```
-
-**Preconditions**: The parser must have been initialized and parsed at least one HTTP message
-**Postconditions**: Returns a valid string reference to the protocol version
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### status_code
-```cpp
-int status_code() const;
-```
-
-**Description**: Returns the HTTP status code of the parsed message (e.g., 200 for OK, 404 for Not Found).
-
-**Parameters**: None
-
-**Return Value**: Returns the HTTP status code as an integer.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- The value is valid only after parsing a complete HTTP response.
-
-**Example**:
-```cpp
-http_parser parser;
-int status = parser.status_code();
-if (status == 200) {
-    std::cout << "Request successful" << std::endl;
-} else {
-    std::cout << "HTTP error: " << status << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized and parsed at least one HTTP message
-**Postconditions**: Returns a valid HTTP status code
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### method
-```cpp
-std::string const& method() const;
-```
-
-**Description**: Returns the HTTP method (e.g., "GET", "POST", "PUT") of the parsed message.
-
-**Parameters**: None
-
-**Return Value**: Returns a reference to the HTTP method string.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- The returned string is valid as long as the parser instance exists.
-
-**Example**:
-```cpp
-http_parser parser;
-std::string method = parser.method();
-std::cout << "Method: " << method << std::endl;
-```
-
-**Preconditions**: The parser must have been initialized and parsed at least one HTTP message
-**Postconditions**: Returns a valid string reference to the HTTP method
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### path
-```cpp
-std::string const& path() const;
-```
-
-**Description**: Returns the path component of the URL from the HTTP request line.
-
-**Parameters**: None
-
-**Return Value**: Returns a reference to the path string (e.g., "/api/v1/users").
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- The returned string is valid as long as the parser instance exists.
-
-**Example**:
-```cpp
-http_parser parser;
-std::string path = parser.path();
-std::cout << "Path: " << path << std::endl;
-```
-
-**Preconditions**: The parser must have been initialized and parsed at least one HTTP message
-**Postconditions**: Returns a valid string reference to the path
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### message
-```cpp
-std::string const& message() const;
-```
-
-**Description**: Returns the server message from an HTTP response, typically found in the status line (e.g., "OK", "Not Found", "Internal Server Error").
-
-**Parameters**: None
-
-**Return Value**: Returns a reference to the server message string.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- The returned string is valid as long as the parser instance exists.
-
-**Example**:
-```cpp
-http_parser parser;
-std::string message = parser.message();
-std::cout << "Message: " << message << std::endl;
-```
-
-**Preconditions**: The parser must have been initialized and parsed at least one HTTP message
-**Postconditions**: Returns a valid string reference to the server message
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### header_finished
-```cpp
-bool header_finished() const;
-```
-
-**Description**: Checks whether the header parsing phase is complete. This indicates that all headers have been parsed and the body is about to be processed.
-
-**Parameters**: None
-
-**Return Value**: 
-- Returns `true` if header parsing is complete.
-- Returns `false` if header parsing is still in progress or has not started.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-
-**Example**:
-```cpp
-http_parser parser;
-// Assume parser is in the middle of parsing
-if (parser.header_finished()) {
-    std::cout << "Headers have been fully parsed" << std::endl;
-} else {
-    std::cout << "Still parsing headers" << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a boolean indicating header parsing status
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### finished
-```cpp
-bool finished() const;
-```
-
-**Description**: Checks whether the entire HTTP message parsing is complete.
-
-**Parameters**: None
-
-**Return Value**: 
-- Returns `true` if the entire message has been parsed.
-- Returns `false` if parsing is incomplete.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-
-**Example**:
-```cpp
-http_parser parser;
-// Assume parser is in the middle of parsing
-if (parser.finished()) {
-    std::cout << "Message parsing complete" << std::endl;
-} else {
-    std::cout << "Parsing still in progress" << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a boolean indicating parsing completion
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### body_start
-```cpp
-int body_start() const;
-```
-
-**Description**: Returns the position where the body starts in the original data stream.
-
-**Parameters**: None
-
-**Return Value**: Returns the byte offset where the body begins, or -1 if the body hasn't started yet.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-
-**Example**:
-```cpp
-http_parser parser;
-int body_start_pos = parser.body_start();
-if (body_start_pos >= 0) {
-    std::cout << "Body starts at position: " << body_start_pos << std::endl;
-} else {
-    std::cout << "Body has not started yet" << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a valid position or -1
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### content_length
-```cpp
-std::int64_t content_length() const;
-```
-
-**Description**: Returns the content length of the HTTP message as specified in the "Content-Length" header.
-
-**Parameters**: None
-
-**Return Value**: Returns the content length as a 64-bit integer. If the header is not present, returns 0.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- If the Content-Length header is invalid, the behavior may be undefined.
-
-**Example**:
-```cpp
-http_parser parser;
-std::int64_t length = parser.content_length();
-std::cout << "Content length: " << length << " bytes" << std::endl;
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a valid content length
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### content_range
-```cpp
-std::pair<std::int64_t, std::int64_t> content_range() const;
-```
-
-**Description**: Returns the content range as specified in the "Content-Range" header, typically in the format "bytes start-end/total".
-
-**Parameters**: None
-
-**Return Value**: Returns a pair where the first element is the start position and the second is the end position of the content range.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- If the Content-Range header is not present or invalid, the behavior may be undefined.
-
-**Example**:
-```cpp
-http_parser parser;
-auto range = parser.content_range();
-std::cout << "Content range: " << range.first << "-" << range.second << std::endl;
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a valid content range pair
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### chunked_encoding
-```cpp
-bool chunked_encoding() const;
-```
-
-**Description**: Checks whether the message uses chunked encoding, which allows for streaming of data without knowing the total size in advance.
-
-**Parameters**: None
-
-**Return Value**: 
-- Returns `true` if the message uses chunked encoding.
-- Returns `false` otherwise.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-
-**Example**:
-```cpp
-http_parser parser;
-if (parser.chunked_encoding()) {
-    std::cout << "Using chunked encoding" << std::endl;
-} else {
-    std::cout << "Not using chunked encoding" << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a boolean indicating chunked encoding status
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### connection_close
-```cpp
-bool connection_close() const;
-```
-
-**Description**: Checks whether the connection should be closed after this request/response.
-
-**Parameters**: None
-
-**Return Value**: 
-- Returns `true` if the connection should be closed.
-- Returns `false` if the connection should be kept alive.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-
-**Example**:
-```cpp
-http_parser parser;
-if (parser.connection_close()) {
-    std::cout << "Connection should be closed after this request" << std::endl;
-} else {
-    std::cout << "Connection should be kept alive" << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a boolean indicating connection close status
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1)
-
-### headers
-```cpp
-std::multimap<std::string, std::string, aux::strview_less> const& headers() const;
-```
-
-**Description**: Returns a read-only reference to the complete set of parsed headers. The headers are stored in a multimap that preserves insertion order and allows multiple headers with the same name.
-
-**Parameters**: None
-
-**Return Value**: Returns a reference to the multimap containing all parsed headers.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- The returned reference is valid for the lifetime of the parser instance.
-
-**Example**:
-```cpp
-http_parser parser;
-auto const& header_map = parser.headers();
-for (auto const& [key, value] : header_map) {
-    std::cout << key << ": " << value << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a valid reference to the header multimap
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1) to return reference, O(n) to iterate
-
-### chunks
-```cpp
-std::vector<std::pair<std::int64_t, std::int64_t>> const& chunks() const;
-```
-
-**Description**: Returns the chunk ranges for chunked encoding, providing information about the size and position of each chunk.
-
-**Parameters**: None
-
-**Return Value**: Returns a reference to a vector of pairs, where each pair represents the start and end positions of a chunk.
-
-**Exceptions/Errors**:
-- No exceptions are thrown.
-- The returned reference is valid for the lifetime of the parser instance.
-
-**Example**:
-```cpp
-http_parser parser;
-auto const& chunk_ranges = parser.chunks();
-for (auto const& [start, end] : chunk_ranges) {
-    std::cout << "Chunk: " << start << " to " << end << std::endl;
-}
-```
-
-**Preconditions**: The parser must have been initialized
-**Postconditions**: Returns a valid reference to the chunk ranges vector
-**Thread Safety**: Thread-safe (reads only)
-**Complexity**: O(1) to return reference, O(n) to iterate
-
-## Usage Examples
-
-### Basic Usage
-```cpp
-#include "http_parser.hpp"
+#include "http_parser.h"
 #include <iostream>
 #include <string>
 
 int main() {
-    // Create a parser
-    http_parser parser;
+    lt::http_parser parser;
+    std::string http_data = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n";
     
-    // Parse some HTTP data (in practice, this would be streamed)
-    // Assume data is in a buffer called 'http_data'
+    // Feed the data to the parser
+    feed_bytes(parser, {http_data.data(), http_data.size()});
     
-    // After parsing, access the results
-    std::cout << "Protocol: " << parser.protocol() << std::endl;
-    std::cout << "Status code: " << parser.status_code() << std::endl;
-    std::cout << "Method: " << parser.method() << std::endl;
-    std::cout << "Path: " << parser.path() << std::endl;
-    
-    // Check header values
-    auto content_type = parser.header("Content-Type");
-    if (!content_type.empty()) {
-        std::cout << "Content-Type: " << content_type << std::endl;
-    }
-    
-    // Check if we're done parsing
-    if (parser.finished()) {
-        std::cout << "Parsing complete" << std::endl;
+    // Check if parsing was successful
+    if (parser.is_valid()) {
+        std::cout << "HTTP request parsed successfully" << std::endl;
+    } else {
+        std::cout << "Failed to parse HTTP request" << std::endl;
     }
     
     return 0;
 }
 ```
 
-### Error Handling
+## Error Handling
+
 ```cpp
-#include "http_parser.hpp"
+#include "http_parser.h"
 #include <iostream>
 #include <string>
 
-void process_http_response(const std::string& http_data) {
-    http_parser parser;
+int main() {
+    lt::http_parser parser;
+    std::string malformed_data = "GET / HTTP/1.1\r\nHost: example.com\r\n\n"; // Missing \r\n\r\n
     
-    // Process the HTTP data
-    // In real implementation, this would involve calling a parsing method
-    // (not shown in the interface)
-    
-    // Check for parsing errors
-    if (parser.finished()) {
-        std::cout << "Processing successful" << std::endl;
-    } else {
-        std::cout << "Parsing incomplete or failed" << std::endl;
+    try {
+        feed_bytes(parser, {malformed_data.data(), malformed_data.size()});
+        
+        if (parser.is_valid()) {
+            std::cout << "HTTP request parsed successfully" << std::endl;
+        } else {
+            std::cout << "HTTP request parsing failed" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Exception during parsing: " << e.what() << std::endl;
     }
     
-    // Check for specific header values with fallback
-    auto status_code = parser.status_code();
-    if (status_code == 200) {
-        std::cout << "Success: " << parser.message() <<
+    return 0;
+}
+```
+
+## Edge Cases
+
+```cpp
+#include "http_parser.h"
+#include <iostream>
+#include <vector>
+
+int main() {
+    lt::http_parser parser;
+    
+    // Empty input
+    feed_bytes(parser, "");
+    std::cout << "Empty input processed" << std::endl;
+    
+    // Maximum input size
+    std::string large_data(1000000, 'A'); // 1MB of 'A' characters
+    feed_bytes(parser, {large_data.data(), large_data.size()});
+    std::cout << "Large input processed" << std::endl;
+    
+    // Partially valid HTTP
+    std::string partial_http = "GET / HTTP/1.1\r\nHost: example.com\r\n";
+    feed_bytes(parser, {partial_http.data(), partial_http.size()});
+    std::cout << "Partial HTTP processed" << std::endl;
+    
+    return 0;
+}
+```
+
+# Best Practices
+
+1. **Use with Fuzzing Tools**: This code is specifically designed for use with fuzzing tools like LLVM Fuzzer. Ensure you're using appropriate fuzzing infrastructure when testing.
+2. **Input Validation**: While this function is designed for fuzzing, in production code, you should validate HTTP data before parsing to prevent security issues.
+3. **Memory Safety**: Ensure that the input data remains valid for the duration of the function call, especially when using raw pointers.
+4. **Error Handling**: The parser may fail to parse certain inputs, so always check the parser's state after processing.
+5. **Performance Considerations**: For production HTTP parsing, consider using more efficient parsing methods rather than the chunked approach used here.
+
+# Code Review & Improvement Suggestions
+
+## Function: feed_bytes
+
+### Potential Issues
+
+**Security:**
+- **Issue**: The function processes raw data without validation, which could be exploited in a fuzzing context.
+- **Severity**: Medium
+- **Impact**: Could lead to crashes or memory corruption if the input data contains malformed or malicious content.
+- **Fix**: Add input validation and bounds checking:
+```cpp
+void feed_bytes(lt::http_parser& parser, lt::string_view str) {
+    if (str.size() > 1000000) { // Limit input size
+        return; // Or throw an exception
+    }
+    for (int chunks = 1; chunks < 70; ++chunks) {
+        parser.reset();
+        lt::string_view recv_buf;
+        for (;;) {
+            int const chunk_size = std::min(chunks, int(str.size() - recv_buf.size()));
+            if (chunk_size == 0) break;
+            recv_buf = str.substr(recv_buf.size(), chunk_size);
+            // Process recv_buf
+        }
+    }
+}
+```
+
+**Performance:**
+- **Issue**: The function uses a loop that could be optimized for better performance.
+- **Severity**: Low
+- **Impact**: Minor performance impact due to repeated function calls and string view operations.
+- **Fix**: Optimize the loop structure and use more efficient string view operations:
+```cpp
+void feed_bytes(lt::http_parser& parser, lt::string_view str) {
+    if (str.empty()) return;
+    
+    for (int chunks = 1; chunks < 70; ++chunks) {
+        parser.reset();
+        size_t pos = 0;
+        while (pos < str.size()) {
+            int chunk_size = std::min(chunks, static_cast<int>(str.size() - pos));
+            lt::string_view chunk = str.substr(pos, chunk_size);
+            // Process chunk
+            pos += chunk_size;
+        }
+    }
+}
+```
+
+**Correctness:**
+- **Issue**: The function uses `int` for `chunk_size` which could overflow on very large inputs.
+- **Severity**: Medium
+- **Impact**: Could cause incorrect parsing or crashes on extremely large inputs.
+- **Fix**: Use `size_t` for the chunk size to prevent overflow:
+```cpp
+void feed_bytes(lt::http_parser& parser, lt::string_view str) {
+    for (size_t chunks = 1; chunks < 70; ++chunks) {
+        parser.reset();
+        size_t pos = 0;
+        while (pos < str.size()) {
+            size_t chunk_size = std::min(chunks, str.size() - pos);
+            lt::string_view chunk = str.substr(pos, chunk_size);
+            // Process chunk
+            pos += chunk_size;
+        }
+    }
+}
+```
+
+**Code Quality:**
+- **Issue**: The function has a magic number (70) that is not clearly explained.
+- **Severity**: Low
+- **Impact**: Could make the code harder to understand and maintain.
+- **Fix**: Replace with a named constant:
+```cpp
+constexpr size_t MAX_CHUNKS = 70;
+
+void feed_bytes(lt::http_parser& parser, lt::string_view str) {
+    for (size_t chunks = 1; chunks < MAX_CHUNKS; ++chunks) {
+        parser.reset();
+        size_t pos = 0;
+        while (pos < str.size()) {
+            size_t chunk_size = std::min(chunks, str.size() - pos);
+            lt::string_view chunk = str.substr(pos, chunk_size);
+            // Process chunk
+            pos += chunk_size;
+        }
+    }
+}
+```
+
+### Modernization Opportunities
+
+```cpp
+// Modernized version of feed_bytes
+[[nodiscard]] void feed_bytes(lt::http_parser& parser, std::string_view str) {
+    constexpr size_t MAX_CHUNKS = 70;
+    
+    if (str.size() > 1000000) {
+        return; // Limit input size to prevent excessive processing
+    }
+    
+    for (size_t chunks = 1; chunks < MAX_CHUNKS; ++chunks) {
+        parser.reset();
+        size_t pos = 0;
+        while (pos < str.size()) {
+            size_t chunk_size = std::min(chunks, str.size() - pos);
+            std::string_view chunk = str.substr(pos, chunk_size);
+            // Process chunk
+            pos += chunk_size;
+        }
+    }
+}
+```
+
+### Refactoring Suggestions
+
+- The `feed_bytes` function could be split into two parts: one for the main loop and one for processing individual chunks.
+- The function could be made into a class method of `lt::http_parser` to encapsulate the fuzzing behavior.
+
+### Performance Optimizations
+
+- Use move semantics for string views to avoid unnecessary copies.
+- Consider adding a `noexcept` specifier since the function doesn't throw exceptions.
+- The function could be optimized further by using a more efficient chunking strategy.
+
+## Function: LLVMFuzzerTestOneInput
+
+### Potential Issues
+
+**Security:**
+- **Issue**: The function directly accesses raw data without bounds checking.
+- **Severity**: High
+- **Impact**: Could lead to buffer overflows or other memory corruption issues.
+- **Fix**: Add bounds checking and input validation:
+```cpp
+int LLVMFuzzerTestOneInput(uint8_t const* data, size_t size) {
+    if (data == nullptr || size > 1000000) {
+        return 0;
+    }
+    
+    lt::http_parser p;
+    feed_bytes(p, {reinterpret_cast<char const*>(data), size});
+    return 0;
+}
+```
+
+**Performance:**
+- **Issue**: The function creates a new parser instance for each call, which could be expensive.
+- **Severity**: Medium
+- **Impact**: Could reduce fuzzing efficiency due to repeated object creation.
+- **Fix**: Consider reusing parser instances or using a factory pattern:
+```cpp
+int LLVMFuzzerTestOneInput(uint8_t const* data, size_t size) {
+    static lt::http_parser parser; // Reuse the parser instance
+    if (data == nullptr || size > 1000000) {
+        return 0;
+    }
+    
+    parser.reset();
+    feed_bytes(parser, {reinterpret_cast<char const*>(data), size});
+    return 0;
+}
+```
+
+**Correctness:**
+- **Issue**: The function returns 0 for all inputs, which could mask real issues.
+- **Severity**: Medium
+- **Impact**: Could make it difficult to distinguish between successful and failed parsing.
+- **Fix**: Return a value indicating success or failure:
+```cpp
+int LLVMFuzzerTestOneInput(uint8_t const* data, size_t size) {
+    if (data == nullptr || size > 1000000) {
+        return 0;
+    }
+    
+    lt::http_parser p;
+    feed_bytes(p, {reinterpret_cast<char const*>(data), size});
+    
+    // Return 1 if parsing failed, 0 if successful
+    return p.is_valid() ? 0 : 1;
+}
+```
+
+**Code Quality:**
+- **Issue**: The function name suggests it's a test function, but it's also used as a main entry point.
+- **Severity**: Low
+- **Impact**: Could be confusing for new developers reading the code.
+- **Fix**: Add comments to clarify the function's purpose:
+```cpp
+// Fuzzer entry point that tests the HTTP parser with arbitrary input data
+int LLVMFuzzerTestOneInput(uint8_t const* data, size_t size) {
+    // Implementation details...
+    return 0;
+}
+```
+
+### Modernization Opportunities
+
+```cpp
+// Modernized version of LLVMFuzzerTestOneInput
+[[nodiscard]] int LLVMFuzzerTestOneInput(std::span<const uint8_t> data) {
+    if (data.empty() || data.size() > 1000000) {
+        return 0;
+    }
+    
+    lt::http_parser p;
+    feed_bytes(p, {reinterpret_cast<char const*>(data.data()), data.size()});
+    return 0;
+}
+```
+
+### Refactoring Suggestions
+
+- The function could be moved to a separate testing namespace to separate it from production code.
+- Consider creating a factory function to create and configure the parser instance.
+
+### Performance Optimizations
+
+- Use `std::span` for the input data to avoid pointer arithmetic.
+- Consider adding a `noexcept` specifier since the function doesn't throw exceptions.
+- The function could be optimized by using a more efficient parsing strategy that doesn't require multiple iterations.

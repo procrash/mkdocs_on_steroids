@@ -2,288 +2,309 @@
 
 ## 1. Architecture Overview
 
-The libtorrent project follows a **monolithic architecture** with strong emphasis on modularity through well-defined components and interfaces. This design prioritizes performance, portability, and maintainability across multiple platforms. The core architectural principle is **separation of concerns**, where networking, file management, peer communication, and metadata handling are encapsulated in distinct modules.
+The libtorrent project follows a **layered architectural pattern** with a strong emphasis on modularity and separation of concerns. The system is structured as a monolithic library that provides comprehensive BitTorrent functionality while maintaining clear boundaries between components. Key design principles include performance optimization, thread safety, and extensibility through well-defined interfaces.
 
-Key architectural decisions include:
-- **Event-driven architecture** for handling asynchronous operations
-- **Component-based design** with clear interfaces between subsystems
-- **Cross-platform compatibility** through abstraction layers
-- **Extensibility** via plugin-like mechanisms for trackers, encryption, etc.
-- **Resource efficiency** with careful memory management and minimal overhead
+The architecture prioritizes **network protocol implementation** at its core, with higher-level abstractions for user interaction and application integration. The use of C++ templates, smart pointers, and RAII ensures memory safety and efficient resource management. Key architectural decisions include the separation of network I/O from business logic, a robust alert system for asynchronous notifications, and extensive use of Boost libraries for cross-platform compatibility.
 
-The system is designed to handle high-concurrency peer-to-peer operations while maintaining thread safety and responsiveness. This architecture enables libtorrent to serve as a robust foundation for various applications requiring torrent functionality.
+The project's modular design allows for both direct integration into applications and binding to higher-level languages like Python through dedicated bindings modules. This layered approach enables developers to leverage specific components without requiring knowledge of the entire codebase, while maintaining performance-critical optimizations throughout the system.
 
 ```mermaid
 graph TD
-    A[Application Layer] --> B[API Interface]
-    B --> C[Core Engine]
-    C --> D[Networking Module]
-    C --> E[File System Module]
+    A[Application Layer] --> B[Binding Layer]
+    B --> C[Core Library]
+    C --> D[Network Protocol]
+    C --> E[File System]
     C --> F[Peer Management]
-    C --> G[Metadata Handling]
-    D --> H[Socket Layer]
-    E --> I[Disk Cache]
-    F --> J[BitTorrent Protocol]
-    G --> K[Torrent Metadata]
+    C --> G[Encryption]
+    D --> H[TCP/IP Stack]
+    E --> I[Disk IO]
 ```
 
 ## 2. Component Breakdown
 
-### Core Engine
-**Purpose**: Central coordination of all torrent operations, managing state and orchestrating component interactions.
+### Core Library (libtorrent)
 
-**Key Classes/Interfaces**:
-- `session`: Main entry point for creating and managing torrents
-- `torrent_handle`: Reference to a specific torrent session
-- `alert_manager`: Handles system alerts and notifications
+**Purpose**: The central component providing BitTorrent protocol implementation, peer management, and file handling.
+
+**Key Classes & Interfaces**:
+- `session`: Manages the overall torrent session
+- `torrent_handle`: Represents a single torrent
+- `alert`: Base class for all notifications
+- `add_torrent_params`: Configuration parameters for adding torrents
 
 ```cpp
 class session {
 public:
-    torrent_handle add_torrent(add_torrent_params const& params);
-    void pause();
-    void resume();
+    void add_torrent(add_torrent_params const& params);
+    std::vector<alert> wait_for_alert(time_duration timeout);
 };
 ```
 
 **Interactions**: 
-- Receives requests from application layer via API interface
-- Coordinates with networking, file system, and peer management modules
-- Publishes alerts to alert manager
+- Communicates with network layer via TCP/IP stack
+- Interacts with file system through disk IO operations
+- Sends alerts to application layer for notification
 
-### Networking Module
-**Purpose**: Handles all network communication including TCP/UDP sockets, protocol encryption, and connection management.
+### Network Layer
 
-**Key Classes/Interfaces**:
-- `socket`: Abstract socket interface for cross-platform compatibility
-- `tcp_connection`: Manages TCP connections with peers
-- `udp_socket`: Handles UDP traffic for DHT and tracker communications
+**Purpose**: Handles all network communication, including peer connections and protocol messaging.
+
+**Key Classes & Interfaces**:
+- `peer_connection`: Manages individual peer connections
+- `tcp_socket`: Abstracts TCP socket operations
+- `bittorrent_protocol`: Implements BitTorrent protocol messages
 
 ```cpp
-class tcp_connection : public socket {
+class peer_connection : public tcp_socket {
 public:
-    void send(buffer const& data);
-    void close();
+    void on_piece(piece_index_t index);
+    void send_request(request const& req);
 };
 ```
 
 **Interactions**: 
-- Communicates with core engine to establish connections
-- Interfaces with peer management for connection requests
-- Works with encryption module for secure communication
+- Receives data from physical network layer
+- Sends/receives data to/from peers
+- Communicates with core library for torrent metadata
 
-### File System Module
-**Purpose**: Manages file operations including reading, writing, and caching torrent files.
+### File System Layer
 
-**Key Classes/Interfaces**:
-- `file_storage`: Represents the structure of a torrent's files
-- `disk_io_thread`: Handles asynchronous disk I/O operations
-- `cache`: Memory-based cache for frequently accessed data
+**Purpose**: Manages file storage, reading, and writing operations.
+
+**Key Classes & Interfaces**:
+- `disk_io_thread`: Handles all disk I/O operations
+- `file_storage`: Represents the structure of files in a torrent
+- `piece_manager`: Tracks piece availability and integrity
 
 ```cpp
 class disk_io_thread {
 public:
-    void async_read(file_slice const& slice, disk_observer* observer);
-    void async_write(file_slice const& slice, disk_observer* observer);
+    void async_read(piece_index_t index, std::vector<char>& buffer);
+    void async_write(piece_index_t index, char const* data);
 };
 ```
 
 **Interactions**: 
-- Receives file operations from core engine
-- Communicates with cache module for data retrieval
-- Interfaces with peer management for piece verification
+- Receives read/write requests from core library
+- Communicates with operating system through file system APIs
+- Provides integrity verification for downloaded pieces
 
-### Peer Management Module
-**Purpose**: Manages peer connections, piece exchange, and protocol negotiation.
+### Binding Layer (Python/C)
 
-**Key Classes/Interfaces**:
-- `peer_connection`: Represents a connection to a single peer
-- `bitfield`: Tracks which pieces each peer has
-- `piece_picker`: Determines which pieces to request from peers
+**Purpose**: Enables integration with higher-level languages.
+
+**Key Classes & Interfaces**:
+- `boost_python.hpp`: Python binding interface
+- `library.cpp`: C API implementation
+- `bytes.hpp`: Data type conversion utilities
 
 ```cpp
-class peer_connection : public socket {
-public:
-    void send_request(piece_block const& block);
-    void handle_piece(piece_block const& block);
-};
+BOOST_PYTHON_MODULE(libtorrent) {
+    class_<session>("session")
+        .def("add_torrent", &session::add_torrent)
+        .def("wait_for_alert", &session::wait_for_alert);
+}
 ```
 
 **Interactions**: 
-- Receives connection requests from networking module
-- Communicates with file system for piece verification
-- Updates bitfield and piece picker based on peer responses
-
-### Metadata Handling Module
-**Purpose**: Processes torrent metadata including .torrent files, magnet links, and tracker information.
-
-**Key Classes/Interfaces**:
-- `torrent_info`: Contains all metadata about a specific torrent
-- `create_torrent`: Generates new torrent files from directory structures
-- `magnet_uri`: Parses and generates magnet URIs
-
-```cpp
-class create_torrent {
-public:
-    void add_file(std::string const& path, std::string const& name);
-    torrent_info generate();
-};
-```
-
-**Interactions**: 
-- Receives metadata from application layer via API interface
-- Provides information to core engine for session creation
-- Interfaces with file system module during torrent generation
+- Exposes core library functionality to external applications
+- Handles data type conversions between C++ and target languages
+- Provides error handling across language boundaries
 
 ## 3. Data Flow
 
-The data flow in libtorrent follows a well-defined pattern across multiple stages:
+The data flow in libtorrent follows a clear pattern from network input to application output:
 
 ```mermaid
 flowchart LR
-    A[Application Input] --> B[API Layer]
-    B --> C[Core Engine]
-    C --> D[Networking Module]
-    D --> E[Socket Layer]
-    E --> F[Network Interface]
-    
-    G[File System] --> H[Disk Cache]
-    H --> I[Disk IO Thread]
-    I --> J[File Storage]
-    
-    K[Peer Management] --> L[BitTorrent Protocol]
-    L --> M[Piece Exchange]
-    N[Magnet URI] --> O[Torrent Info]
-    O --> P[Metadata Handler]
-    
-    F --> Q[Network Response]
-    Q --> R[Core Engine]
-    R --> S[File System]
-    S --> T[Application Output]
+    A[Network Input] --> B[Protocol Parser]
+    B --> C[Torrent Manager]
+    C --> D[Piece Validator]
+    D --> E[File System]
+    E --> F[Application Output]
+    G[User Input] --> H[Session Controller]
+    H --> I[Alert Queue]
+    I --> J[Application Notification]
 ```
 
 **Key Data Structures**:
-- `torrent_info`: Contains metadata about a torrent including file list, piece hashes, and tracker URLs
-- `piece_block`: Represents a block of data (typically 16KB) that can be transferred between peers
-- `file_slice`: Defines the range of bytes to read/write from/to disk files
-- `alert`: System notifications for events like connection established, download complete, etc.
+- `torrent_info`: Contains metadata about a torrent
+- `piece_block`: Represents a block of data to be transferred
+- `peer_connection`: Tracks connection state and statistics
 
 **Data Transformation Points**:
-1. **Torrent File Parsing**: Converts .torrent file format into internal `torrent_info` structure
-2. **Magnet URI Processing**: Extracts info_hash and tracker information from magnet links
-3. **Piece Verification**: Compares downloaded pieces with expected hashes in torrent metadata
-4. **File Writing**: Transforms piece data into actual files on disk
+1. **Network Layer**: Raw bytes from network → structured protocol messages
+2. **Protocol Parser**: Protocol messages → internal data structures
+3. **Piece Validator**: Downloaded pieces → verified content
+4. **File System**: Verified content → persistent storage
+
+```cpp
+struct piece_block {
+    piece_index_t index;
+    std::vector<char> data;
+    bool is_verified;
+};
+```
 
 ## 4. Design Patterns
 
 ### Observer Pattern
-**Application**: Used extensively for alert notifications throughout the system.
 
-```cpp
-class alert_manager {
-public:
-    void add_alert(alert* a);
-    std::vector<alert*> get_pending_alerts();
-};
+**Application**: Implemented through the alert system.
 
-// Alert classes inherit from base alert class
-class peer_connected_alert : public alert {
-    // Specific implementation details
-};
-```
-
-**Why**: Enables decoupled communication between components, allowing the system to notify interested parties of events without direct dependencies.
-
-### Factory Pattern
-**Application**: Used for creating torrent sessions and other core objects.
+**Implementation**:
+- `alert`: Base class for all notifications
+- `session`: Maintains an alert queue and notifies subscribers
+- `alert_manager`: Handles alert dispatching
 
 ```cpp
 class session {
+    std::vector<alert> m_alerts;
 public:
-    static std::unique_ptr<session> create();
+    void wait_for_alert() {
+        // Process alerts when available
+        for (auto& a : m_alerts) {
+            if (a.type() == alert::torrent_finished) {
+                // Notify interested parties
+            }
+        }
+    }
 };
-
-// Implementation in source file
-std::unique_ptr<session> session::create() {
-    return std::make_unique<session>();
-}
 ```
 
-**Why**: Provides controlled instantiation of complex objects, allowing for future extension with different session types.
+### Factory Pattern
 
-### Singleton Pattern
-**Application**: Used for global configuration and system-wide services.
+**Application**: Used in torrent creation and session management.
+
+**Implementation**:
+- `add_torrent_params`: Configuration factory for torrents
+- `session_params`: Configuration factory for sessions
 
 ```cpp
-class settings_pack {
+class add_torrent_params {
 public:
-    static settings_pack& instance();
-    
-private:
-    // Private constructor to prevent direct instantiation
-    settings_pack() = default;
+    static add_torrent_params create_from_torrent_file(std::string const& path);
+    static add_torrent_params create_from_magnet_uri(std::string const& uri);
 };
 ```
 
-**Why**: Ensures a single point of control for system configuration, preventing inconsistent state across different parts of the application.
+### Singleton Pattern
+
+**Application**: Session management.
+
+**Implementation**:
+- `session`: Ensures only one instance exists per application
+- Thread-safe initialization using double-checked locking
+
+```cpp
+class session {
+private:
+    static std::unique_ptr<session> m_instance;
+public:
+    static session& get() {
+        if (!m_instance) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            if (!m_instance)
+                m_instance = std::make_unique<session>();
+        }
+        return *m_instance;
+    }
+};
+```
 
 ### Strategy Pattern
-**Application**: Used in encryption and compression modules where different algorithms can be selected at runtime.
+
+**Application**: Encryption and compression algorithms.
+
+**Implementation**:
+- `encryption`: Base class for encryption strategies
+- `plain_encryption`, `rc4_encryption`: Concrete implementations
 
 ```cpp
 class encryption {
 public:
-    virtual void encrypt(buffer& data) = 0;
-    virtual void decrypt(buffer& data) = 0;
+    virtual void encrypt(char* data, int size) = 0;
 };
 
-// Concrete implementations
-class aes_encryption : public encryption { /* ... */ };
-class none_encryption : public encryption { /* ... */ };
+class rc4_encryption : public encryption {
+public:
+    void encrypt(char* data, int size) override { /* RC4 implementation */ }
+};
 ```
-
-**Why**: Allows runtime selection of different algorithms without modifying core code, enhancing extensibility.
 
 ## 5. Threading and Concurrency
 
 ### Threading Model
-libtorrent employs a **multi-threaded architecture** with distinct thread pools for different operations:
+
+libtorrent employs a **multi-threaded architecture** with distinct thread pools:
 
 ```mermaid
 graph TD
-    A[Main Thread] --> B[Network Threads]
-    A --> C[Disk I/O Threads]
-    A --> D[Application Thread]
-    B --> E[Socket Processing]
+    A[Main Thread] --> B[Network Thread]
+    A --> C[Disk IO Thread]
+    A --> D[Alert Thread]
+    B --> E[Peer Connections]
     C --> F[File Operations]
-    D --> G[User Interface]
+    D --> G[Application Notifications]
 ```
 
-The system uses:
-- **Worker threads** for network operations (typically 2-4)
-- **Dedicated disk thread** for file I/O
-- **Main application thread** for user interface and control flow
-
 ### Synchronization Mechanisms
+
 **Key Components**:
-1. **Mutexes**: Used to protect shared data structures like the torrent list and peer connections.
-   ```cpp
-   std::mutex m_mutex;
-   ```
+- `mutex`: For protecting shared resources
+- `condition_variable`: For thread coordination
+- `atomic`: For lock-free operations
 
-2. **Condition Variables**: For signaling between threads, particularly in disk I/O operations.
-   ```cpp
-   std::condition_variable m_condition;
-   ```
-
-3. **Atomic Operations**: Used for thread-safe counters and flags to minimize locking overhead.
-
-4. **Read-Write Locks**: Applied to data structures that are frequently read but infrequently modified.
+```cpp
+class session {
+    std::mutex m_mutex;
+    std::condition_variable m_alert_condition;
+    std::vector<alert> m_alerts;
+    
+public:
+    void wait_for_alert() {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_alert_condition.wait(lock, [this] { return !m_alerts.empty(); });
+    }
+};
+```
 
 ### Concurrent Data Structures
-**Key Structures**:
-1. `unordered_map` with appropriate synchronization: Used for storing torrent sessions and peer connections.
-2. `deque`: For managing pending network operations and disk I/O requests.
-3. `shared_ptr`: For safe reference counting across threads, particularly in alert management.
 
-The system employs **lock-free programming techniques** where possible to minimize contention, especially in high-performance networking paths. Critical sections are kept as small as possible, with most data access occurring through thread-safe interfaces rather than direct manipulation of shared state.
+**Key Structures**:
+- `thread_safe_queue`: Thread-safe queue for alerts
+- `shared_ptr`: Reference-counted objects across threads
+- `atomic_counter`: For thread-safe counters
+
+```cpp
+template<typename T>
+class thread_safe_queue {
+private:
+    std::queue<T> m_queue;
+    mutable std::mutex m_mutex;
+    
+public:
+    void push(T const& item) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_queue.push(item);
+    }
+    
+    bool try_pop(T& result) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_queue.empty()) return false;
+        result = std::move(m_queue.front());
+        m_queue.pop();
+        return true;
+    }
+};
+```
+
+### Thread Safety
+
+The architecture ensures thread safety through:
+1. **Immutable data structures** where possible
+2. **Fine-grained locking** to minimize contention
+3. **Thread-local storage** for non-shared state
+4. **Message passing** between threads instead of shared memory
+
+This design enables high performance while maintaining correctness in concurrent operations, making libtorrent suitable for both single-threaded applications and complex multi-threaded systems.

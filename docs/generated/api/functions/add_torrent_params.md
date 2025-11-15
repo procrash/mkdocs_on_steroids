@@ -3,240 +3,220 @@
 ## add_torrent_params
 
 - **Signature**: `auto add_torrent_params()`
-- **Description**: The `add_torrent_params` struct is a container for parameters used when adding a torrent to a session. It encapsulates all the necessary configuration options for a torrent, including metadata, file paths, tracker information, and other settings. This struct is designed to be passed to the `add_torrent()` function in the libtorrent library.
-- **Parameters**: N/A - This is a constructor function that creates a new instance of the `add_torrent_params` struct.
-- **Return Value**: 
-  - Returns a new instance of the `add_torrent_params` struct.
-  - The returned object contains default values for all parameters.
+- **Description**: Creates a default `add_torrent_params` object used to configure torrent addition parameters in libtorrent. This function returns a struct that can be customized before adding a torrent to a session.
+- **Parameters**: None
+- **Return Value**:
+  - Returns an `add_torrent_params` object initialized with default values.
+  - The returned object can be modified to set various torrent parameters like save path, tracker URLs, etc.
 - **Exceptions/Errors**:
-  - No exceptions are thrown by the constructor.
-  - Memory allocation errors could occur if the system is out of memory.
+  - No exceptions are thrown by this function.
 - **Example**:
 ```cpp
-// Create a new add_torrent_params instance with default values
 auto params = add_torrent_params();
+params.save_path = "/downloads/torrents";
+params.ti = std::make_shared<torrent_info>(torrent_file);
+auto handle = session.add_torrent(params);
 ```
-- **Preconditions**: 
-  - The libtorrent library must be properly initialized.
-  - The function is called in a valid context where memory is available.
-- **Postconditions**:
-  - A valid `add_torrent_params` object is returned.
-  - The object is ready to be modified with specific torrent parameters.
-- **Thread Safety**: 
-  - The constructor is thread-safe.
-  - The resulting object should not be shared between threads without proper synchronization.
-- **Complexity**:
-  - Time Complexity: O(1) - constant time for construction.
-  - Space Complexity: O(1) - minimal additional memory overhead.
-- **See Also**: `add_torrent()`, `torrent_info`, `torrent_handle`
+- **Preconditions**: None
+- **Postconditions**: Returns a valid `add_torrent_params` object with default values.
+- **Thread Safety**: The function itself is thread-safe, but the returned object should not be shared across threads.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `add_torrent()`, `session::add_torrent()`
 
 ## contains_resume_data
 
 - **Signature**: `auto contains_resume_data()`
-- **Description**: The `contains_resume_data` function checks whether the given `add_torrent_params` object contains resume data. Resume data allows torrents to resume from a previous state, preserving information about downloaded pieces, upload/download statistics, and other state information.
+- **Description**: Checks if the given `add_torrent_params` object contains resume data. This function is used to determine if the parameters include information that can be used to resume a previously paused torrent.
 - **Parameters**:
-  - `params` (`add_torrent_params const&`): The torrent parameters object to check for resume data. This parameter must be a valid `add_torrent_params` object.
+  - `params` (`add_torrent_params const&`): The torrent parameters to check for resume data.
 - **Return Value**:
   - Returns `true` if the parameters contain resume data.
-  - Returns `false` if the parameters do not contain resume data or if the input is invalid.
+  - Returns `false` if no resume data is present.
 - **Exceptions/Errors**:
   - No exceptions are thrown by this function.
-  - The function may return undefined behavior if the input is not a valid `add_torrent_params` object.
 - **Example**:
 ```cpp
-// Check if a torrent parameters object contains resume data
 auto params = add_torrent_params();
-bool has_resume_data = contains_resume_data(params);
-if (has_resume_data) {
-    // The torrent has resume data and can be resumed
+if (contains_resume_data(params)) {
+    std::cout << "Resume data is available." << std::endl;
+} else {
+    std::cout << "No resume data available." << std::endl;
 }
 ```
-- **Preconditions**:
-  - The `add_torrent_params` object must be properly constructed and valid.
-  - The function should not be called with null or invalid pointers.
-- **Postconditions**:
-  - The function returns a boolean indicating whether resume data is present.
-  - The input parameters are not modified.
-- **Thread Safety**: 
-  - The function is thread-safe as it only reads from the input parameters.
-- **Complexity**:
-  - Time Complexity: O(1) - constant time check.
-  - Space Complexity: O(1) - no additional memory allocation.
-- **See Also**: `add_torrent_params`, `add_torrent()`, `resume_data`
+- **Preconditions**: The `params` object must be valid and not null.
+- **Postconditions**: Returns a boolean indicating the presence of resume data.
+- **Thread Safety**: The function is thread-safe as it only reads the `params` object.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `add_torrent_params`, `session::add_torrent()`
 
-## Usage Examples
+# Usage Examples
 
-### Basic Usage
+## Basic Usage
 
 ```cpp
 #include <libtorrent/add_torrent_params.hpp>
-#include <libtorrent/torrent_handle.hpp>
 #include <libtorrent/session.hpp>
 
-// Create a session
-libtorrent::session ses;
-
-// Create torrent parameters with default values
-auto params = add_torrent_params();
-
-// Set the torrent file path
-params.ti = libtorrent::torrent_info("example.torrent");
-
-// Add the torrent to the session
-libtorrent::torrent_handle handle = ses.add_torrent(params);
+int main() {
+    // Create default parameters
+    auto params = add_torrent_params();
+    
+    // Customize parameters
+    params.save_path = "/downloads/torrents";
+    params.ti = std::make_shared<torrent_info>(torrent_file);
+    params.priorities = std::vector<int>{1, 1, 0, 1}; // Set file priorities
+    
+    // Add torrent to session
+    libtorrent::session ses;
+    auto handle = ses.add_torrent(params);
+    
+    return 0;
+}
 ```
 
-### Error Handling
+## Error Handling
 
 ```cpp
 #include <libtorrent/add_torrent_params.hpp>
-#include <libtorrent/torrent_handle.hpp>
 #include <libtorrent/session.hpp>
 #include <iostream>
 
-// Create a session
-libtorrent::session ses;
-
-// Create torrent parameters
-auto params = add_torrent_params();
-
-// Set the torrent file path
-params.ti = libtorrent::torrent_info("example.torrent");
-
-// Check if the torrent has resume data before adding
-if (contains_resume_data(params)) {
-    std::cout << "Torrent has resume data, will resume from previous state." << std::endl;
-} else {
-    std::cout << "Torrent does not have resume data, will start fresh." << std::endl;
-}
-
-// Add the torrent to the session
-try {
-    libtorrent::torrent_handle handle = ses.add_torrent(params);
-    std::cout << "Torrent added successfully." << std::endl;
-} catch (const std::exception& e) {
-    std::cerr << "Failed to add torrent: " << e.what() << std::endl;
+int main() {
+    auto params = add_torrent_params();
+    params.save_path = "/downloads/torrents";
+    
+    // Validate parameters before adding
+    if (!params.ti) {
+        std::cerr << "Torrent info is missing!" << std::endl;
+        return -1;
+    }
+    
+    libtorrent::session ses;
+    auto handle = ses.add_torrent(params);
+    
+    if (!handle.is_valid()) {
+        std::cerr << "Failed to add torrent!" << std::endl;
+        return -1;
+    }
+    
+    return 0;
 }
 ```
 
-### Edge Cases
+## Edge Cases
 
 ```cpp
 #include <libtorrent/add_torrent_params.hpp>
-#include <libtorrent/torrent_handle.hpp>
 #include <libtorrent/session.hpp>
+#include <iostream>
 
-// Create a session
-libtorrent::session ses;
-
-// Test with an empty torrent parameters object
-auto empty_params = add_torrent_params();
-if (contains_resume_data(empty_params)) {
-    std::cout << "Empty params contain resume data - this should not happen." << std::endl;
-} else {
-    std::cout << "Empty params do not contain resume data - this is expected." << std::endl;
+int main() {
+    // Empty parameters
+    auto empty_params = add_torrent_params();
+    if (contains_resume_data(empty_params)) {
+        std::cout << "Empty params contain resume data." << std::endl;
+    }
+    
+    // Parameters with resume data
+    auto params_with_resume = add_torrent_params();
+    // Assume some resume data is set
+    // params_with_resume.resume_data = ...;
+    
+    if (contains_resume_data(params_with_resume)) {
+        std::cout << "Resume data detected." << std::endl;
+    }
+    
+    return 0;
 }
-
-// Test with a torrent that has resume data
-auto params_with_resume = add_torrent_params();
-params_with_resume.resume_data = std::vector<char>(1024); // Simulate resume data
-if (contains_resume_data(params_with_resume)) {
-    std::cout << "Params with resume data correctly identified." << std::endl;
-} else {
-    std::cout << "Failed to detect resume data in valid parameters." << std::endl;
-}
-
-// Test with a null torrent info
-auto params_with_null_ti = add_torrent_params();
-// params_with_null_ti.ti is not set - this would cause add_torrent() to fail
 ```
 
-## Best Practices
+# Best Practices
 
-1. **Always initialize parameters**: Ensure `add_torrent_params` objects are properly initialized before use.
-2. **Check for resume data**: Use `contains_resume_data()` to determine if a torrent can be resumed.
-3. **Handle errors**: Always check the return value of `add_torrent()` and handle exceptions.
-4. **Use move semantics**: When passing parameters, consider using move semantics for efficiency.
-5. **Validate input**: Ensure the torrent file path and other parameters are valid before attempting to add a torrent.
+## Effective Usage
 
-## Code Review & Improvement Suggestions
+1. **Initialize with defaults**: Always start with `add_torrent_params()` to ensure default values.
+2. **Set required fields**: Always set `ti` (torrent_info) and `save_path` before adding.
+3. **Use move semantics**: When adding multiple torrents, consider moving parameters to avoid copies.
+4. **Check return values**: Always verify that the add operation was successful.
 
-### Potential Issues
+## Common Mistakes to Avoid
 
-**Function**: `add_torrent_params`
-**Issue**: The constructor and assignment operators are incomplete in the provided code. This could lead to undefined behavior if the full implementation is not properly defined.
-**Severity**: Critical
-**Impact**: The function may not work correctly, leading to memory leaks, undefined behavior, or crashes.
-**Fix**: Complete the implementation of the class with proper constructors, destructor, and assignment operators:
-```cpp
-struct TORRENT_EXPORT add_torrent_params
-{
-    // Constructor
-    add_torrent_params();
-    
-    // Destructor
-    ~add_torrent_params();
-    
-    // Move constructor
-    add_torrent_params(add_torrent_params&&) noexcept;
-    
-    // Move assignment operator
-    add_torrent_params& operator=(add_torrent_params&&) &;
-    
-    // Copy constructor
-    add_torrent_params(add_torrent_params const&);
-    
-    // Copy assignment operator
-    add_torrent_params& operator=(add_torrent_params const&);
-    
-    // Other members...
-};
-```
+1. **Not setting torrent info**: Forgetting to set `params.ti` will result in failed torrent additions.
+2. **Invalid save path**: Using a path that doesn't exist or is inaccessible will cause the torrent to fail.
+3. **Uninitialized parameters**: Using uninitialized `add_torrent_params` objects can lead to undefined behavior.
 
-**Function**: `contains_resume_data`
-**Issue**: The function is not documented as const, but it should be since it doesn't modify the parameters.
+## Performance Tips
+
+1. **Reuse parameter objects**: For multiple similar torrents, create a base parameters object and modify as needed.
+2. **Avoid unnecessary copies**: Use move semantics when passing parameters to reduce overhead.
+3. **Pre-allocate resources**: If adding many torrents, pre-allocate `torrent_info` objects when possible.
+
+# Code Review & Improvement Suggestions
+
+## Potential Issues
+
+### Function: `add_torrent_params()`
+**Issue**: Incomplete function signature in the documentation
 **Severity**: Low
-**Impact**: Minor performance impact and potential confusion for users.
-**Fix**: Declare the function as const:
+**Impact**: Users may be confused about the function's exact signature
+**Fix**: Complete the function signature in the documentation:
 ```cpp
-TORRENT_EXTRA_EXPORT bool contains_resume_data(add_torrent_params const&) noexcept;
+// Corrected signature
+auto add_torrent_params()
 ```
 
-### Modernization Opportunities
+### Function: `contains_resume_data`
+**Issue**: The function is in the `aux` namespace but not clearly documented as an auxiliary function
+**Severity**: Medium
+**Impact**: Users may not understand the function's purpose or when to use it
+**Fix**: Add a clear description of the function's purpose and usage context:
+```cpp
+// Add documentation explaining the function's purpose
+// This function is used internally by libtorrent to check for resume data
+// and should typically not be called directly by application code.
+```
 
-**Function**: `add_torrent_params`
-**Opportunity**: The class could benefit from C++11/14 features like `std::move` semantics and `noexcept` specifiers.
-**Suggestion**: Use `noexcept` for move operations and consider adding `constexpr` for some operations where applicable.
+## Modernization Opportunities
 
-**Function**: `contains_resume_data`
-**Opportunity**: The function could be marked as `[[nodiscard]]` since its return value is important.
+### Function: `add_torrent_params()`
+**Opportunity**: Use `[[nodiscard]]` to indicate the return value is important
 **Suggestion**: 
 ```cpp
-[[nodiscard]] TORRENT_EXTRA_EXPORT bool contains_resume_data(add_torrent_params const&) noexcept;
+[[nodiscard]] auto add_torrent_params()
 ```
 
-### Refactoring Suggestions
-
-**Function**: `add_torrent_params`
-**Suggestion**: Consider splitting the class into smaller, more focused classes for different aspects of torrent parameters (e.g., `TorrentMetadataParams`, `NetworkParams`, `StorageParams`).
-
-**Function**: `contains_resume_data`
-**Suggestion**: This function could be made a member function of `add_torrent_params` for better encapsulation:
+### Function: `contains_resume_data`
+**Opportunity**: Use `std::span` for better parameter passing
+**Suggestion**: 
 ```cpp
-struct add_torrent_params
-{
-    // ... other members ...
-    
-    bool contains_resume_data() const noexcept;
-};
+// Modern C++ version (if possible)
+[[nodiscard]] bool contains_resume_data(std::span<const add_torrent_params> params);
 ```
 
-### Performance Optimizations
+## Refactoring Suggestions
 
-**Function**: `add_torrent_params`
-**Opportunity**: The class could benefit from move semantics to avoid unnecessary copies.
-**Suggestion**: Ensure the move constructor and move assignment operator are properly implemented and used.
+### Function: `add_torrent_params()`
+**Suggestion**: Consider making this function a constructor of a class
+**Reason**: This would provide better encapsulation and allow for additional initialization logic.
 
-**Function**: `contains_resume_data`
-**Opportunity**: The function could be optimized by caching the resume data check result if it's called frequently.
-**Suggestion**: Consider adding a member variable to cache the result of the resume data check.
+### Function: `contains_resume_data`
+**Suggestion**: Move this function to a more accessible namespace
+**Reason**: The function is useful for application code and should be easily discoverable.
+
+## Performance Optimizations
+
+### Function: `add_torrent_params()`
+**Opportunity**: Add `noexcept` specification
+**Suggestion**: 
+```cpp
+// Add noexcept to the constructor
+add_torrent_params() noexcept;
+```
+
+### Function: `contains_resume_data`
+**Opportunity**: Use `const&` for parameters to avoid copies
+**Suggestion**: 
+```cpp
+// Ensure the parameter is passed by const reference
+bool contains_resume_data(add_torrent_params const& params);
+```

@@ -3,377 +3,370 @@
 ## generate_block
 
 - **Signature**: `void generate_block(span<std::uint32_t> buffer, piece_index_t const piece, int const offset)`
-- **Description**: Fills a buffer with a pattern based on piece and offset values. This function is used to generate test data blocks for torrent verification and testing purposes. The pattern is a 32-bit value constructed from the piece index and offset.
+- **Description**: Fills a buffer with a pattern based on the piece index and offset. This function generates a block of data with a specific pattern that can be used for testing purposes. The pattern is derived from the piece index and the offset within the piece.
 - **Parameters**:
-  - `buffer` (span<std::uint32_t>): The buffer to fill with the generated pattern. This must be a valid span of 32-bit unsigned integers.
-  - `piece` (piece_index_t const): The piece index used to generate the pattern. This determines the high 8 bits of the pattern.
-  - `offset` (int const): The offset within the piece used to generate the pattern. This determines the middle 8 bits of the pattern.
+  - `buffer` (span<std::uint32_t>): The buffer to fill with the generated data. This must be a valid span that can hold at least `buffer.size()` elements.
+  - `piece` (piece_index_t): The index of the piece to generate data for. This must be a valid piece index.
+  - `offset` (int): The offset within the piece where the data should be generated. This should be a non-negative value.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown, but the function assumes valid input parameters.
+  - This function does not throw exceptions.
+  - The function assumes that the `buffer` is valid and properly allocated.
 - **Example**:
 ```cpp
 std::vector<std::uint32_t> buffer(1024);
-piece_index_t piece = 42;
-int offset = 8192;
+piece_index_t piece = 0;
+int offset = 0;
 generate_block(buffer, piece, offset);
 ```
-- **Preconditions**: `buffer` must be a valid span of 32-bit unsigned integers.
-- **Postconditions**: The buffer is filled with the generated pattern based on the piece and offset.
-- **Thread Safety**: This function is thread-safe as it only reads input parameters and writes to the buffer.
-- **Complexity**: O(n) where n is the size of the buffer.
-- **See Also**: `verify_piece()`
+- **Preconditions**:
+  - The `buffer` must be a valid span with enough capacity to hold the data.
+  - The `piece` must be a valid piece index.
+  - The `offset` must be a non-negative value.
+- **Postconditions**:
+  - The `buffer` will be filled with data generated based on the piece index and offset.
+- **Thread Safety**:
+  - This function is thread-safe as it only writes to the provided buffer.
+- **Complexity**:
+  - Time Complexity: O(n) where n is the size of the buffer.
+  - Space Complexity: O(1) additional space.
+- **See Also**: `verify_piece`, `write_piece`
 
 ## leaf_path
 
 - **Signature**: `std::string leaf_path(std::string f)`
-- **Description**: Extracts the leaf path from a file path string. This function returns the last component of the path, handling both forward and back slashes on different platforms.
+- **Description**: Extracts the leaf path from a given file path string. This function returns the last component of the path, which is the file name or directory name if the path ends with a separator.
 - **Parameters**:
-  - `f` (std::string): The file path from which to extract the leaf path.
+  - `f` (std::string): The file path from which to extract the leaf path. This must be a valid string.
 - **Return Value**:
-  - `std::string`: The leaf path (last component) of the input path.
+  - `std::string`: The leaf path extracted from the input string. If the input is empty, an empty string is returned.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function assumes that the input string is valid.
 - **Example**:
 ```cpp
 std::string path = "/home/user/documents/file.txt";
 std::string leaf = leaf_path(path);
 // leaf will be "file.txt"
 ```
-- **Preconditions**: `f` must be a valid string representing a file path.
-- **Postconditions**: Returns the last component of the path.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(n) where n is the length of the input string.
-- **See Also**: `peer_conn()`
+- **Preconditions**:
+  - The input string must be valid and not null.
+- **Postconditions**:
+  - The returned string will contain the leaf path from the input.
+- **Thread Safety**:
+  - This function is thread-safe as it only reads from the input string.
+- **Complexity**:
+  - Time Complexity: O(n) where n is the length of the input string.
+  - Space Complexity: O(n) where n is the length of the input string.
+- **See Also**: `peer_conn`, `start_conn`
 
 ## peer_conn
 
 - **Signature**: `peer_conn(io_context& ios, int piece_count, int blocks_pp, tcp::endpoint const& ep, char const* ih, bool seed_, int churn_, bool corrupt_)`
-- **Description**: Constructor for the peer_conn class. Initializes a peer connection with the given parameters. This class manages a single peer connection in the torrent testing framework.
+- **Description**: Constructor for the `peer_conn` class. Initializes a peer connection with the given parameters. This constructor sets up the connection to a peer and initializes various state variables.
 - **Parameters**:
-  - `ios` (io_context&): The io_context for the connection.
-  - `piece_count` (int): The number of pieces in the torrent.
-  - `blocks_pp` (int): The number of blocks per piece.
-  - `ep` (tcp::endpoint const&): The endpoint to connect to.
-  - `ih` (char const*): The info hash of the torrent.
-  - `seed_` (bool): Whether this peer is a seed.
-  - `churn_` (int): The churn rate for the connection.
-  - `corrupt_` (bool): Whether to generate corrupt data.
+  - `ios` (io_context&): The I/O context for the connection. This must be a valid I/O context.
+  - `piece_count` (int): The number of pieces in the torrent. This should be a non-negative value.
+  - `blocks_pp` (int): The number of blocks per piece. This should be a non-negative value.
+  - `ep` (tcp::endpoint const&): The endpoint to connect to. This must be a valid endpoint.
+  - `ih` (char const*): The info hash of the torrent. This must be a valid pointer to a string.
+  - `seed_` (bool): Whether the peer is a seed. This should be `true` or `false`.
+  - `churn_` (int): The churn rate for the connection. This should be a non-negative value.
+  - `corrupt_` (bool): Whether to enable corruption for the connection. This should be `true` or `false`.
 - **Return Value**:
-  - None (constructor)
+  - `peer_conn`: An instance of the `peer_conn` class.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function assumes that all parameters are valid.
 - **Example**:
 ```cpp
 io_context ios;
-tcp::endpoint ep(address_v4::loopback(), 6881);
-peer_conn conn(ios, 100, 16, ep, "info_hash", true, 10, false);
+tcp::endpoint ep;
+char const* ih = "info_hash";
+peer_conn conn(ios, 100, 4, ep, ih, true, 0, false);
 ```
-- **Preconditions**: The io_context must be valid and the endpoint must be valid.
-- **Postconditions**: The peer_conn object is initialized with the given parameters.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `start_conn()`, `on_connect()`
+- **Preconditions**:
+  - The `ios` must be a valid I/O context.
+  - The `ep` must be a valid endpoint.
+  - The `ih` must be a valid pointer to a string.
+- **Postconditions**:
+  - The `peer_conn` instance will be initialized with the provided parameters.
+- **Thread Safety**:
+  - This function is thread-safe as it only initializes the object.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `start_conn`, `on_connect`
 
 ## start_conn
 
 - **Signature**: `void start_conn()`
-- **Description**: Initiates the connection process by binding to a local address and attempting to connect to the remote endpoint. This function is typically called after the peer_conn object is constructed.
-- **Parameters**: None
+- **Description**: Starts the connection process by attempting to open and bind the socket. This function is typically called to initiate a connection to a peer.
+- **Parameters**:
+  - None.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown, but the function may return if the connection fails.
+  - This function may throw an error if the socket cannot be opened or bound.
+  - The function uses `error_code` to report errors.
 - **Example**:
 ```cpp
-peer_conn conn(ios, 100, 16, ep, "info_hash", true, 10, false);
+peer_conn conn;
 conn.start_conn();
 ```
-- **Preconditions**: The peer_conn object must be properly constructed.
-- **Postconditions**: The connection attempt is initiated.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `on_connect()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+  - The `local_bind` must be set to `true` if binding is required.
+- **Postconditions**:
+  - The socket will be opened and bound if successful.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `on_connect`, `close`
 
 ## on_connect
 
 - **Signature**: `void on_connect(error_code const& ec)`
-- **Description**: Handles the connect callback. If the connection is successful, it sends the handshake message. This function is called when the connection attempt completes.
+- **Description**: Handles the completion of the connect operation. This function is called when the connection attempt has completed, either successfully or with an error.
 - **Parameters**:
-  - `ec` (error_code const&): The error code from the connection attempt.
+  - `ec` (error_code const&): The error code indicating the result of the connect operation. This should be a valid error code.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function may close the connection if there is an error.
 - **Example**:
 ```cpp
-// This function is called automatically by the system
-on_connect(error_code());
+peer_conn conn;
+conn.on_connect(error_code());
 ```
-- **Preconditions**: The connection attempt must have been initiated.
-- **Postconditions**: If the connection is successful, the handshake is sent.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `on_handshake()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+- **Postconditions**:
+  - If there is no error, the handshake process will begin.
+  - If there is an error, the connection will be closed.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `on_handshake`, `close`
 
 ## on_handshake
 
 - **Signature**: `void on_handshake(char* h, error_code const& ec, size_t)`
-- **Description**: Handles the handshake callback. It reads the handshake from the peer and initiates the next step in the connection process. This function is called when the handshake message is received.
+- **Description**: Handles the completion of the handshake process. This function is called when the handshake data has been sent and received.
 - **Parameters**:
-  - `h` (char*): The handshake message.
-  - `ec` (error_code const&): The error code from the handshake operation.
-  - `size_t`: Unused parameter.
+  - `h` (char*): The handshake data. This must be a valid pointer to the handshake data.
+  - `ec` (error_code const&): The error code indicating the result of the handshake. This should be a valid error code.
+  - `size_t`: The size of the handshake data. This is typically ignored.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function may close the connection if there is an error.
 - **Example**:
 ```cpp
-// This function is called automatically by the system
-on_handshake(handshake_message, error_code());
+peer_conn conn;
+conn.on_handshake(nullptr, error_code(), 0);
 ```
-- **Preconditions**: The handshake message must be valid.
-- **Postconditions**: The handshake is processed and the next step is initiated.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `on_handshake2()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+- **Postconditions**:
+  - If there is no error, the next message will be read.
+  - If there is an error, the connection will be closed.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `on_handshake2`, `write_have_all`
 
 ## on_handshake2
 
 - **Signature**: `void on_handshake2(error_code const& ec, size_t)`
-- **Description**: Handles the second handshake callback. It reads the complete handshake and sets up the connection based on the extension bits. This function is called when the full handshake is received.
+- **Description**: Handles the completion of reading the handshake data. This function is called when the handshake data has been read from the socket.
 - **Parameters**:
-  - `ec` (error_code const&): The error code from the handshake operation.
-  - `size_t`: Unused parameter.
+  - `ec` (error_code const&): The error code indicating the result of the handshake read. This should be a valid error code.
+  - `size_t`: The number of bytes read. This is typically ignored.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function may close the connection if there is an error.
 - **Example**:
 ```cpp
-// This function is called automatically by the system
-on_handshake2(error_code(), 0);
+peer_conn conn;
+conn.on_handshake2(error_code(), 0);
 ```
-- **Preconditions**: The handshake must be complete and valid.
-- **Postconditions**: The connection is set up and ready for communication.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `write_have_all()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+- **Postconditions**:
+  - If there is no error, the extension bits will be checked.
+  - If there is an error, the connection will be closed.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `write_have_all`, `on_sent`
 
 ## write_have_all
 
 - **Signature**: `void write_have_all()`
-- **Description**: Writes a have_all message and an unchoke message to the peer. This function is used to inform the peer that this client has all pieces and to unchoke the peer.
-- **Parameters**: None
+- **Description**: Sends a 'have_all' message to the peer to indicate that the client has all pieces of the torrent. This function is used when the client is a seed.
+- **Parameters**:
+  - None.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function may throw an error if the write operation fails.
+  - The function uses `error_code` to report errors.
 - **Example**:
 ```cpp
-peer_conn conn(ios, 100, 16, ep, "info_hash", true, 10, false);
+peer_conn conn;
 conn.write_have_all();
 ```
-- **Preconditions**: The connection must be established.
-- **Postconditions**: The have_all and unchoke messages are sent to the peer.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `write_have()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+  - The `fast_extension` must be `true` for this function to work correctly.
+- **Postconditions**:
+  - The 'have_all' message will be sent to the peer.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `on_sent`, `write_have`
 
 ## on_sent
 
 - **Signature**: `void on_sent(error_code const& ec, size_t, char const* msg)`
-- **Description**: Handles the send callback. If the message is sent successfully, it reads the next message from the peer. This function is called when a message is sent.
+- **Description**: Handles the completion of a write operation. This function is called when a message has been sent to the peer.
 - **Parameters**:
-  - `ec` (error_code const&): The error code from the send operation.
-  - `size_t`: Unused parameter.
-  - `msg` (char const*): The message that was sent.
+  - `ec` (error_code const&): The error code indicating the result of the write operation. This should be a valid error code.
+  - `size_t`: The number of bytes sent. This is typically ignored.
+  - `msg` (char const*): A message describing the write operation. This should be a valid pointer to a string.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function may close the connection if there is an error.
 - **Example**:
 ```cpp
-// This function is called automatically by the system
-on_sent(error_code(), 0, "have_all");
+peer_conn conn;
+conn.on_sent(error_code(), 0, "ERROR SENT MESSAGE");
 ```
-- **Preconditions**: The message must be valid.
-- **Postconditions**: If the send is successful, the next message is read.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `on_msg_length()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+- **Postconditions**:
+  - If there is no error, the next message will be read.
+  - If there is an error, the connection will be closed.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `on_message`, `on_msg_length`
 
 ## write_request
 
 - **Signature**: `bool write_request()`
-- **Description**: Writes a request message to the peer if the conditions are met. This function checks if the peer is not choked and if there are pieces to request.
-- **Parameters**: None
+- **Description**: Sends a request message to the peer to download a specific block. This function is used to request blocks from the peer.
+- **Parameters**:
+  - None.
 - **Return Value**:
-  - `bool`: True if a request was sent, false otherwise.
+  - `bool`: `true` if the request was sent successfully, `false` otherwise.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function may return `false` if the peer is choked or if there are no pieces left to request.
 - **Example**:
 ```cpp
-peer_conn conn(ios, 100, 16, ep, "info_hash", true, 10, false);
-if (conn.write_request()) {
-    // Request was sent
+peer_conn conn;
+bool success = conn.write_request();
+if (success) {
+    // Request was sent successfully
 }
 ```
-- **Preconditions**: The connection must be established and the peer must not be choked.
-- **Postconditions**: If a request was sent, the request message is sent to the peer.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `on_req_sent()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+  - The `current_piece` must be a valid piece index.
+- **Postconditions**:
+  - If the function returns `true`, a request message will be sent to the peer.
+  - If the function returns `false`, no request will be sent.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `on_req_sent`, `write_piece`
 
 ## on_req_sent
 
 - **Signature**: `void on_req_sent(char* m, error_code const& ec, size_t)`
-- **Description**: Handles the request send callback. It frees the request message and starts the download process if the send was successful. This function is called when a request message is sent.
+- **Description**: Handles the completion of a request message sent to the peer. This function is called when the request message has been sent.
 - **Parameters**:
-  - `m` (char*): The request message.
-  - `ec` (error_code const&): The error code from the send operation.
-  - `size_t`: Unused parameter.
+  - `m` (char*): The request message. This must be a valid pointer to the request message.
+  - `ec` (error_code const&): The error code indicating the result of the send operation. This should be a valid error code.
+  - `size_t`: The number of bytes sent. This is typically ignored.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function may close the connection if there is an error.
 - **Example**:
 ```cpp
-// This function is called automatically by the system
-on_req_sent(request_message, error_code(), 0);
+peer_conn conn;
+conn.on_req_sent(nullptr, error_code(), 0);
 ```
-- **Preconditions**: The request message must be valid.
-- **Postconditions**: If the send is successful, the download process starts.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `work_download()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+- **Postconditions**:
+  - If there is no error, the download process will continue.
+  - If there is an error, the connection will be closed.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `work_download`, `on_sent`
 
 ## close
 
 - **Signature**: `void close(char const* msg, error_code const& ec)`
-- **Description**: Closes the connection and prints a message. This function is called when the connection is closed, either normally or due to an error.
+- **Description**: Closes the connection and logs the closure message. This function is called when the connection should be closed, either due to an error or completion.
 - **Parameters**:
-  - `msg` (char const*): The message to print.
-  - `ec` (error_code const&): The error code from the connection closure.
+  - `msg` (char const*): A message describing the reason for closing the connection. This should be a valid pointer to a string.
+  - `ec` (error_code const&): The error code indicating the reason for closure. This should be a valid error code.
 - **Return Value**:
-  - void: This function does not return a value.
+  - `void`: This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - This function does not throw exceptions.
+  - The function may log the closure message and close the connection.
 - **Example**:
 ```cpp
-peer_conn conn(ios, 100, 16, ep, "info_hash", true, 10, false);
-conn.close("Connection closed", error_code());
+peer_conn conn;
+conn.close("CONNECTION CLOSED", error_code());
 ```
-- **Preconditions**: The connection must be established.
-- **Postconditions**: The connection is closed and a message is printed.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `main()`
+- **Preconditions**:
+  - The `conn` must be a valid `peer_conn` instance.
+- **Postconditions**:
+  - The connection will be closed and the closure message will be logged.
+- **Thread Safety**:
+  - This function is thread-safe as it only modifies the internal state of the `peer_conn` instance.
+- **Complexity**:
+  - Time Complexity: O(1).
+  - Space Complexity: O(1).
+- **See Also**: `print_usage`, `main`
 
 ## work_download
 
 - **Signature**: `void work_download()`
-- **Description**: Processes the download by sending requests and handling received data. This function is called when data needs to be downloaded.
-- **Parameters**: None
-- **Return Value**:
-  - void: This function does not return a value.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-peer_conn conn(ios, 100, 16, ep, "info_hash", true, 10, false);
-conn.work_download();
-```
-- **Preconditions**: The connection must be established.
-- **Postconditions**: Data is downloaded and processed.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(n) where n is the amount of data to download.
-- **See Also**: `on_message()`
-
-## on_msg_length
-
-- **Signature**: `void on_msg_length(error_code const& ec, size_t)`
-- **Description**: Handles the message length callback. It reads the message length and initiates the next step in the message processing. This function is called when the message length is received.
+- **Description**: Performs the download work by sending requests and processing received data. This function is called periodically to continue the download process.
 - **Parameters**:
-  - `ec` (error_code const&): The error code from the message length operation.
-  - `size_t`: Unused parameter.
+  - None.
 - **Return Value**:
-  - void: This function does not return a value.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// This function is called automatically by the system
-on_msg_length(error_code(), 0);
-```
-- **Preconditions**: The message length must be valid.
-- **Postconditions**: The message length is processed and the next step is initiated.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `on_message()`
-
-## on_message
-
-- **Signature**: `void on_message(error_code const& ec, size_t bytes_transferred)`
-- **Description**: Handles the message callback. It processes the received message and initiates the next step in the message processing. This function is called when a message is received.
-- **Parameters**:
-  - `ec` (error_code const&): The error code from the message operation.
-  - `bytes_transferred` (size_t): The number of bytes transferred.
-- **Return Value**:
-  - void: This function does not return a value.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// This function is called automatically by the system
-on_message(error_code(), 1024);
-```
-- **Preconditions**: The message must be valid.
-- **Postconditions**: The message is processed and the next step is initiated.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(1)
-- **See Also**: `verify_piece()`
-
-## verify_piece
-
-- **Signature**: `bool verify_piece(piece_index_t const piece, int start, char const* ptr, int size)`
-- **Description**: Verifies that a piece of data matches the expected pattern. This function compares the received data with the expected pattern generated by generate_block.
-- **Parameters**:
-  - `piece` (piece_index_t const): The piece index to verify.
-  - `start` (int): The start offset of the data to verify.
-  - `ptr` (char const*): The pointer to the data to verify.
-  - `size` (int): The size of the data to verify.
-- **Return Value**:
-  - `bool`: True if the piece matches the expected pattern, false otherwise.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-bool valid = verify_piece(42, 0, received_data, 1024);
-if (valid) {
-    // Data is valid
-}
-```
-- **Preconditions**: The data must be valid and the size must be correct.
-- **Postconditions**: Returns true if the data matches the expected pattern.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(n) where n is the size of the data to verify.
-- **See Also**: `generate_block()`
-
-## write_piece
-
-- **Signature**: `void write_piece(piece_index_t const piece, int start, int length)`
-- **Description**: Writes a piece of data to the write buffer. This function generates the data using generate_block and optionally corrupts it. This function is used to generate test data for torrent verification.
-- **Parameters**:
-  - `piece` (piece_index_t const): The piece index to write.
-  - `start` (int): The start offset of the piece.
-  - `length` (int): The length of the piece to write.
-- **Return Value**:
-  - void: This function does not return a value.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-peer_conn conn(ios, 100, 16, ep, "info_hash", true, 10, false
+  - `void`: This function does not

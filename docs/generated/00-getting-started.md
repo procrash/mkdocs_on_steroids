@@ -2,59 +2,80 @@
 
 ## Main Purpose
 
-libtorrent is a high-performance C++ library designed to implement BitTorrent protocol clients. It enables developers to build applications that can download and share files using peer-to-peer networking. The library solves challenges related to efficient file sharing, network resilience, and scalability in distributed systems.
+libtorrent is a powerful C++ library designed to implement BitTorrent protocol clients. It enables developers to build efficient, cross-platform torrent applications that can download and share files using peer-to-peer networking. The project solves the challenges of reliable file sharing across networks by providing:
+
+- High-performance torrent downloading
+- Bandwidth management
+- Peer discovery and connection handling
+- File integrity verification through hashing
+
+This library powers many popular torrent clients and is widely used in both open-source and commercial applications.
 
 ## Core Architecture
 
-The project follows a modular design with these key components:
+The libtorrent library consists of several key components:
 
-- **Core Library** (`libtorrent/`) - Implements the BitTorrent protocol specifications
-- **Bindings** (`bindings/`) - Provides interfaces for different languages (C, Python)
-- **Examples** (`examples/`) - Demonstrates practical usage patterns
-- **Utilities** (`src/`) - Contains helper functions and data structures
-
-## Entry Points for New Developers
-
-Start your exploration with these resources:
-
-- **Beginner-friendly files**: 
-  - `libtorrent.h` (main header file)
-  - `bt-get.cpp` (simple example client)
-  - `examples/client_test.cpp` (basic usage pattern)
-
-- **Key classes to understand**:
-  - `session` - Main entry point for creating torrent sessions
-  - `torrent_handle` - Represents a single torrent download
-  - `alert` - Event notification system
-
-Common workflow:
-1. Create a session with configuration settings
-2. Add torrents using magnet links or .torrent files
-3. Process alerts to monitor download progress
-4. Manage resources and shutdown gracefully
-
-## Technology Stack
-
-- **C++ Standard**: C++17 (with some C++14 features)
-- **Key Libraries**:
-  - Boost (for threading, filesystem, etc.)
-  - OpenSSL (for encryption support)
-  - zlib (for compression)
-- **Build System**: CMake
-- **Testing Framework**: Google Test
+- **Core Library**: The main implementation of BitTorrent protocol (in `libtorrent/` directory)
+- **Bindings**: Language interfaces for C and Python
+- **Examples**: Practical usage demonstrations
+- **Utilities**: Helper functions and data structures
 
 ```mermaid
 graph TD
     A[Application] --> B[libtorrent Core]
     B --> C[Network Layer]
     B --> D[File System]
-    B --> E[Protocol Handler]
-    C --> F[TCP/UDP Sockets]
-    D --> G[Disk Cache]
-    E --> H[BitTorrent Protocol]
+    B --> E[Peer Management]
+    B --> F[Encryption]
+    G[Python Bindings] --> B
+    H[C Bindings] --> B
 ```
 
-For more details, explore:
-- [Main header file](libtorrent/libtorrent.h)
-- [Python bindings](libtorrent/bindings/python/src/)
-- [Example applications](examples/)
+## Getting Started
+
+### Where to Begin
+
+New developers should start with these key files:
+
+1. **`libtorrent.h`** - The main header file defining the public API
+2. **`library.cpp`** - C bindings implementation
+3. **`bt-get.cpp`** - Simple example of downloading a torrent
+
+### Important Files to Understand
+
+- `session.hpp` and `session.cpp` - Main session management class
+- `torrent_handle.hpp` and `torrent_handle.cpp` - Handle for individual torrents
+- `alert.hpp` and `alert.cpp` - Event notification system
+
+### Common Workflows
+
+```cpp
+#include "libtorrent.h"
+
+// Create a torrent session
+lt::session ses;
+
+// Add a torrent to download
+lt::add_torrent_params params;
+params.ti = lt::create_torrent();
+params.save_path = "./downloads";
+ses.add_torrent(params);
+
+// Process alerts and events
+while (true) {
+    lt::alert const* a = ses.wait_for_alert(lt::seconds(5));
+    if (a) {
+        // Handle alert
+        std::cout << a->msg() << std::endl;
+    }
+}
+```
+
+## Technology Stack
+
+- **C++ Standard**: C++14 (with some C++17 features)
+- **Key Libraries**: Boost, OpenSSL, zlib
+- **Build System**: CMake
+- **Testing Framework**: Google Test
+
+For more details, see the [main header file](libtorrent/libtorrent.h) and [example code](examples/bt-get.cpp).

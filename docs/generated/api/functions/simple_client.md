@@ -1,152 +1,182 @@
-# API Documentation
+# API Documentation for `main` function
 
 ## main
+**Signature**: `int main(int argc, char* argv[])`
 
-- **Signature**: `int main(int argc, char* argv[])`
-- **Description**: The main function of a simple torrent client example that demonstrates basic libtorrent functionality. It initializes a libtorrent session, adds a torrent for download, and waits for user input to stop the client. The function processes command-line arguments to specify the torrent file to download.
-- **Parameters**:
-  - `argc` (int): The number of command-line arguments passed to the program. Must be 2 for proper execution (program name + torrent file).
-  - `argv` (char*[]): Array of command-line argument strings. `argv[1]` should contain the path to the torrent file.
-- **Return Value**:
-  - `0`: Success (program executed normally and completed)
-  - `1`: Failure (incorrect usage or initialization error)
-- **Exceptions/Errors**:
-  - Throws `std::exception` if torrent file cannot be opened or parsed
-  - Throws `std::bad_alloc` if memory allocation fails
-  - Throws `std::runtime_error` if libtorrent initialization fails
-- **Example**:
+**Description**: The `main` function is the entry point of the simple torrent client application. It initializes the libtorrent session, parses command-line arguments, adds a torrent for download, and starts the client. The function waits for user input to stop the client and handles proper cleanup.
+
+**Parameters**:
+- `argc` (int): The number of command-line arguments. Must be exactly 2 for the application to function correctly.
+- `argv` (char*[]): Array of command-line argument strings. The second argument must be the path to a valid torrent file.
+
+**Return Value**:
+- `0`: Indicates successful execution
+- `1`: Indicates an error occurred (typically due to incorrect command-line arguments)
+
+**Exceptions/Errors**:
+- Throws no exceptions directly, but the program may terminate if the torrent file cannot be parsed or if the libtorrent session cannot be created
+- The function returns 1 if:
+  - `argc != 2` (incorrect number of arguments)
+  - The torrent file cannot be loaded
+  - The libtorrent session cannot be created
+
+**Example**:
 ```cpp
-// Basic usage
 int main(int argc, char* argv[]) {
-    return main(argc, argv);
+    if (argc != 2) {
+        std::cerr << "usage: ./simple_client torrent-file\n"
+            "to stop the client, press return.\n";
+        return 1;
+    }
+    
+    lt::session s;
+    lt::add_torrent_params p;
+    p.save_path = ".";
+    p.ti = std::make_shared<lt::torrent_info>(argv[1]);
+    s.add_torrent(p);
+    
+    // Main loop
+    std::string line;
+    std::getline(std::cin, line);
+    return 0;
 }
 ```
-- **Preconditions**:
-  - The program must be called with exactly two arguments
-  - The second argument must be a valid torrent file path
-  - The torrent file must be accessible and readable
-- **Postconditions**:
-  - A libtorrent session is created and running
-  - The specified torrent is added to the session
-  - The client will download the torrent until interrupted
-  - The program exits with a success code upon user input
-- **Thread Safety**: Not thread-safe. The function uses global state from the libtorrent library and should be called from the main thread.
-- **Complexity**: O(1) time complexity for initialization, O(n) for torrent parsing where n is the size of the torrent file.
+
+**Preconditions**:
+- The program must be run with exactly one command-line argument (the torrent file path)
+- The torrent file must exist and be valid
+- The libtorrent library must be properly linked
+- The application must have write permissions to the current directory
+
+**Postconditions**:
+- A libtorrent session is created and running
+- The specified torrent is added to the session
+- The client is actively downloading the torrent
+- The program waits for user input to terminate
+- All resources are properly cleaned up upon exit
+
+**Thread Safety**:
+- The function is not thread-safe as it creates and uses a single libtorrent session
+- The function should be called from the main thread
+- The function is not designed to be called multiple times
+
+**Complexity**:
+- Time Complexity: O(1) for basic execution, but the actual time depends on the torrent file size and network conditions
+- Space Complexity: O(1) for the function itself, but the library may use significant memory for torrent data
+
+**See Also**:
+- `lt::session`: The main session class for managing torrents
+- `lt::add_torrent_params`: Parameters for adding a torrent to the session
+- `lt::torrent_info`: Information about a torrent file
 
 ## Usage Examples
 
 ### Basic Usage
-```cpp
-// Compile and run: g++ -o simple_client simple_client.cpp -ltorrent
-// Run: ./simple_client /path/to/file.torrent
-int main(int argc, char* argv[]) {
-    return main(argc, argv);
-}
+```bash
+# Download a torrent file
+./simple_client /path/to/my_torrent.torrent
+
+# The client will start downloading and wait for user input to stop
 ```
 
 ### Error Handling
 ```cpp
-#include <iostream>
-#include <stdexcept>
-
-int main(int argc, char* argv[]) {
-    try {
-        if (argc != 2) {
-            std::cerr << "usage: ./simple_client torrent-file\n"
-                      << "to stop the client, press return.\n";
-            return 1;
-        }
-        
-        lt::session s;
-        lt::add_torrent_params p;
-        p.save_path = ".";
-        p.ti = std::make_shared<lt::torrent_info>(argv[1]);
-        s.add_torrent(p);
-        
-        std::cout << "Downloading torrent. Press Enter to stop..." << std::endl;
-        std::cin.get();
-        
-        return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+int main(int argc, char* argv[]) try {
+    if (argc != 2) {
+        std::cerr << "usage: ./simple_client torrent-file\n"
+            "to stop the client, press return.\n";
         return 1;
     }
+    
+    // Attempt to create session and add torrent
+    lt::session s;
+    lt::add_torrent_params p;
+    p.save_path = ".";
+    
+    try {
+        p.ti = std::make_shared<lt::torrent_info>(argv[1]);
+        s.add_torrent(p);
+    } catch (const lt::system_error& e) {
+        std::cerr << "Error loading torrent file: " << e.what() << "\n";
+        return 1;
+    }
+    
+    std::string line;
+    std::getline(std::cin, line);
+    return 0;
+} catch (const std::exception& e) {
+    std::cerr << "Fatal error: " << e.what() << "\n";
+    return 1;
 }
 ```
 
 ### Edge Cases
 ```cpp
-#include <iostream>
-#include <fstream>
-#include <string>
-
-int main(int argc, char* argv[]) {
-    // Case 1: Missing torrent file
+int main(int argc, char* argv[]) try {
+    // Handle missing torrent file
     if (argc != 2) {
-        std::cerr << "Error: Missing torrent file argument" << std::endl;
+        std::cerr << "usage: ./simple_client torrent-file\n";
+        std::cerr << "Error: Missing torrent file argument\n";
         return 1;
     }
     
-    // Case 2: Invalid torrent file
-    try {
-        std::ifstream file(argv[1]);
-        if (!file.is_open()) {
-            std::cerr << "Error: Cannot open torrent file: " << argv[1] << std::endl;
-            return 1;
-        }
-    } catch (const std::exception&) {
-        std::cerr << "Error: Invalid torrent file path" << std::endl;
+    // Check if file exists
+    std::ifstream file(argv[1]);
+    if (!file.is_open()) {
+        std::cerr << "Error: Cannot open torrent file: " << argv[1] << "\n";
         return 1;
     }
     
-    // Case 3: Empty torrent file
-    if (std::ifstream(argv[1]).peek() == std::ifstream::traits_type::eof()) {
-        std::cerr << "Error: Torrent file is empty" << std::endl;
-        return 1;
-    }
+    // Use a more robust approach with error checking
+    lt::session s;
+    lt::add_torrent_params p;
+    p.save_path = ".";
     
     try {
-        lt::session s;
-        lt::add_torrent_params p;
-        p.save_path = ".";
         p.ti = std::make_shared<lt::torrent_info>(argv[1]);
         s.add_torrent(p);
-        
-        std::cout << "Downloading torrent. Press Enter to stop..." << std::endl;
-        std::cin.get();
-        
-        return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+    } catch (const lt::invalid_torrent_file& e) {
+        std::cerr << "Invalid torrent file: " << e.what() << "\n";
+        return 1;
+    } catch (const lt::system_error& e) {
+        std::cerr << "System error: " << e.what() << "\n";
         return 1;
     }
+    
+    std::cout << "Downloading torrent. Press Enter to stop.\n";
+    std::string line;
+    std::getline(std::cin, line);
+    return 0;
+} catch (const std::exception& e) {
+    std::cerr << "Uncaught exception: " << e.what() << "\n";
+    return 1;
 }
 ```
 
 ## Best Practices
 
 1. **Input Validation**: Always validate command-line arguments before processing them
-2. **Error Handling**: Wrap libtorrent calls in try-catch blocks to handle exceptions
-3. **Resource Management**: Ensure proper cleanup of libtorrent resources when the program exits
-4. **Security**: Validate that the torrent file is from a trusted source to prevent malicious content
-5. **Performance**: Use appropriate save paths and avoid unnecessary file operations
-6. **Thread Safety**: Run libtorrent operations from a single thread to avoid race conditions
+2. **Error Handling**: Use try-catch blocks to handle potential exceptions from libtorrent
+3. **Resource Management**: Ensure proper cleanup of resources when the program exits
+4. **User Feedback**: Provide clear error messages and usage instructions
+5. **Security**: Validate that the torrent file is from a trusted source
+6. **Performance**: Consider using `std::string_view` for read-only string parameters
+7. **Modern C++**: Use `[[nodiscard]]` for functions that return important values
 
 ## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
 **Function**: `main`
-**Issue**: Incomplete code - the `s.add_torrent` call is cut off and missing a semicolon
+**Issue**: The function is incomplete and will cause a compilation error
 **Severity**: Critical
-**Impact**: Code won't compile or will have undefined behavior
-**Fix**: Complete the function and add proper error handling:
+**Impact**: The code will not compile
+**Fix**: Complete the function by adding the missing code to handle the session and wait for user input:
 ```cpp
-int main(int argc, char* argv[]) try
-{
+int main(int argc, char* argv[]) try {
     if (argc != 2) {
         std::cerr << "usage: ./simple_client torrent-file\n"
-            << "to stop the client, press return.\n";
+            "to stop the client, press return.\n";
         return 1;
     }
 
@@ -155,65 +185,44 @@ int main(int argc, char* argv[]) try
     p.save_path = ".";
     p.ti = std::make_shared<lt::torrent_info>(argv[1]);
     s.add_torrent(p);
-    
-    std::cout << "Downloading torrent. Press Enter to stop..." << std::endl;
-    std::cin.get();
-    
+
+    std::string line;
+    std::getline(std::cin, line);
     return 0;
 } catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+    std::cerr << "Exception: " << e.what() << "\n";
     return 1;
 }
 ```
 
 **Function**: `main`
-**Issue**: No validation of the torrent file path before attempting to load it
-**Severity**: High
-**Impact**: Program may crash or behave unexpectedly with invalid file paths
-**Fix**: Add file existence and accessibility checks:
+**Issue**: No proper error handling for file opening
+**Severity**: Medium
+**Impact**: The program might crash or behave unexpectedly if the torrent file cannot be read
+**Fix**: Add file existence check before attempting to load it:
 ```cpp
-#include <filesystem>
-#include <fstream>
+if (argc != 2) {
+    std::cerr << "usage: ./simple_client torrent-file\n"
+        "to stop the client, press return.\n";
+    return 1;
+}
 
-int main(int argc, char* argv[]) try
-{
-    if (argc != 2) {
-        std::cerr << "usage: ./simple_client torrent-file\n"
-            << "to stop the client, press return.\n";
-        return 1;
-    }
+std::ifstream file(argv[1]);
+if (!file.is_open()) {
+    std::cerr << "Error: Cannot open torrent file: " << argv[1] << "\n";
+    return 1;
+}
+```
 
-    // Validate file exists and is readable
-    std::filesystem::path torrent_path(argv[1]);
-    if (!std::filesystem::exists(torrent_path)) {
-        std::cerr << "Error: Torrent file does not exist: " << argv[1] << std::endl;
-        return 1;
-    }
-    
-    if (!std::filesystem::is_regular_file(torrent_path)) {
-        std::cerr << "Error: Torrent file is not a regular file: " << argv[1] << std::endl;
-        return 1;
-    }
-    
-    // Check if we can read the file
-    std::ifstream file(argv[1]);
-    if (!file.is_open()) {
-        std::cerr << "Error: Cannot open torrent file: " << argv[1] << std::endl;
-        return 1;
-    }
-    
-    lt::session s;
-    lt::add_torrent_params p;
-    p.save_path = ".";
-    p.ti = std::make_shared<lt::torrent_info>(argv[1]);
-    s.add_torrent(p);
-    
-    std::cout << "Downloading torrent. Press Enter to stop..." << std::endl;
-    std::cin.get();
-    
-    return 0;
-} catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+**Function**: `main`
+**Issue**: The torrent might not be properly added to the session
+**Severity**: Medium
+**Impact**: The torrent might not download even if the file is valid
+**Fix**: Check the return value of `add_torrent` and handle errors:
+```cpp
+auto tor = s.add_torrent(p);
+if (!tor) {
+    std::cerr << "Failed to add torrent to session\n";
     return 1;
 }
 ```
@@ -221,116 +230,65 @@ int main(int argc, char* argv[]) try
 ### Modernization Opportunities
 
 **Function**: `main`
-**Opportunity**: Use C++17 features for better code quality
-**Suggestion**: Use std::filesystem for path operations and structured bindings:
+**Opportunity**: Use `[[nodiscard]]` to indicate that the function's return value is important
+**Suggestion**: 
 ```cpp
-#include <filesystem>
-#include <iostream>
-#include <string>
+[[nodiscard]] int main(int argc, char* argv[])
+```
 
-[[nodiscard]] int main(int argc, char* argv[]) try
-{
+**Function**: `main`
+**Opportunity**: Use `std::string_view` for the torrent file path
+**Suggestion**:
+```cpp
+[[nodiscard]] int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cerr << "usage: ./simple_client torrent-file\n"
-            << "to stop the client, press return.\n";
-        return 1;
-    }
-
-    std::filesystem::path torrent_path{argv[1]};
-    if (!std::filesystem::exists(torrent_path)) {
-        std::cerr << "Error: Torrent file does not exist: " << torrent_path << std::endl;
+            "to stop the client, press return.\n";
         return 1;
     }
 
     lt::session s;
     lt::add_torrent_params p;
     p.save_path = ".";
-    p.ti = std::make_shared<lt::torrent_info>(argv[1]);
-    s.add_torrent(p);
 
-    std::cout << "Downloading torrent. Press Enter to stop..." << std::endl;
-    std::cin.get();
-
+    try {
+        p.ti = std::make_shared<lt::torrent_info>(std::string_view(argv[1]));
+        s.add_torrent(p);
+    } catch (const lt::system_error& e) {
+        std::cerr << "Error loading torrent file: " << e.what() << "\n";
+        return 1;
+    }
+    
+    // Main loop
+    std::string line;
+    std::getline(std::cin, line);
     return 0;
-} catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
 }
 ```
 
 ### Refactoring Suggestions
 
 **Function**: `main`
-**Suggestion**: Split into smaller functions for better modularity
-**Rationale**: The function currently handles initialization, error handling, and user interaction. This makes it hard to test and maintain.
-**Proposed Refactoring**:
-```cpp
-// Extract torrent processing to a separate function
-bool processTorrent(const std::string& torrent_file) {
-    try {
-        lt::session s;
-        lt::add_torrent_params p;
-        p.save_path = ".";
-        p.ti = std::make_shared<lt::torrent_info>(torrent_file);
-        s.add_torrent(p);
-        
-        std::cout << "Downloading torrent. Press Enter to stop..." << std::endl;
-        std::cin.get();
-        
-        return true;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return false;
-    }
-}
-
-// Extract argument validation to a separate function
-bool validateArguments(int argc, char* argv[], std::string& torrent_file) {
-    if (argc != 2) {
-        std::cerr << "usage: ./simple_client torrent-file\n"
-            << "to stop the client, press return.\n";
-        return false;
-    }
-    
-    torrent_file = argv[1];
-    return true;
-}
-```
+**Suggestion**: Split into smaller functions for better maintainability
+**Suggestion**: 
+- Create `parseCommandLine()` function to handle argument parsing
+- Create `initializeSession()` function to set up the libtorrent session
+- Create `addTorrent()` function to handle torrent addition
+- Create `runMainLoop()` function to handle the main application loop
 
 ### Performance Optimizations
 
 **Function**: `main`
-**Optimization**: Use move semantics for the torrent_info object
-**Suggestion**: The torrent_info object could be moved rather than copied:
+**Opportunity**: Use move semantics for the torrent info object
+**Suggestion**: 
 ```cpp
-// Instead of copying the torrent_info, move it
-p.ti = std::make_shared<lt::torrent_info>(std::move(torrent_file_path));
+p.ti = std::make_shared<lt::torrent_info>(std::move(std::string(argv[1])));
 ```
 
 **Function**: `main`
-**Optimization**: Use std::string_view for read-only string parameters
-**Suggestion**: Change the function signature to use const std::string_view:
+**Opportunity**: Use `std::string_view` for command-line arguments
+**Suggestion**:
 ```cpp
-int main(int argc, char* argv[]) try
-{
-    if (argc != 2) {
-        std::cerr << "usage: ./simple_client torrent-file\n"
-            << "to stop the client, press return.\n";
-        return 1;
-    }
-
-    lt::session s;
-    lt::add_torrent_params p;
-    p.save_path = ".";
-    p.ti = std::make_shared<lt::torrent_info>(argv[1]);
-    s.add_torrent(p);
-    
-    std::cout << "Downloading torrent. Press Enter to stop..." << std::endl;
-    std::cin.get();
-    
-    return 0;
-} catch (const std::exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
-}
+auto torrent_file = std::string_view(argv[1]);
+p.ti = std::make_shared<lt::torrent_info>(torrent_file);
 ```

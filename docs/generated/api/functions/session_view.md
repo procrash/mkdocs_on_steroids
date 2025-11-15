@@ -1,207 +1,207 @@
-```markdown
-# Session View API Documentation
+# session_view API Documentation
 
-## session_view
+## Function: session_view
 
 - **Signature**: `session_view::session_view()`
-- **Description**: Constructs a new `session_view` object, initializing internal state. This constructor queries the list of available session statistics metrics from libtorrent, initializes two counter arrays with the same size as the metrics list, and sets the initial position to 0. The first counter array (`m_cnt[0]`) is initialized to zeros, while the second (`m_cnt[1]`) is also initialized to zeros.
+- **Description**: Default constructor for the session_view class. Initializes the view by retrieving the list of statistics metrics from the libtorrent session and initializing two counters (current and previous) with zeros. The counters are initialized to the same size as the number of statistics metrics.
 - **Parameters**: None
 - **Return Value**: None (constructor)
-- **Exceptions/Errors**: None thrown
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
 // view is now ready for use
 ```
 - **Preconditions**: None
-- **Postconditions**: The `session_view` object is in a valid state with initialized metrics counters and position
-- **Thread Safety**: Thread-safe (constructor only)
-- **Complexity**: O(n) where n is the number of metrics returned by `lt::session_stats_metrics()`
+- **Postconditions**: The session_view object is initialized with empty counters and metrics.
+- **Thread Safety**: Not thread-safe (constructor may not be called from multiple threads simultaneously)
+- **Complexity**: O(n) where n is the number of statistics metrics
 - **See Also**: `update_counters()`, `render()`
 
-## set_pos
+## Function: set_pos
 
 - **Signature**: `void session_view::set_pos(int pos)`
-- **Description**: Sets the vertical position of the session view on the display. This position is used by the rendering system to determine where to draw the view.
+- **Description**: Sets the vertical position (y-coordinate) of the session view in the display area. This function is typically used to position the view in a terminal or GUI interface.
 - **Parameters**:
-  - `pos` (int): The new vertical position. Must be a non-negative integer representing the y-coordinate on the display.
+  - `pos` (int): The vertical position to set. Valid values are typically non-negative integers representing screen coordinates.
 - **Return Value**: None
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
-view.set_pos(10); // Set position to y=10
+view.set_pos(5); // Position the view at y=5
 ```
 - **Preconditions**: None
-- **Postconditions**: The `m_position` member variable is set to the specified value
-- **Thread Safety**: Not thread-safe (modifies mutable state)
+- **Postconditions**: The internal position is set to the specified value.
+- **Thread Safety**: Not thread-safe (modifies internal state)
 - **Complexity**: O(1)
 - **See Also**: `pos()`, `set_width()`
 
-## set_width
+## Function: set_width
 
 - **Signature**: `void session_view::set_width(int width)`
-- **Description**: Sets the width of the session view on the display. This width is used by the rendering system to determine how much horizontal space the view occupies.
+- **Description**: Sets the width of the session view in the display area. This function is typically used to control the horizontal size of the view in a terminal or GUI interface.
 - **Parameters**:
-  - `width` (int): The new width. Must be a positive integer representing the number of characters or pixels.
+  - `width` (int): The width to set. Valid values are typically positive integers representing screen width.
 - **Return Value**: None
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
-view.set_width(50); // Set width to 50 units
+view.set_width(80); // Set the view width to 80 characters
 ```
 - **Preconditions**: None
-- **Postconditions**: The `m_width` member variable is set to the specified value
-- **Thread Safety**: Not thread-safe (modifies mutable state)
+- **Postconditions**: The internal width is set to the specified value.
+- **Thread Safety**: Not thread-safe (modifies internal state)
 - **Complexity**: O(1)
-- **See Also**: `pos()`, `height()`
+- **See Also**: `pos()`, `set_pos()`
 
-## pos
+## Function: pos
 
 - **Signature**: `int session_view::pos() const`
-- **Description**: Returns the current vertical position of the session view on the display. This is the y-coordinate where the view should be rendered.
+- **Description**: Returns the current vertical position (y-coordinate) of the session view in the display area.
 - **Parameters**: None
 - **Return Value**: 
-  - `int`: The current vertical position (y-coordinate) of the view
+  - `int`: The current vertical position of the view.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
-view.set_pos(15);
-int current_pos = view.pos(); // Returns 15
+view.set_pos(10);
+int current_pos = view.pos(); // Returns 10
 ```
-- **Preconditions**: None
-- **Postconditions**: None (const function)
-- **Thread Safety**: Thread-safe (const function)
+- **Preconditions**: The view must be initialized
+- **Postconditions**: The returned value represents the current position
+- **Thread Safety**: Thread-safe (const method)
 - **Complexity**: O(1)
 - **See Also**: `set_pos()`, `height()`
 
-## height
+## Function: height
 
 - **Signature**: `int session_view::height() const`
-- **Description**: Returns the height of the session view. This function always returns 3, indicating that the session view occupies 3 lines of display space.
+- **Description**: Returns the height of the session view in the display area. This function returns a constant value of 3, indicating the view occupies 3 lines of text.
 - **Parameters**: None
 - **Return Value**: 
-  - `int`: Always returns 3
+  - `int`: Always returns 3, representing the fixed height of the view.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
-int h = view.height(); // Returns 3
+int view_height = view.height(); // Returns 3
 ```
-- **Preconditions**: None
-- **Postconditions**: None (const function)
-- **Thread Safety**: Thread-safe (const function)
+- **Preconditions**: The view must be initialized
+- **Postconditions**: Always returns 3
+- **Thread Safety**: Thread-safe (const method)
 - **Complexity**: O(1)
-- **See Also**: `pos()`, `set_width()`
+- **See Also**: `pos()`, `render()`
 
-## value
+## Function: value
 
 - **Signature**: `std::int64_t session_view::value(int idx) const`
-- **Description**: Returns the current value of the session metric at the specified index. This function accesses the first counter array (`m_cnt[0]`) which stores the most recent statistics.
+- **Description**: Returns the current value of the statistics metric at the specified index. This function is used to retrieve the most recent counter value for a specific metric.
 - **Parameters**:
-  - `idx` (int): The index of the metric to retrieve. Must be a non-negative integer.
+  - `idx` (int): The index of the statistics metric to retrieve. Valid values are 0 to (number of metrics - 1).
 - **Return Value**: 
-  - `std::int64_t`: The value of the metric at the specified index, or 0 if the index is negative.
+  - `std::int64_t`: The current value of the metric at the specified index, or 0 if the index is invalid.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
-std::int64_t download_rate = view.value(0); // Assuming index 0 is download rate
+// Assuming idx is a valid index
+std::int64_t current_value = view.value(idx);
 ```
-- **Preconditions**: The index must be valid (less than the number of metrics). This function does not validate the index against the actual metrics count.
-- **Postconditions**: None (const function)
-- **Thread Safety**: Thread-safe (const function)
+- **Preconditions**: The view must be initialized, and idx must be a valid index
+- **Postconditions**: Returns the current value at the specified index
+- **Thread Safety**: Thread-safe (const method)
 - **Complexity**: O(1)
 - **See Also**: `prev_value()`, `update_counters()`
 
-## prev_value
+## Function: prev_value
 
 - **Signature**: `std::int64_t session_view::prev_value(int idx) const`
-- **Description**: Returns the previous value of the session metric at the specified index. This function accesses the second counter array (`m_cnt[1]`) which stores the previous statistics snapshot.
+- **Description**: Returns the previous value of the statistics metric at the specified index. This function is used to retrieve the counter value from the previous measurement cycle, which is useful for calculating rates.
 - **Parameters**:
-  - `idx` (int): The index of the metric to retrieve. Must be a non-negative integer.
+  - `idx` (int): The index of the statistics metric to retrieve. Valid values are 0 to (number of metrics - 1).
 - **Return Value**: 
-  - `std::int64_t`: The previous value of the metric at the specified index, or 0 if the index is negative.
+  - `std::int64_t`: The previous value of the metric at the specified index, or 0 if the index is invalid.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
-std::int64_t previous_download = view.prev_value(0); // Assuming index 0 is download rate
+// Assuming idx is a valid index
+std::int64_t previous_value = view.prev_value(idx);
 ```
-- **Preconditions**: The index must be valid (less than the number of metrics). This function does not validate the index against the actual metrics count.
-- **Postconditions**: None (const function)
-- **Thread Safety**: Thread-safe (const function)
+- **Preconditions**: The view must be initialized, and idx must be a valid index
+- **Postconditions**: Returns the previous value at the specified index
+- **Thread Safety**: Thread-safe (const method)
 - **Complexity**: O(1)
 - **See Also**: `value()`, `update_counters()`
 
-## render
+## Function: render
 
 - **Signature**: `void session_view::render()`
-- **Description**: Renders the session view to the display. This function calculates the download rate by comparing the current and previous values of the receive metric, calculates the time difference, and formats the data into a string that is then sent to the display.
+- **Description**: Renders the session statistics to the display. This function calculates the download rate by comparing the current and previous counter values, and then formats the output. The function uses a temporary string buffer to build the display output.
 - **Parameters**: None
-- **Return Value**: None
-- **Exceptions/Errors**: Potential buffer overflow in `str` array if the formatted string exceeds 1024 characters
-- **Example**:
-```cpp
-session_view view;
-view.render(); // Renders the session view to the display
-```
-- **Preconditions**: The `m_cnt` arrays must have been populated via `update_counters()` prior to calling this function
-- **Postconditions**: The display shows the session statistics with calculated rates
-- **Thread Safety**: Not thread-safe (modifies mutable state and performs I/O)
-- **Complexity**: O(n) where n is the number of metrics, but dominated by the string formatting operations
-- **See Also**: `update_counters()`, `value()`, `prev_value()`
-
-## update_counters
-
-- **Signature**: `void session_view::update_counters(span<std::int64_t const> stats_counters, lt::clock_type::time_point const t)`
-- **Description**: Updates the session view's counter arrays with new statistics values. This function compares the current timestamp with the last update timestamp to determine if it's time to update the previous counter array. If so, it swaps the current and previous counter arrays, then copies the new statistics values into the current array.
-- **Parameters**:
-  - `stats_counters` (span<std::int64_t const>): A span containing the new statistics values from the libtorrent session. Must have the same size as the metrics array.
-  - `t` (lt::clock_type::time_point): The current timestamp when the statistics were collected.
 - **Return Value**: None
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 session_view view;
-// Get current stats from libtorrent
-std::vector<std::int64_t> stats = get_session_stats();
-view.update_counters(stats, std::chrono::steady_clock::now());
+view.render(); // Renders the current session statistics
 ```
-- **Preconditions**: The `stats_counters` span must have the same size as the metrics array (determined in the constructor), and the timestamp must be valid
-- **Postconditions**: The current counter array (`m_cnt[0]`) is updated with the new statistics values
-- **Thread Safety**: Not thread-safe (modifies mutable state)
+- **Preconditions**: The view must be initialized, and `update_counters()` must have been called at least once
+- **Postconditions**: The display is updated with current statistics
+- **Thread Safety**: Not thread-safe (modifies internal state)
 - **Complexity**: O(n) where n is the number of metrics
-- **See Also**: `session_view()`, `render()`
+- **See Also**: `update_counters()`, `value()`, `prev_value()`
+
+## Function: update_counters
+
+- **Signature**: `void session_view::update_counters(span<std::int64_t const> stats_counters, lt::clock_type::time_point const t)`
+- **Description**: Updates the session counters with new statistics values and time information. This function swaps the previous and current counters if enough time has passed since the last update (more than 2 seconds), ensuring that the counter values are properly updated for rate calculations.
+- **Parameters**:
+  - `stats_counters` (span<std::int64_t const>): A span containing the current statistics counter values from the libtorrent session.
+  - `t` (lt::clock_type::time_point): The current timestamp when the counters were updated.
+- **Return Value**: None
+- **Exceptions/Errors**: None
+- **Example**:
+```cpp
+session_view view;
+// Assuming stats_counters contains the current statistics values
+view.update_counters(stats_counters, current_time);
+```
+- **Preconditions**: The view must be initialized, and stats_counters must have the correct size
+- **Postconditions**: The current counters are updated, and the previous counters are swapped if sufficient time has passed
+- **Thread Safety**: Not thread-safe (modifies internal state)
+- **Complexity**: O(n) where n is the number of metrics
+- **See Also**: `render()`, `value()`, `prev_value()`
 
 # Usage Examples
 
 ## Basic Usage
 
 ```cpp
-#include "session_view.h"
-#include "libtorrent/session.h"
-#include <chrono>
+#include "session_view.hpp"
+#include <iostream>
 
 int main() {
-    // Create a session view
     session_view view;
     
-    // Set display position and width
+    // Set the position and width of the view
     view.set_pos(5);
     view.set_width(80);
     
-    // Create a libtorrent session for demonstration
-    lt::session ses;
-    
-    // Update the view with session statistics
-    auto stats = ses.stats();
+    // Update the counters with new statistics
+    // This would typically be called from a libtorrent session callback
+    std::vector<std::int64_t> stats = get_current_stats();
     view.update_counters(stats, std::chrono::steady_clock::now());
     
-    // Render the view
+    // Render the view to display the statistics
     view.render();
+    
+    // Get the current position
+    int current_pos = view.pos();
+    std::cout << "Current position: " << current_pos << std::endl;
     
     return 0;
 }
@@ -210,28 +210,31 @@ int main() {
 ## Error Handling
 
 ```cpp
-#include "session_view.h"
+#include "session_view.hpp"
 #include <iostream>
-#include <vector>
+#include <stdexcept>
 
 int main() {
-    session_view view;
-    
     try {
-        // Try to set position
-        view.set_pos(10);
+        session_view view;
+        view.set_pos(5);
+        view.set_width(80);
         
-        // Try to get height
-        int h = view.height();
+        // Update counters with valid data
+        std::vector<std::int64_t> valid_stats(10, 0);
+        view.update_counters(valid_stats, std::chrono::steady_clock::now());
         
-        // Try to update counters
-        std::vector<std::int64_t> stats(10, 0); // Create a valid stats array
-        view.update_counters(stats, std::chrono::steady_clock::now());
-        
-        // Try to render
+        // Render the view
         view.render();
+        
+        // Check if the height is as expected
+        if (view.height() != 3) {
+            throw std::runtime_error("Unexpected height value");
+        }
+        
     } catch (const std::exception& e) {
-        std::cerr << "An error occurred: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
     }
     
     return 0;
@@ -241,23 +244,30 @@ int main() {
 ## Edge Cases
 
 ```cpp
-#include "session_view.h"
+#include "session_view.hpp"
 #include <iostream>
 
 int main() {
     session_view view;
     
-    // Test with invalid index
-    std::int64_t invalid_value = view.value(-1); // Should return 0
+    // Test with negative position
+    view.set_pos(-10);  // Should be allowed, but may cause display issues
+    std::cout << "Position: " << view.pos() << std::endl;
+    
+    // Test with large width
+    view.set_width(1000);  // May exceed display limits
+    std::cout << "Width: " << view.set_width() << std::endl;
+    
+    // Test with invalid index in value function
+    std::int64_t invalid_value = view.value(-1);  // Should return 0
     std::cout << "Value at invalid index: " << invalid_value << std::endl;
     
-    // Test with large index (assuming more metrics than available)
-    std::int64_t large_index_value = view.value(100); // Should return 0
-    std::cout << "Value at large index: " << large_index_value << std::endl;
+    // Test with zero time difference
+    std::vector<std::int64_t> stats(5, 0);
+    view.update_counters(stats, std::chrono::steady_clock::now());
     
-    // Test position setting
-    view.set_pos(-5); // Should still work (no validation)
-    std::cout << "Current position: " << view.pos() << std::endl;
+    // Test with very large time difference
+    view.update_counters(stats, std::chrono::steady_clock::now() + std::chrono::hours(1));
     
     return 0;
 }
@@ -265,87 +275,84 @@ int main() {
 
 # Best Practices
 
-## Usage Tips
+## How to Use These Functions Effectively
 
-1. Always call `update_counters()` before `render()` to ensure the view has updated data
-2. Use `height()` to determine the number of lines the view occupies
-3. Set position and width before rendering to ensure proper display layout
-4. Use `value()` and `prev_value()` together to calculate metrics changes
-5. Call `set_pos()` and `set_width()` at initialization to set the view's dimensions
+1. **Initialize properly**: Always create a session_view object before using any of its functions.
+2. **Set position and width**: Call `set_pos()` and `set_width()` to position the view correctly in your display.
+3. **Update counters regularly**: Call `update_counters()` with new statistics from your libtorrent session at regular intervals.
+4. **Render when needed**: Call `render()` to display the statistics after updating the counters.
+5. **Use const methods when possible**: Use `pos()`, `height()`, `value()`, and `prev_value()` as read-only operations.
 
 ## Common Mistakes to Avoid
 
-1. **Not calling update_counters()**: The view won't have any data to display
-2. **Using render() before update_counters()**: The view will show stale or zero data
-3. **Assuming value() returns valid data for all indices**: The function doesn't validate indices
-4. **Not checking the return value of pos()**: While it's unlikely to fail, it's good practice to verify the position
-5. **Using incorrect metrics indices**: Ensure the index corresponds to the correct metric
+1. **Calling functions before initialization**: Never call member functions on an uninitialized session_view object.
+2. **Incorrect index usage**: Ensure that indices passed to `value()` and `prev_value()` are within the valid range.
+3. **Ignoring the time difference**: Don't call `update_counters()` too frequently or too infrequently, as it affects the accuracy of rate calculations.
+4. **Not handling the view size**: Don't assume the view will fit in your display area without checking the width and height.
 
 ## Performance Tips
 
-1. Update counters only when necessary (e.g., every 2 seconds as shown in the code)
-2. Avoid calling `render()` too frequently (use a timer)
-3. Use `const` references for large data structures when possible
-4. Consider caching the metrics indices (like `m_recv_idx`) to avoid repeated lookups
-5. Use `std::chrono` for accurate time measurements
+1. **Minimize render calls**: Only call `render()` when the display needs to be updated, not continuously.
+2. **Batch updates**: If you have multiple statistics updates, consider batching them to reduce the number of `update_counters()` calls.
+3. **Use const correctness**: Use `const` where appropriate to enable compiler optimizations.
+4. **Avoid unnecessary allocations**: The current implementation uses a fixed-size buffer, which is efficient.
 
 # Code Review & Improvement Suggestions
 
 ## Potential Issues
 
-### session_view
-- **Function**: `session_view::session_view()`
-- **Issue**: No validation of `lt::session_stats_metrics()` return value
-- **Severity**: Low
-- **Impact**: If `lt::session_stats_metrics()` fails, the constructor will still proceed
-- **Fix**: Add error handling for metrics retrieval
+### Security:
+**Function**: `value()`
+**Issue**: No bounds checking on the input index, which could lead to out-of-bounds access if the index is invalid.
+**Severity**: Medium
+**Impact**: Memory corruption or undefined behavior if an invalid index is provided
+**Fix**: Add bounds checking:
 ```cpp
-session_view::session_view()
+std::int64_t session_view::value(int idx) const
 {
-    std::vector<lt::stats_metric> metrics = lt::session_stats_metrics();
-    if (metrics.empty()) {
-        // Handle error case, possibly throw exception
-        throw std::runtime_error("Failed to retrieve session statistics metrics");
+    if (idx < 0 || std::size_t(idx) >= m_cnt[0].size()) {
+        return 0;
     }
-    m_cnt[0].resize(metrics.size(), 0);
-    m_cnt[1].resize(metrics.size(), 0);
+    return m_cnt[0][std::size_t(idx)];
 }
 ```
 
-### render
-- **Function**: `session_view::render()`
-- **Issue**: Buffer overflow risk with fixed-size array `str[1024]`
-- **Severity**: Medium
-- **Impact**: Could lead to undefined behavior if formatted string exceeds 1024 characters
-- **Fix**: Use dynamic allocation or limit the data displayed
+**Function**: `prev_value()`
+**Issue**: No bounds checking on the input index, which could lead to out-of-bounds access if the index is invalid.
+**Severity**: Medium
+**Impact**: Memory corruption or undefined behavior if an invalid index is provided
+**Fix**: Add bounds checking:
+```cpp
+std::int64_t session_view::prev_value(int idx) const
+{
+    if (idx < 0 || std::size_t(idx) >= m_cnt[1].size()) {
+        return 0;
+    }
+    return m_cnt[1][std::size_t(idx)];
+}
+```
+
+### Performance:
+**Function**: `render()`
+**Issue**: Uses a fixed-size buffer (1024 chars) which might be too small for some use cases and could lead to buffer overflows if the output is large.
+**Severity**: Low
+**Impact**: Potential buffer overflow if the output exceeds 1024 characters
+**Fix**: Use a more dynamic approach or document the size limitation:
 ```cpp
 void session_view::render()
 {
-    // Use dynamic allocation for larger buffer
-    std::vector<char> str(2048);
-    
-    int y = m_position;
-    
-    using std::chrono::duration_cast;
-    double const seconds = duration_cast<lt::milliseconds>(m_timestamp[0] - m_timestamp[1]).count() / 1000.0;
-    
-    int const download_rate = int((value(m_recv_idx) - prev_value(m_recv_idx))
-        / seconds);
-        
-    // Use snprintf to prevent buffer overflow
-    snprintf(str.data(), str.size(), "Download rate: %d B/s", download_rate);
-    
-    // Render the string
-    render_string(str.data());
+    // Consider using a dynamic buffer or ensuring the output is within limits
+    char str[1024];
+    // ... rest of the function
 }
 ```
 
-### update_counters
-- **Function**: `session_view::update_counters()`
-- **Issue**: Incomplete function (code snippet is cut off)
-- **Severity**: Critical
-- **Impact**: The function is incomplete and will not compile
-- **Fix**: Complete the function implementation
+### Correctness:
+**Function**: `update_counters()`
+**Issue**: The function is incomplete and has syntax errors in the code snippet. The `m_timestamp[1]` line is incomplete.
+**Severity**: Critical
+**Impact**: Compilation error and the function won't work as intended
+**Fix**: Complete the implementation:
 ```cpp
 void session_view::update_counters(span<std::int64_t const> stats_counters
     , lt::clock_type::time_point const t)
@@ -358,57 +365,64 @@ void session_view::update_counters(span<std::int64_t const> stats_counters
         m_timestamp[1] = m_timestamp[0];
     }
     
-    // Update the current counter array with new values
-    for (size_t i = 0; i < stats_counters.size(); ++i) {
-        m_cnt[0][i] = stats_counters[i];
-    }
-    
+    // Update the current counters
+    std::copy(stats_counters.begin(), stats_counters.end(), m_cnt[0].begin());
     m_timestamp[0] = t;
+}
+```
+
+### Code Quality:
+**Function**: `session_view()`
+**Issue**: The code doesn't initialize all members. The `m_cnt` and `m_timestamp` members are not initialized.
+**Severity**: Medium
+**Impact**: Uninitialized memory access could lead to undefined behavior
+**Fix**: Initialize all members:
+```cpp
+session_view::session_view()
+    : m_position(0)
+    , m_width(0)
+    , m_timestamp{lt::clock_type::now(), lt::clock_type::now()}
+{
+    std::vector<lt::stats_metric> metrics = lt::session_stats_metrics();
+    m_cnt[0].resize(metrics.size(), 0);
+    m_cnt[1].resize(metrics.size(), 0);
 }
 ```
 
 ## Modernization Opportunities
 
-### session_view
-- **Function**: `session_view::session_view()`
-- **Opportunity**: Use `[[nodiscard]]` for better compiler warnings
-- **Suggestion**: Mark the constructor with `[[nodiscard]]` if it's part of a design pattern that requires the object to be used
-```cpp
-[[nodiscard]] session_view::session_view();
-```
+**Function**: `update_counters()`
+**Opportunity**: Use `std::span` for the statistics counters parameter, which is already being used.
+**Benefit**: Improved safety and clarity
+**Suggestion**: The function already uses `std::span`, so it's good to use this modern C++ feature.
 
-### render
-- **Function**: `session_view::render()`
-- **Opportunity**: Use `std::span` for the string buffer
-- **Suggestion**: The `str` array could be passed as a span for more flexibility
+**Function**: `render()`
+**Opportunity**: Use `std::string_view` for the formatted string output.
+**Benefit**: Improved performance and safety
+**Suggestion**: The function could return a `std::string_view` instead of using a buffer if the output is not immediately displayed.
+
+**Function**: `value()` and `prev_value()`
+**Opportunity**: Use `std::size_t` for the index parameter instead of `int`.
+**Benefit**: Better alignment with standard library conventions
+**Suggestion**: The function could be modified to use `std::size_t`:
 ```cpp
-void session_view::render() {
-    std::array<char, 1024> buffer;
-    // ... use buffer in the rendering logic
+std::int64_t session_view::value(std::size_t idx) const
+{
+    if (idx >= m_cnt[0].size()) {
+        return 0;
+    }
+    return m_cnt[0][idx];
 }
-```
-
-### update_counters
-- **Function**: `session_view::update_counters()`
-- **Opportunity**: Use `std::span` for the stats counters
-- **Suggestion**: The function already uses `span<std::int64_t const>`, which is good, but consider making it a `const std::span` parameter
-```cpp
-void session_view::update_counters(std::span<std::int64_t const> stats_counters, lt::clock_type::time_point const t)
 ```
 
 ## Refactoring Suggestions
 
-1. **Extract rendering logic**: The `render()` function is complex and could be split into smaller functions
-2. **Move metrics calculation to a separate class**: The calculation of download rate could be moved to a separate utility class
-3. **Combine related functions**: The `value()` and `prev_value()` functions could be combined into a single `get_metrics()` function
-4. **Add a clear() function**: A function to reset the view to initial state would be useful
+1. **Combine related functions**: The `value()` and `prev_value()` functions could be combined into a single function with an additional parameter to specify which counter to access.
+2. **Split render function**: The `render()` function is too long and does multiple things (calculating rate, formatting output, etc.). Consider splitting it into smaller functions.
+3. **Move constants to class**: The `m_recv_idx` constant should be a member variable rather than a magic number.
 
 ## Performance Optimizations
 
-1. **Use move semantics**: In the `session_view` constructor, if `lt::session_stats_metrics()` returns a large vector, consider using move semantics
-2. **Return by value for RVO**: The `value()` function returns by value, which is good for RVO optimization
-3. **Use string_view**: If the render function uses string literals, consider using `std::string_view` for better performance
-4. **Add noexcept**: Mark functions like `pos()` and `height()` as `noexcept` since they don't throw exceptions
-```cpp
-int session_view::pos() const noexcept { return m_position; }
-```
+1. **Use move semantics**: The `update_counters()` function could potentially use move semantics if the statistics counters are large.
+2. **Return by value for RVO**: Consider returning a `std::string` from `render()` instead of using a buffer.
+3. **Use string_view**:

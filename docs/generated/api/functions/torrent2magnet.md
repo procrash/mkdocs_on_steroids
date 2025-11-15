@@ -1,195 +1,169 @@
-```markdown
-# API Documentation: torrent2magnet.cpp
+# API Documentation for torrent2magnet.cpp
 
 ## print_usage
 
 - **Signature**: `[[noreturn]] void print_usage()`
-- **Description**: Outputs a usage message to stderr and exits the program with code 1. This function is called when the command-line arguments are invalid or missing. It displays the correct usage syntax and available options for the `torrent2magnet` utility.
+- **Description**: Displays the usage information for the torrent2magnet command-line tool and exits with a failure status. This function is called when the user provides invalid arguments or requests help. It prints a formatted help message to stderr that includes the command syntax and available options.
 - **Parameters**: None
-- **Return Value**: This function does not return because it terminates the program using `std::exit(1)`. The `[[noreturn]]` attribute indicates that the function never returns.
-- **Exceptions/Errors**: This function does not throw exceptions. It relies on `std::exit()` to terminate the program.
+- **Return Value**: This function does not return because it calls `std::exit(1)` to terminate the program. It is annotated with `[[noreturn]]` to indicate that it never returns.
+- **Exceptions/Errors**: This function does not throw exceptions. It terminates the program with exit code 1.
 - **Example**:
 ```cpp
-// This function is typically called when invalid arguments are provided
 print_usage();
+// This will print usage information to stderr and exit the program
 ```
-- **Preconditions**: The function should only be called when the program's command-line arguments are invalid or missing.
-- **Postconditions**: The program terminates immediately after printing the usage message.
-- **Thread Safety**: This function is thread-safe as it only writes to stderr and calls `std::exit()`.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: None
+- **Postconditions**: The program terminates with exit code 1 and usage information is displayed.
+- **Thread Safety**: This function is thread-safe as it only writes to stderr and calls a standard library function.
+- **Complexity**: O(1) time, O(1) space
+- **See Also**: `main()`
 
 ## main
 
 - **Signature**: `int main(int argc, char const* argv[])`
-- **Description**: The entry point of the `torrent2magnet` utility. This function parses command-line arguments, loads a torrent file, and generates a magnet link. It handles the main logic of converting a torrent file to a magnet link, with options to exclude trackers and web seeds.
+- **Description**: The main entry point of the torrent2magnet application. This function parses command-line arguments, loads a torrent file, and processes its contents to generate a magnet link. It handles command-line argument parsing, validates input, and demonstrates how to use libtorrent's API to extract torrent metadata.
 - **Parameters**:
-  - `argc` (int): The number of command-line arguments.
+  - `argc` (int): The number of command-line arguments (including the program name).
   - `argv` (char const*): An array of C-style strings containing the command-line arguments.
-- **Return Value**: Returns 0 on successful execution, or a non-zero value if an error occurs.
-- **Exceptions/Errors**:
-  - `lt::system_error`: Thrown if the torrent file cannot be loaded.
-  - `std::exception`: May be thrown by the libtorrent library or standard library functions.
+- **Return Value**: Returns 0 on successful execution, 1 on error.
+- **Exceptions/Errors**: This function catches and handles exceptions from the libtorrent library. It may throw exceptions if the torrent file cannot be loaded or if there are errors processing the torrent metadata.
 - **Example**:
 ```cpp
-int main(int argc, char const* argv[]) try {
-    // The main function handles command-line arguments and processes the torrent file
-    int result = main(argc, argv);
-    return result;
-} catch (std::exception const& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
+int main(int argc, char const* argv[]) {
+    // This function processes command-line arguments and generates a magnet link
+    // from a torrent file
+    return 0;
 }
 ```
-- **Preconditions**: The program must be called with at least one argument (the torrent file path). The torrent file must exist and be valid.
-- **Postconditions**: The program exits with an appropriate status code. If successful, it generates and outputs a magnet link.
-- **Thread Safety**: This function is not thread-safe as it is the main entry point and may not be designed to be called from multiple threads.
-- **Complexity**: Time complexity depends on the size of the torrent file and the libtorrent library's processing. Space complexity is O(1) for the command-line arguments.
-
-# Additional Sections
+- **Preconditions**: The program must be called with at least one argument (the torrent file path). The torrent file must exist and be accessible.
+- **Postconditions**: If successful, the program will have processed the torrent file and generated a magnet link. If unsuccessful, the program will have printed error messages and exited.
+- **Thread Safety**: This function is thread-safe as it does not use any shared state that could be modified by multiple threads simultaneously.
+- **Complexity**: O(1) time for argument parsing, O(n) for loading the torrent file where n is the size of the torrent file.
+- **See Also**: `print_usage()`, `lt::load_torrent_file()`
 
 ## Usage Examples
 
 ### Basic Usage
 ```bash
 # Convert a torrent file to a magnet link
-./torrent2magnet example.torrent
+./torrent2magnet my_torrent.torrent
 ```
 
 ### Error Handling
 ```cpp
-int main(int argc, char const* argv[]) try {
+#include <iostream>
+#include <cstdlib>
+
+int main(int argc, char const* argv[]) {
     if (argc < 2) {
-        std::cerr << "Error: Missing torrent file argument" << std::endl;
+        std::cerr << "Error: Missing torrent file argument\n";
+        std::cerr << "Usage: torrent2magnet torrent-file [options]\n";
         return 1;
     }
     
-    char const* filename = argv[1];
-    
-    lt::add_torrent_params atp = lt::load_torrent_file(filename);
-    
-    // Process the torrent data
-    // ... (conversion logic)
+    try {
+        // Process the torrent file
+        // ... (code would go here)
+    } catch (const std::exception& e) {
+        std::cerr << "Error processing torrent file: " << e.what() << "\n";
+        return 1;
+    }
     
     return 0;
-} catch (std::exception const& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return 1;
 }
 ```
 
 ### Edge Cases
 ```bash
-# Attempt to convert a non-existent file
+# Invalid torrent file
 ./torrent2magnet non_existent.torrent
 
-# Attempt to convert a file with invalid format
-./torrent2magnet invalid.torrent
+# Missing required arguments
+./torrent2magnet
+
+# Invalid options
+./torrent2magnet my_torrent.torrent --invalid-option
 ```
 
 ## Best Practices
 
-1. **Input Validation**: Always validate command-line arguments before processing them.
-2. **Error Handling**: Use try-catch blocks to handle exceptions from libtorrent and standard library functions.
-3. **Resource Management**: Ensure that all resources are properly cleaned up, especially when using external libraries.
-4. **Security**: Validate file paths and avoid executing untrusted torrent files.
-5. **Performance**: Consider using asynchronous I/O for large torrent files to improve performance.
+1. **Always validate input**: Check that the torrent file exists and is accessible before attempting to load it.
+
+2. **Handle exceptions properly**: Use try-catch blocks to handle potential errors from libtorrent functions.
+
+3. **Use appropriate error messages**: Provide clear, descriptive error messages to help users understand what went wrong.
+
+4. **Consider security implications**: Validate torrent files from untrusted sources to prevent potential security issues.
+
+5. **Follow command-line conventions**: Use standard argument parsing patterns and provide clear usage information.
+
+6. **Keep functions focused**: The main function should handle high-level flow control, while specific tasks should be handled by dedicated functions.
 
 ## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
 **Function**: `print_usage`
-**Issue**: The function uses `std::exit(1)` which terminates the entire program. This makes it difficult to handle the situation gracefully in more complex applications.
-**Severity**: Low
-**Impact**: The function cannot be used in a larger application context without terminating the whole process.
-**Fix**: Consider returning a status code instead of exiting the program.
-
-**Function**: `main`
-**Issue**: The code is incomplete and will not compile as shown. The `lt::add_torrent_params atp` assignment is followed by an incomplete expression.
-**Severity**: Critical
-**Impact**: The code will not compile and will not function as intended.
-**Fix**: Complete the implementation of the main function to properly process the torrent file and generate a magnet link.
-
-**Function**: `main`
-**Issue**: The function does not handle the command-line options (`--no-trackers`, `--no-web-seeds`) that are mentioned in the usage message.
-**Severity**: Medium
-**Impact**: The program will not function as described in the documentation.
-**Fix**: Add parsing of command-line options and logic to exclude trackers and web seeds when requested.
-
-**Function**: `print_usage`
-**Issue**: The function does not handle the case where the standard error stream cannot be written to.
-**Severity**: Low
-**Impact**: Could cause the program to terminate unexpectedly in certain environments.
-**Fix**: Consider checking the status of the `std::cerr` stream before writing to it.
-
-### Modernization Opportunities
-
-**Function**: `print_usage`
-**Opportunity**: Use `std::format` (C++20) for more robust string formatting.
-**Suggestion**:
+**Issue**: The function signature is incomplete and the code shows a truncated function body. The function should have a proper signature and complete implementation.
+**Severity**: High
+**Impact**: The function is incomplete and will not compile as shown in the example.
+**Fix**: Complete the function with proper implementation:
 ```cpp
-// Modern C++ version
-[[nodiscard]] int print_usage(std::ostream& os = std::cerr) {
-    os << R"(usage: torrent2magnet torrent-file [options]
+[[nodiscard]] void print_usage() {
+    std::cerr << R"(usage: torrent2magnet torrent-file [options]
     OPTIONS:
     --no-trackers    do not include trackers in the magnet link
     --no-web-seeds   do not include web seeds in the magnet link
 )";
-    return 1;
+    std::exit(1);
 }
 ```
 
 **Function**: `main`
-**Opportunity**: Use `std::span` for array parameters to improve safety and readability.
-**Suggestion**:
+**Issue**: The function is incomplete and truncated. The code shows that it loads a torrent file but doesn't show the full implementation.
+**Severity**: High
+**Impact**: The function is incomplete and will not compile as shown in the example.
+**Fix**: Complete the function with proper implementation:
 ```cpp
-int main(lt::span<char const*> args) try {
-    // Use std::span for safer and more expressive code
+int main(int argc, char const* argv[]) try {
+    lt::span<char const*> args(argv, argc);
+    
+    // strip executable name
+    args = args.subspan(1);
+    
     if (args.empty()) print_usage();
     
     char const* filename = args[0];
-    // Process other arguments
-    // ...
+    args = args.subspan(1);
+    
+    lt::add_torrent_params atp = lt::load_torrent_file(filename);
+    
+    // Continue with magnet link generation
+    // ... (implementation would continue here)
     
     return 0;
-} catch (std::exception const& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+} catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << "\n";
     return 1;
 }
 ```
+
+### Modernization Opportunities
+
+**Function**: `main`
+**Issue**: The code could benefit from more modern C++ practices.
+**Suggestion**: Use `[[nodiscard]]` on functions that return important values, use `std::span` for array parameters, and use `std::expected` (C++23) for error handling instead of exceptions.
 
 ### Refactoring Suggestions
 
 **Function**: `main`
 **Suggestion**: Split the main function into smaller, more focused functions:
-1. `parse_arguments()` - Parse command-line arguments
-2. `load_torrent_file()` - Load the torrent file
-3. `generate_magnet_link()` - Generate the magnet link
-4. `print_magnet_link()` - Print the magnet link
-
-This would improve code readability, maintainability, and testability.
+1. `parse_arguments` - Handle command-line argument parsing
+2. `load_torrent` - Handle loading the torrent file
+3. `generate_magnet_link` - Handle magnet link generation
+4. `print_magnet_link` - Handle displaying the result
 
 ### Performance Optimizations
 
 **Function**: `main`
-**Opportunity**: Use move semantics when passing `lt::add_torrent_params` to avoid unnecessary copies.
-**Suggestion**:
-```cpp
-lt::add_torrent_params atp = lt::load_torrent_file(filename);
-// Use move semantics if needed
-auto magnet_link = generate_magnet_link(std::move(atp));
-```
-
-**Function**: `main`
-**Opportunity**: Consider using `std::string_view` for the filename parameter to avoid string copying.
-**Suggestion**:
-```cpp
-lt::add_torrent_params atp = lt::load_torrent_file(std::string_view(filename));
-```
-
-**Function**: `print_usage`
-**Opportunity**: Use `[[nodiscard]]` attribute to indicate that the function's return value is important.
-**Suggestion**:
-```cpp
-[[nodiscard]] [[noreturn]] void print_usage()
-```
+**Suggestion**: Use move semantics when returning the `add_torrent_params` object, and consider using `std::string_view` for the filename parameter if the function signature is modified.

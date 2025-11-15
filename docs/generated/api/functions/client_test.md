@@ -1,102 +1,111 @@
-# API Documentation for libtorrent Client Test Functions
+```markdown
+# libtorrent Client Test API Documentation
 
 ## sleep_and_input
 
 - **Signature**: `bool sleep_and_input(int* c, lt::time_duration const sleep)`
-- **Description**: Checks for keyboard input within a specified time duration. Returns true if a key was pressed, false otherwise. The function attempts to check for input multiple times within the specified duration.
+- **Description**: Checks for keyboard input with a timeout, returning true if input is available.
 - **Parameters**:
-  - `c` (int*): Pointer to an integer where the pressed key will be stored. The function modifies this value if a key is pressed.
-  - `sleep` (lt::time_duration const): The total duration to wait for input, divided into multiple checks.
+  - `c` (int*): Pointer to store the pressed key character. The function stores the pressed character here.
+  - `sleep` (lt::time_duration const): Duration to wait for input before returning.
 - **Return Value**:
-  - `true`: A key was pressed during the check period
-  - `false`: No key was pressed within the specified time
+  - `true`: Input was received during the timeout period.
+  - `false`: No input was received within the specified time.
 - **Exceptions/Errors**:
-  - No exceptions are thrown, but the function relies on platform-specific functions (_kbhit and _getch) that may not be available on all platforms.
+  - No exceptions thrown. Returns false if no input is detected.
 - **Example**:
 ```cpp
-int key = 0;
+int key;
 if (sleep_and_input(&key, lt::seconds(1))) {
     std::printf("Key pressed: %d\n", key);
 } else {
-    std::printf("No key pressed\n");
+    std::printf("No input received\n");
 }
 ```
-- **Preconditions**: The function assumes that the system supports keyboard input detection.
-- **Postconditions**: If a key is pressed, the value of `c` will be set to the ASCII value of the pressed key.
-- **Thread Safety**: This function is not thread-safe due to the use of global state in the keyboard input functions.
-- **Complexity**: O(1) time complexity, as it performs a fixed number of checks.
-- **See Also**: `set_keypress`, `print_alert`
+- **Preconditions**:
+  - `c` must be a valid pointer.
+  - `sleep` must be a positive duration.
+- **Postconditions**:
+  - If input is received, `*c` contains the pressed key.
+  - Returns false if no input is received within the timeout period.
+- **Thread Safety**: Not thread-safe. Uses `_kbhit()` and `_getch()` which are not thread-safe.
+- **Complexity**: O(1) time complexity.
+- **See Also**: `set_keypress`, `sleep_and_input` (alternative implementation)
 
-## set_keypress (constructor)
+## set_keypress
 
 - **Signature**: `set_keypress(std::uint8_t const mode = 0)`
-- **Description**: Constructor for the `set_keypress` class that sets the terminal to non-canonical mode, allowing immediate character input without requiring the Enter key to be pressed. This is typically used to enable real-time keyboard input in a console application.
+- **Description**: Constructor for the `set_keypress` class. Configures terminal settings to enable single-character input mode.
 - **Parameters**:
-  - `mode` (std::uint8_t const): Configuration mode flags, which can include `echo` to enable character echoing.
-- **Return Value**: None (constructor).
-- **Exceptions/Errors**:
-  - May throw an exception if the terminal settings cannot be changed (e.g., on some platforms or with insufficient permissions).
-- **Example**:
-```cpp
-set_keypress s_;
-// The terminal is now in non-canonical mode
-// When s_ is destroyed, the terminal settings are restored
-```
-- **Preconditions**: The function must be called from a terminal that supports terminal attribute manipulation.
-- **Postconditions**: The terminal is set to non-canonical mode with the specified configuration until the object is destroyed.
-- **Thread Safety**: This function is not thread-safe due to the global state modification of terminal settings.
-- **Complexity**: O(1) time complexity.
-- **See Also**: `set_keypress` (destructor), `sleep_and_input`
-
-## set_keypress (destructor)
-
-- **Signature**: `~set_keypress()`
-- **Description**: Destructor for the `set_keypress` class that restores the original terminal settings when the object is destroyed. This ensures that the terminal returns to its previous state even if the program exits unexpectedly.
-- **Parameters**: None.
+  - `mode` (std::uint8_t const): Bitmask indicating which terminal settings to modify (e.g., echo control).
 - **Return Value**: None.
 - **Exceptions/Errors**:
-  - May throw an exception if the terminal settings cannot be restored.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
 {
-    set_keypress s_;
-    // Terminal is in non-canonical mode
-    // When s_ goes out of scope, terminal settings are restored
-}
-// Terminal is back to normal
+    set_keypress s_; // Sets terminal to single-character mode
+    // ... use single-character input
+} // Destructor restores terminal settings
 ```
-- **Preconditions**: The function assumes that the object was properly constructed and that terminal settings were modified.
-- **Postconditions**: The terminal settings are restored to their original state.
-- **Thread Safety**: This function is not thread-safe due to the global state modification of terminal settings.
+- **Preconditions**: Must be called in a terminal environment.
+- **Postconditions**:
+  - Terminal is configured for single-character input mode.
+  - Destructor restores original terminal settings.
+- **Thread Safety**: Not thread-safe. Changes terminal state globally.
 - **Complexity**: O(1) time complexity.
-- **See Also**: `set_keypress` (constructor), `sleep_and_input`
+- **See Also**: `~set_keypress`, `sleep_and_input`
+
+## set_keypress
+
+- **Signature**: `~set_keypress()`
+- **Description**: Destructor for the `set_keypress` class. Restores original terminal settings.
+- **Parameters**: None.
+- **Return Value**: None.
+- **Exceptions/Errors**: None.
+- **Example**:
+```cpp
+{
+    set_keypress s_; // Sets terminal settings
+    // ... use terminal
+} // Destructor restores original settings
+```
+- **Preconditions**: `set_keypress` object must have been constructed.
+- **Postconditions**: Terminal settings are restored to original state.
+- **Thread Safety**: Not thread-safe. Changes terminal state globally.
+- **Complexity**: O(1) time complexity.
+- **See Also**: `set_keypress`
 
 ## sleep_and_input
 
 - **Signature**: `bool sleep_and_input(int* c, lt::time_duration const sleep)`
-- **Description**: Checks for keyboard input within a specified time duration using file descriptor monitoring. Returns true if a key was pressed, false otherwise.
+- **Description**: Checks for keyboard input with a timeout using select() system call, returning true if input is available.
 - **Parameters**:
-  - `c` (int*): Pointer to an integer where the pressed key will be stored.
-  - `sleep` (lt::time_duration const): The total duration to wait for input.
+  - `c` (int*): Pointer to store the pressed key character.
+  - `sleep` (lt::time_duration const): Duration to wait for input before returning.
 - **Return Value**:
-  - `true`: A key was pressed during the check period
-  - `false`: No key was pressed within the specified time
+  - `true`: Input was received during the timeout period.
+  - `false`: No input was received within the specified time.
 - **Exceptions/Errors**:
-  - No exceptions are thrown, but the function relies on platform-specific functions for file descriptor monitoring.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
-int key = 0;
+int key;
 if (sleep_and_input(&key, lt::seconds(1))) {
     std::printf("Key pressed: %d\n", key);
 } else {
-    std::printf("No key pressed\n");
+    std::printf("No input received\n");
 }
 ```
-- **Preconditions**: The function assumes that the system supports file descriptor monitoring.
-- **Postconditions**: If a key is pressed, the value of `c` will be set to the ASCII value of the pressed key.
-- **Thread Safety**: This function is not thread-safe due to the use of global state in the file descriptor monitoring functions.
+- **Preconditions**:
+  - `c` must be a valid pointer.
+  - `sleep` must be a positive duration.
+- **Postconditions**:
+  - If input is received, `*c` contains the pressed key.
+  - Returns false if no input is received within the timeout period.
+- **Thread Safety**: Not thread-safe. Uses `select()` and file descriptor operations.
 - **Complexity**: O(1) time complexity.
-- **See Also**: `set_keypress`, `print_alert`
+- **See Also**: `set_keypress`, `sleep_and_input` (alternative implementation)
 
 ## to_hex
 
@@ -106,32 +115,32 @@ if (sleep_and_input(&key, lt::seconds(1))) {
   - `s` (lt::sha1_hash const&): The SHA-1 hash to convert.
 - **Return Value**: A string containing the hexadecimal representation of the hash.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
-lt::sha1_hash hash("some data");
+lt::sha1_hash hash = lt::sha1_hash::from_string("a1b2c3d4e5f6g7h8i9j0");
 std::string hex = to_hex(hash);
-std::printf("SHA-1 hash: %s\n", hex.c_str());
+std::printf("Hex: %s\n", hex.c_str());
 ```
-- **Preconditions**: The input hash must be valid.
-- **Postconditions**: The returned string is a valid hexadecimal representation of the hash.
-- **Thread Safety**: This function is thread-safe.
+- **Preconditions**: `s` must be a valid SHA-1 hash.
+- **Postconditions**: Returns a string with the hexadecimal representation of the hash.
+- **Thread Safety**: Thread-safe.
 - **Complexity**: O(1) time complexity.
-- **See Also**: `resume_file`, `is_resume_file`
+- **See Also**: `lt::sha1_hash`, `to_hex`
 
 ## load_file
 
 - **Signature**: `bool load_file(std::string const& filename, std::vector<char>& v, int limit = 8000000)`
-- **Description**: Loads the contents of a file into a vector. The function checks the file size against a limit to prevent loading excessively large files.
+- **Description**: Loads a file into a vector, with size limit checking.
 - **Parameters**:
-  - `filename` (std::string const&): The path to the file to load.
-  - `v` (std::vector<char>&): The vector to store the file contents.
-  - `limit` (int, default 8000000): The maximum file size allowed.
+  - `filename` (std::string const&): Path to the file to load.
+  - `v` (std::vector<char>&): Vector to store the file contents.
+  - `limit` (int): Maximum file size allowed (default: 8,000,000 bytes).
 - **Return Value**:
-  - `true`: File was successfully loaded
-  - `false`: File loading failed (e.g., due to size limit, permission issues, or file not found)
+  - `true`: File loaded successfully.
+  - `false`: File could not be loaded (too large or file not found).
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
 std::vector<char> data;
@@ -141,211 +150,259 @@ if (load_file("example.txt", data)) {
     std::printf("Failed to load file\n");
 }
 ```
-- **Preconditions**: The file must exist and be accessible, and the limit must be a positive value.
-- **Postconditions**: If successful, the vector contains the file contents; otherwise, it remains unchanged.
-- **Thread Safety**: This function is not thread-safe due to file I/O operations.
-- **Complexity**: O(n) time complexity, where n is the file size.
-- **See Also**: `save_file`, `resume_file`
+- **Preconditions**:
+  - `filename` must be a valid file path.
+  - `v` must be a valid vector.
+- **Postconditions**:
+  - If successful, `v` contains the file contents.
+  - Returns false if the file is too large or cannot be opened.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time complexity, where n is file size.
+- **See Also**: `save_file`, `std::vector`
 
 ## is_absolute_path
 
 - **Signature**: `bool is_absolute_path(std::string const& f)`
-- **Description**: Determines whether a given file path is absolute (i.e., starts with a drive letter on Windows or a root directory on Unix-like systems).
+- **Description**: Checks if a path is absolute.
 - **Parameters**:
-  - `f` (std::string const&): The file path to check.
+  - `f` (std::string const&): Path to check.
 - **Return Value**:
-  - `true`: The path is absolute
-  - `false`: The path is relative
+  - `true`: Path is absolute.
+  - `false`: Path is relative.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
-if (is_absolute_path("C:\\Windows\\System32")) {
+if (is_absolute_path("C:\\Windows\\system32")) {
     std::printf("Path is absolute\n");
 } else {
     std::printf("Path is relative\n");
 }
 ```
-- **Preconditions**: The input string must be a valid file path.
-- **Postconditions**: The function returns the result of the absolute path check.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(n) time complexity, where n is the length of the path string.
+- **Preconditions**: `f` must be a valid string.
+- **Postconditions**: Returns true if the path is absolute, false otherwise.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time complexity, where n is path length.
 - **See Also**: `make_absolute_path`, `path_append`
 
 ## path_append
 
 - **Signature**: `std::string path_append(std::string const& lhs, std::string const& rhs)`
-- **Description**: Appends two path components, ensuring the correct separator is used based on the platform. Handles edge cases like empty strings and the current directory marker.
+- **Description**: Appends two path components, handling platform-specific path separators.
 - **Parameters**:
-  - `lhs` (std::string const&): The left path component.
-  - `rhs` (std::string const&): The right path component.
-- **Return Value**: A new string representing the combined path.
+  - `lhs` (std::string const&): Base path.
+  - `rhs` (std::string const&): Path to append.
+- **Return Value**: Combined path string.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
 std::string path = path_append("C:\\Users", "Documents");
 std::printf("Path: %s\n", path.c_str());
 ```
-- **Preconditions**: The input strings must be valid path components.
-- **Postconditions**: The returned string is a properly formatted path.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(n) time complexity, where n is the total length of the input paths.
+- **Preconditions**:
+  - `lhs` and `rhs` must be valid strings.
+  - `rhs` should not be empty unless `lhs` is also empty.
+- **Postconditions**: Returns a properly formatted path with appropriate separator.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time complexity, where n is total path length.
 - **See Also**: `make_absolute_path`, `is_absolute_path`
 
 ## make_absolute_path
 
 - **Signature**: `std::string make_absolute_path(std::string const& p)`
-- **Description**: Converts a relative path to an absolute path by prepending the current working directory. The function handles both Windows and Unix-like systems.
+- **Description**: Converts a relative path to an absolute path.
 - **Parameters**:
-  - `p` (std::string const&): The path to convert to absolute.
-- **Return Value**: A string representing the absolute path.
+  - `p` (std::string const&): Relative path to convert.
+- **Return Value**: Absolute path.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
-std::string absolute = make_absolute_path("Documents\\example.txt");
+std::string absolute = make_absolute_path("Documents\\file.txt");
 std::printf("Absolute path: %s\n", absolute.c_str());
 ```
-- **Preconditions**: The current working directory must be valid.
-- **Postconditions**: The returned string is an absolute path.
-- **Thread Safety**: This function is not thread-safe due to file system calls.
-- **Complexity**: O(n) time complexity, where n is the length of the path.
+- **Preconditions**: `p` must be a valid string.
+- **Postconditions**: Returns the absolute path equivalent of the input.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time complexity, where n is path length.
 - **See Also**: `path_append`, `is_absolute_path`
 
 ## print_endpoint
 
 - **Signature**: `std::string print_endpoint(lt::tcp::endpoint const& ep)`
-- **Description**: Converts a TCP endpoint to a human-readable string format, including IP address and port. Handles IPv6 addresses appropriately.
+- **Description**: Converts a TCP endpoint to a string representation with proper formatting for IPv6 addresses.
 - **Parameters**:
-  - `ep` (lt::tcp::endpoint const&): The TCP endpoint to convert.
-- **Return Value**: A string representation of the endpoint.
+  - `ep` (lt::tcp::endpoint const&): Endpoint to convert.
+- **Return Value**: String representation of the endpoint.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
 lt::tcp::endpoint ep(lt::address_v4::from_string("192.168.1.1"), 8080);
-std::string endpoint_str = print_endpoint(ep);
-std::printf("Endpoint: %s\n", endpoint_str.c_str());
+std::string str = print_endpoint(ep);
+std::printf("Endpoint: %s\n", str.c_str());
 ```
-- **Preconditions**: The endpoint must be valid.
-- **Postconditions**: The returned string is a valid representation of the endpoint.
-- **Thread Safety**: This function is thread-safe.
+- **Preconditions**: `ep` must be a valid endpoint.
+- **Postconditions**: Returns a string representation of the endpoint.
+- **Thread Safety**: Thread-safe.
 - **Complexity**: O(1) time complexity.
-- **See Also**: `peer_index`, `print_peer_info`
+- **See Also**: `lt::tcp::endpoint`, `print_endpoint`
 
 ## peer_index
 
 - **Signature**: `int peer_index(lt::tcp::endpoint addr, std::vector<lt::peer_info> const& peers)`
-- **Description**: Finds the index of a peer with the specified endpoint in a vector of peer information.
+- **Description**: Finds the index of a specific peer in a vector of peers.
 - **Parameters**:
-  - `addr` (lt::tcp::endpoint): The endpoint of the peer to find.
-  - `peers` (std::vector<lt::peer_info> const&): The vector of peer information.
+  - `addr` (lt::tcp::endpoint): The peer endpoint to find.
+  - `peers` (std::vector<lt::peer_info> const&): Vector of peer information.
 - **Return Value**:
-  - `>= 0`: The index of the peer in the vector
-  - `-1`: Peer not found
+  - Index of the peer if found.
+  - `-1` if the peer is not found.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
-lt::tcp::endpoint peer_addr(lt::address_v4::from_string("192.168.1.1"), 6881);
-int index = peer_index(peer_addr, peers);
-if (index >= 0) {
-    std::printf("Peer found at index %d\n", index);
+int index = peer_index(ep, peers);
+if (index != -1) {
+    std::printf("Peer found at index: %d\n", index);
 } else {
     std::printf("Peer not found\n");
 }
 ```
-- **Preconditions**: The vector of peers must be valid and contain peer information.
-- **Postconditions**: The function returns the index of the peer or -1 if not found.
-- **Thread Safety**: This function is thread-safe.
+- **Preconditions**:
+  - `peers` must be a valid vector.
+  - `addr` must be a valid endpoint.
+- **Postconditions**: Returns the index of the peer, or -1 if not found.
+- **Thread Safety**: Thread-safe.
 - **Complexity**: O(n) time complexity, where n is the number of peers.
-- **See Also**: `print_peer_info`, `print_endpoint`
+- **See Also**: `lt::peer_info`, `std::vector`
 
 ## base32encode_i2p
 
 - **Signature**: `void base32encode_i2p(lt::sha256_hash const& s, std::string& out, int limit)`
-- **Description**: Encodes a SHA-256 hash into a base32 string format, typically used for I2P addresses. The function ensures the output is limited to a specified length.
+- **Description**: Encodes a SHA-256 hash to base32 format for I2P addresses.
 - **Parameters**:
-  - `s` (lt::sha256_hash const&): The hash to encode.
-  - `out` (std::string&): The output string where the encoded result will be stored.
-  - `limit` (int): The maximum length of the output string.
-- **Return Value**: None (modifies the output string).
+  - `s` (lt::sha256_hash const&): Hash to encode.
+  - `out` (std::string&): Output string to store the encoded result.
+  - `limit` (int): Maximum length of output.
+- **Return Value**: None.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
-lt::sha256_hash hash("some data");
-std::string encoded;
-base32encode_i2p(hash, encoded, 32);
-std::printf("Encoded: %s\n", encoded.c_str());
+lt::sha256_hash hash = lt::sha256_hash::from_string("a1b2c3d4e5f6g7h8i9j0");
+std::string result;
+base32encode_i2p(hash, result, 50);
+std::printf("Base32: %s\n", result.c_str());
 ```
-- **Preconditions**: The hash must be valid, and the limit must be a positive value.
-- **Postconditions**: The output string contains the base32-encoded hash.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(n) time complexity, where n is the length of the hash.
-- **See Also**: `to_hex`, `is_resume_file`
+- **Preconditions**:
+  - `s` must be a valid SHA-256 hash.
+  - `out` must be a valid string.
+  - `limit` must be positive.
+- **Postconditions**: `out` contains the base32-encoded hash.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time complexity, where n is hash size.
+- **See Also**: `lt::sha256_hash`, `base32encode_i2p`
 
 ## print_peer_info
 
 - **Signature**: `int print_peer_info(std::string& out, std::vector<lt::peer_info> const& peers, int max_lines)`
-- **Description**: Generates a formatted string containing information about peers, including IP addresses, download progress, and other statistics. The function limits the output to a specified number of lines.
+- **Description**: Prints peer information to a string with formatting.
 - **Parameters**:
-  - `out` (std::string&): The output string where the formatted peer information will be appended.
-  - `peers` (std::vector<lt::peer_info> const&): The vector of peer information.
-  - `max_lines` (int): The maximum number of lines to output.
-- **Return Value**: The number of lines actually printed.
+  - `out` (std::string&): Output string to append results.
+  - `peers` (std::vector<lt::peer_info> const&): Vector of peer information.
+  - `max_lines` (int): Maximum number of lines to print.
+- **Return Value**: Number of lines printed.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
 std::string output;
-int lines_printed = print_peer_info(output, peers, 10);
-std::printf("Printed %d lines\n", lines_printed);
-std::printf("%s\n", output.c_str());
+int lines = print_peer_info(output, peers, 10);
+std::printf("Printed %d lines\n", lines);
 ```
-- **Preconditions**: The vector of peers must be valid.
-- **Postconditions**: The output string contains the formatted peer information.
-- **Thread Safety**: This function is thread-safe.
-- **Complexity**: O(n) time complexity, where n is the number of peers.
-- **See Also**: `peer_index`, `print_peer_legend`
+- **Preconditions**:
+  - `out` must be a valid string.
+  - `peers` must be a valid vector.
+  - `max_lines` must be positive.
+- **Postconditions**: Appends peer information to `out` string.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time complexity, where n is number of peers.
+- **See Also**: `lt::peer_info`, `std::vector`
 
 ## print_peer_legend
 
 - **Signature**: `int print_peer_legend(std::string& out, int max_lines)`
-- **Description**: Prints a legend for the peer information output, explaining the meaning of different columns and symbols. The function limits the output to a specified number of lines.
+- **Description**: Prints a legend for peer information display.
 - **Parameters**:
-  - `out` (std::string&): The output string where the legend will be appended.
-  - `max_lines` (int): The maximum number of lines to output.
-- **Return Value**: The number of lines actually printed.
+  - `out` (std::string&): Output string to append results.
+  - `max_lines` (int): Maximum number of lines to print.
+- **Return Value**: Number of lines printed.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
 std::string output;
-int lines_printed = print_peer_legend(output, 5);
-std::printf("Printed %d lines\n", lines_printed);
-std::printf("%s\n", output.c_str());
+int lines = print_peer_legend(output, 5);
+std::printf("Printed %d lines\n", lines);
 ```
-- **Preconditions**: None.
-- **Postconditions**: The output string contains the legend.
-- **Thread Safety**: This function is thread-safe.
+- **Preconditions**:
+  - `out` must be a valid string.
+  - `max_lines` must be positive.
+- **Postconditions**: Appends legend information to `out` string.
+- **Thread Safety**: Thread-safe.
 - **Complexity**: O(1) time complexity.
-- **See Also**: `print_peer_info`, `print_usage`
+- **See Also**: `print_peer_info`
 
 ## signal_handler
 
 - **Signature**: `void signal_handler(int)`
-- **Description**: Signal handler function that sets a global flag (`quit`) to true when a signal is received, typically to terminate the program gracefully.
+- **Description**: Signal handler function that sets a global flag to terminate the main loop.
 - **Parameters**:
-  - `int`: The signal number (unused in this implementation).
+  - `int`: Signal number (not used).
 - **Return Value**: None.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions thrown.
 - **Example**:
 ```cpp
+// Set up signal handler
 signal(SIGINT, signal_handler);
-// When Ctrl+C is pressed, quit will be set to true
 ```
-- **Preconditions**: The signal must be valid and the function must be registered as a handler.
-- **Postconditions**: The `quit`
+- **Preconditions**: Must be called as a signal handler.
+- **Postconditions**: Sets global `quit` flag to true.
+- **Thread Safety**: Thread-safe only if `quit` is atomic or properly synchronized.
+- **Complexity**: O(1) time complexity.
+- **See Also**: `main`, `quit`
+
+## print_settings
+
+- **Signature**: `void print_settings(int const start, int const num, char const* const type)`
+- **Description**: Prints settings names and types for the specified range.
+- **Parameters**:
+  - `start` (int const): Starting index of settings to print.
+  - `num` (int const): Number of settings to print.
+  - `type` (char const* const): Type string to append to each setting.
+- **Return Value**: None.
+- **Exceptions/Errors**:
+  - No exceptions thrown.
+- **Example**:
+```cpp
+print_settings(0, 10, "string");
+```
+- **Preconditions**:
+  - `start` must be non-negative.
+  - `num` must be non-negative.
+- **Postconditions**: Prints settings information to stdout.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time complexity, where n is number of settings.
+- **See Also**: `lt::name_for_setting`
+
+## assign_setting
+
+- **Signature**: `void assign_setting(lt::settings_pack& settings, std::string const& key, char const* value)`
+- **Description**: Assigns a value to a libtorrent setting by name.
+- **Parameters**:
+  - `settings` (lt::settings_pack&): Settings pack to modify.
+  - `key` (std::string const&): Name of the setting.
+  - `value` (char const*): Value to assign
