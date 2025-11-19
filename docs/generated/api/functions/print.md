@@ -1,383 +1,247 @@
-```markdown
-# API Documentation
+# Function Documentation
 
-## esc
+## add_suffix
 
-- **Signature**: `char const* esc(char const* code)`
-- **Description**: Converts a string code to a human-readable string representation using a static buffer. This function uses a round-robin buffer to avoid string copying overhead. It's designed for performance-critical code where frequent string formatting occurs.
+- **Signature**: `auto add_suffix(T val, char const* suffix = nullptr)`
+- **Description**: This function converts a numeric value to a string representation with an optional suffix appended. It is a templated function that takes any type `T` that can be converted to a double, and returns a string with the value and optional suffix. The function internally calls `add_suffix_float` with the value converted to double.
 - **Parameters**:
-  - `code` (char const*): The input code string to convert. This string is interpreted as a format specifier or identifier.
+  - `val` (T): The numeric value to convert to string. This can be any type that can be implicitly converted to double (int, float, double, etc.).
+  - `suffix` (char const*): Optional suffix to append to the string representation. If not provided, an empty string is used.
 - **Return Value**:
-  - `char const*`: A pointer to a static buffer containing the formatted string. The returned pointer is valid until the next call to `esc()`, so the caller must not store it beyond that point.
+  - Returns a `std::string` containing the string representation of the value with the optional suffix appended. The string will contain a decimal representation of the value with appropriate precision.
 - **Exceptions/Errors**:
-  - None thrown.
+  - The function may throw exceptions if the internal `add_suffix_float` function throws. This could happen due to memory allocation failures or other internal errors in the implementation.
+  - The function does not explicitly handle invalid input values (like NaN or infinity), but these would be handled by the internal `add_suffix_float` function.
 - **Example**:
 ```cpp
-auto result = esc("OK");
-if (result != nullptr) {
-    std::cout << result << std::endl;
+// Practical example of using this function
+auto result = add_suffix(42, " units");
+if (!result.empty()) {
+    std::cout << result << std::endl; // Output: "42 units"
 }
+
+auto result2 = add_suffix(3.14159);
+std::cout << result2 << std::endl; // Output: "3.14159"
 ```
-- **Preconditions**: `code` must not be null.
-- **Postconditions**: Returns a pointer to a static buffer containing the formatted string.
-- **Thread Safety**: Not thread-safe due to the use of a static buffer and mutable state.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `to_string()`, `color()`
+- **Preconditions**: 
+  - The `val` parameter must be a valid numeric value that can be converted to double.
+  - The `suffix` parameter, if provided, must be a valid null-terminated string.
+- **Postconditions**: 
+  - The returned string will contain a string representation of the value with the optional suffix appended.
+  - The returned string will be valid and null-terminated.
+- **Thread Safety**: 
+  - The function is thread-safe as it does not modify any shared state and only uses local variables.
+- **Complexity**: 
+  - Time Complexity: O(1) - The function performs a fixed number of operations regardless of input size.
+  - Space Complexity: O(1) - The function uses a fixed amount of additional memory.
+- **See Also**: `add_suffix_float`
 
-## to_string
+## Usage Examples
 
-- **Signature**: `std::string to_string(int v, int width)`
-- **Description**: Converts an integer to a string with a specified minimum width, padding with spaces if necessary.
-- **Parameters**:
-  - `v` (int): The integer value to convert.
-  - `width` (int): The minimum width of the resulting string. If the number has fewer digits than `width`, it will be padded with spaces on the left.
-- **Return Value**:
-  - `std::string`: The formatted string representation of the integer.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-auto result = to_string(42, 5);
-std::cout << result << std::endl; // Output: "   42"
-```
-- **Preconditions**: `width` must be non-negative.
-- **Postconditions**: Returns a string representation of `v` with at least `width` characters.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `esc()`, `add_suffix_float()`
-
-## add_suffix_float
-
-- **Signature**: `std::string add_suffix_float(double val, char const* suffix)`
-- **Description**: Formats a floating-point number with an appropriate SI prefix (kB, MB, GB, etc.) and optional suffix. The function scales the value down to a more readable format and appends the appropriate suffix.
-- **Parameters**:
-  - `val` (double): The floating-point value to format.
-  - `suffix` (char const*): Optional suffix to append to the result. Can be null.
-- **Return Value**:
-  - `std::string`: The formatted string with the appropriate prefix and suffix.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-auto result = add_suffix_float(1234567.89, "B");
-std::cout << result << std::endl; // Output: "1.23MB"
-```
-- **Preconditions**: `suffix` must be null or a valid C-string.
-- **Postconditions**: Returns a formatted string representing the value in human-readable units.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `to_string()`, `color()`
-
-## color
-
-- **Signature**: `std::string color(std::string const& s, color_code c)`
-- **Description**: Applies ANSI color codes to a string for terminal display. The function wraps the input string with ANSI escape sequences to color it in the terminal.
-- **Parameters**:
-  - `s` (std::string const&): The string to colorize.
-  - `c` (color_code): The color code to apply. If `col_none`, no color is applied.
-- **Return Value**:
-  - `std::string`: The colorized string with ANSI escape sequences.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-auto result = color("Hello World", col_red);
-std::cout << result << std::endl;
-```
-- **Preconditions**: `s` must be a valid string.
-- **Postconditions**: Returns a string with ANSI color codes applied.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time and space complexity, where n is the length of the input string.
-- **See Also**: `progress_bar()`, `set_cursor_pos()`
-
-## progress_bar
-
-- **Signature**: `std::string const& progress_bar(int progress, int width, color_code c, char fill, char bg, std::string caption, int flags)`
-- **Description**: Generates a progress bar string with specified parameters. The function calculates the progress as a percentage and creates a visual representation of it.
-- **Parameters**:
-  - `progress` (int): The current progress as a percentage (0-100).
-  - `width` (int): The width of the progress bar in characters.
-  - `c` (color_code): The color code for the progress bar.
-  - `fill` (char): The character used to fill the progress portion of the bar.
-  - `bg` (char): The background character for the non-progress portion of the bar.
-  - `caption` (std::string): An optional caption to display with the progress bar.
-  - `flags` (int): Additional flags to modify the behavior of the progress bar.
-- **Return Value**:
-  - `std::string const&`: A reference to a static string containing the progress bar. This reference is valid until the next call to `progress_bar()`.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-auto result = progress_bar(75, 50, col_green, '#', ' ', "Download Progress", 0);
-std::cout << result << std::endl;
-```
-- **Preconditions**: `progress` must be between 0 and 100, `width` must be positive.
-- **Postconditions**: Returns a reference to a static string containing the progress bar.
-- **Thread Safety**: Not thread-safe due to the use of a static buffer.
-- **Complexity**: O(n) time and space complexity, where n is the width of the progress bar.
-- **See Also**: `piece_bar()`, `avail_bar()`
-
-## piece_bar
-
-- **Signature**: `std::string const& piece_bar(lt::bitfield const& p, int width)`
-- **Description**: Generates a visual representation of a bitfield as a piece bar. The function converts each bit in the bitfield to a character, creating a visual bar that shows which pieces are available.
-- **Parameters**:
-  - `p` (lt::bitfield const&): The bitfield to visualize.
-  - `width` (int): The width of the piece bar in characters.
-- **Return Value**:
-  - `std::string const&`: A reference to a static string containing the piece bar. This reference is valid until the next call to `piece_bar()`.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-lt::bitfield bf(100);
-// Set some bits
-auto result = piece_bar(bf, 50);
-std::cout << result << std::endl;
-```
-- **Preconditions**: `width` must be positive.
-- **Postconditions**: Returns a reference to a static string containing the piece bar.
-- **Thread Safety**: Not thread-safe due to the use of a static buffer.
-- **Complexity**: O(n) time and space complexity, where n is the width of the piece bar.
-- **See Also**: `progress_bar()`, `avail_bar()`
-
-## avail_bar
-
-- **Signature**: `std::string avail_bar(lt::span<int> avail, int const width, int& pos)`
-- **Description**: Generates a visual representation of the availability of pieces, displaying them as a bar with different characters for different availability levels. The function returns a string and updates the position pointer.
-- **Parameters**:
-  - `avail` (lt::span<int>): A span of integers representing the availability of each piece.
-  - `width` (int): The width of the availability bar in characters.
-  - `pos` (int&): A reference to an integer that will be updated to the current position in the availability data.
-- **Return Value**:
-  - `std::string`: The availability bar string.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-std::vector<int> availability(100, 0);
-// Populate availability data
-int pos = 0;
-auto result = avail_bar(avail, 50, pos);
-std::cout << result << std::endl;
-```
-- **Preconditions**: `width` must be positive, `avail` must be valid.
-- **Postconditions**: Returns a string representing the availability bar and updates `pos` to the current position.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time and space complexity, where n is the width of the bar.
-- **See Also**: `piece_bar()`, `piece_matrix()`
-
-## get_piece
-
-- **Signature**: `int get_piece(lt::bitfield const& p, int index)`
-- **Description**: Retrieves the availability status of a specific piece from a bitfield.
-- **Parameters**:
-  - `p` (lt::bitfield const&): The bitfield containing piece availability data.
-  - `index` (int): The index of the piece to check.
-- **Return Value**:
-  - `int`: Returns 1 if the piece is available, 0 otherwise.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-lt::bitfield bf(100);
-// Set some bits
-int result = get_piece(bf, 42);
-if (result == 1) {
-    std::cout << "Piece 42 is available" << std::endl;
-}
-```
-- **Preconditions**: `index` must be within the bounds of the bitfield.
-- **Postconditions**: Returns 1 if the piece is available, 0 otherwise.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `piece_matrix()`, `avail_bar()`
-
-## piece_matrix
-
-- **Signature**: `std::string piece_matrix(lt::bitfield const& p, int width, int* height)`
-- **Description**: Generates a matrix representation of a bitfield, displaying pieces in a grid format. The function returns a string and updates the height pointer.
-- **Parameters**:
-  - `p` (lt::bitfield const&): The bitfield to visualize.
-  - `width` (int): The width of the matrix in characters.
-  - `height` (int*): A pointer to an integer that will be updated to the height of the matrix.
-- **Return Value**:
-  - `std::string`: The matrix representation of the bitfield.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-lt::bitfield bf(100);
-// Set some bits
-int height = 0;
-auto result = piece_matrix(bf, 50, &height);
-std::cout << result << std::endl;
-```
-- **Preconditions**: `width` must be positive, `height` must be a valid pointer.
-- **Postconditions**: Returns a string representing the piece matrix and updates `height` to the height of the matrix.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time and space complexity, where n is the number of pieces.
-- **See Also**: `avail_bar()`, `get_piece()`
-
-## set_cursor_pos
-
-- **Signature**: `void set_cursor_pos(int x, int y)`
-- **Description**: Sets the cursor position in the terminal. This function works on both Windows and Unix-like systems.
-- **Parameters**:
-  - `x` (int): The horizontal position of the cursor.
-  - `y` (int): The vertical position of the cursor.
-- **Return Value**:
-  - `void`: No return value.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-set_cursor_pos(10, 5);
-std::cout << "Hello" << std::endl;
-```
-- **Preconditions**: `x` and `y` must be within the terminal's dimensions.
-- **Postconditions**: The cursor is moved to the specified position.
-- **Thread Safety**: Not thread-safe due to direct console access.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `clear_screen()`, `clear_rows()`
-
-## clear_screen
-
-- **Signature**: `void clear_screen()`
-- **Description**: Clears the entire terminal screen. This function works on both Windows and Unix-like systems.
-- **Parameters**:
-  - None.
-- **Return Value**:
-  - `void`: No return value.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-clear_screen();
-std::cout << "Screen cleared" << std::endl;
-```
-- **Preconditions**: None.
-- **Postconditions**: The entire terminal screen is cleared.
-- **Thread Safety**: Not thread-safe due to direct console access.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `set_cursor_pos()`, `clear_rows()`
-
-## clear_rows
-
-- **Signature**: `void clear_rows(int y1, int y2)`
-- **Description**: Clears a range of rows in the terminal screen. This function works on both Windows and Unix-like systems.
-- **Parameters**:
-  - `y1` (int): The starting row to clear.
-  - `y2` (int): The ending row to clear.
-- **Return Value**:
-  - `void`: No return value.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-clear_rows(5, 10);
-std::cout << "Rows 5-10 cleared" << std::endl;
-```
-- **Preconditions**: `y1` must be less than or equal to `y2`.
-- **Postconditions**: The specified range of rows is cleared.
-- **Thread Safety**: Not thread-safe due to direct console access.
-- **Complexity**: O(n) time and space complexity, where n is the number of rows to clear.
-- **See Also**: `clear_screen()`, `set_cursor_pos()`
-
-## apply_ansi_code
-
-- **Signature**: `void apply_ansi_code(WORD* attributes, bool* reverse, bool* support_chaining, int code)`
-- **Description**: Applies ANSI color codes to console attributes. This function is used internally by `print()` to handle color formatting.
-- **Parameters**:
-  - `attributes` (WORD*): Pointer to the console attributes to modify.
-  - `reverse` (bool*): Pointer to a boolean indicating whether reverse video is enabled.
-  - `support_chaining` (bool*): Pointer to a boolean indicating whether chaining is supported.
-  - `code` (int): The ANSI code to apply.
-- **Return Value**:
-  - `void`: No return value.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-WORD attributes = 7;
-bool reverse = false;
-bool support_chaining = true;
-apply_ansi_code(&attributes, &reverse, &support_chaining, 31); // Red text
-```
-- **Preconditions**: `attributes` must be a valid pointer to console attributes.
-- **Postconditions**: The console attributes are modified according to the ANSI code.
-- **Thread Safety**: Not thread-safe due to direct console access.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `print()`, `color()`
-
-## print
-
-- **Signature**: `void print(char const* buf)`
-- **Description**: Prints a string to the console, handling ANSI escape sequences for color and formatting. This function is used to display formatted text in the terminal.
-- **Parameters**:
-  - `buf` (char const*): The string to print.
-- **Return Value**:
-  - `void`: No return value.
-- **Exceptions/Errors**:
-  - None thrown.
-- **Example**:
-```cpp
-print("Hello \033[31mWorld\033[0m");
-```
-- **Preconditions**: `buf` must not be null.
-- **Postconditions**: The string is printed to the console with any ANSI escape sequences processed.
-- **Thread Safety**: Not thread-safe due to direct console access.
-- **Complexity**: O(n) time and space complexity, where n is the length of the input string.
-- **See Also**: `apply_ansi_code()`, `color()`
-
-# Usage Examples
-
-## Basic Usage
-
+### Basic Usage
 ```cpp
 #include <iostream>
 #include <string>
 
-int main() {
-    // Basic string formatting
-    std::string result = to_string(42, 5);
-    std::cout << result << std::endl; // Output: "   42"
+// Assuming the function is in the global namespace
+auto result = add_suffix(123);
+std::cout << result << std::endl; // Output: "123"
 
-    // Colorized text
-    std::string colored = color("Hello World", col_red);
-    std::cout << colored << std::endl;
-
-    // Progress bar
-    auto progress = progress_bar(75, 50, col_green, '#', ' ', "Download Progress", 0);
-    std::cout << progress << std::endl;
-
-    // Set cursor position
-    set_cursor_pos(10, 5);
-    std::cout << "Hello" << std::endl;
-
-    return 0;
-}
+auto result2 = add_suffix(45.67, " degrees");
+std::cout << result2 << std::endl; // Output: "45.67 degrees"
 ```
 
-## Error Handling
-
+### Error Handling
 ```cpp
 #include <iostream>
 #include <string>
 #include <stdexcept>
 
-int main() {
-    try {
-        // Validate inputs
-        if (width < 0) {
-            throw std::invalid_argument("Width must be non-negative");
-        }
+try {
+    auto result = add_suffix(42, " items");
+    if (!result.empty()) {
+        std::cout << "Success: " << result << std::endl;
+    }
+} catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+}
+```
 
-        // Use functions with proper error handling
-        std::string result = to_string(42, 5);
-        if (result.empty()) {
-            std::cerr << "Error: Failed to format string" << std::endl;
-            return 1;
-        }
+### Edge Cases
+```cpp
+#include <iostream>
+#include <string>
 
-        // Handle potential console errors
+// Zero value
+auto result1 = add_suffix(0, " zeros");
+std::cout << result1 << std::endl; // Output: "0 zeros"
+
+// Negative value
+auto result2 = add_suffix(-123.45, " negative");
+std::cout << result2 << std::endl; // Output: "-123.45 negative"
+
+// Large value
+auto result3 = add_suffix(1234567890, " billion");
+std::cout << result3 << std::endl; // Output: "1234567890 billion"
+
+// Small floating point value
+auto result4 = add_suffix(0.000001, " micro");
+std::cout << result4 << std::endl; // Output: "1e-06 micro"
+```
+
+## Best Practices
+
+### How to Use These Functions Effectively
+1. Use this function when you need to convert numeric values to strings with optional suffixes for display purposes.
+2. The function is particularly useful in logging, debugging, or user interface display scenarios.
+3. For performance-critical applications, consider caching the results if the same values are frequently converted.
+
+### Common Mistakes to Avoid
+1. **Invalid suffix pointers**: Ensure the suffix parameter points to valid memory if provided.
+2. **Performance overhead**: Be aware that string conversion can be expensive in tight loops.
+3. **Memory allocation**: The function creates a new string object, so avoid using it in performance-critical code without profiling.
+
+### Performance Tips
+1. **Cache results**: If the same values are converted multiple times, cache the results instead of calling the function repeatedly.
+2. **Use for display only**: This function is intended for display purposes, not for performance-critical operations.
+3. **Consider alternative**: For performance-critical applications, consider using `sprintf` or similar functions directly.
+
+## Code Review & Improvement Suggestions
+
+### Potential Issues
+
+**Security:**
+- **Function**: `add_suffix`
+- **Issue**: No explicit validation of the `suffix` parameter for null pointer dereference
+- **Severity**: Low
+- **Impact**: Could cause a crash if a null pointer is passed as suffix
+- **Fix**: Add explicit null check for the suffix parameter
+```cpp
+std::string add_suffix(T val, char const* suffix = nullptr) {
+    if (suffix == nullptr) {
+        suffix = "";
+    }
+    return add_suffix_float(double(val), suffix);
+}
+```
+
+**Performance:**
+- **Function**: `add_suffix`
+- **Issue**: Unnecessary conversion to double for integer types
+- **Severity**: Medium
+- **Impact**: Potential performance overhead for integer types
+- **Fix**: Use template specialization to avoid double conversion for integer types
+```cpp
+// This would require a more complex template design
+template<typename T>
+std::string add_suffix(T val, char const* suffix = nullptr) {
+    return add_suffix_float(static_cast<double>(val), suffix);
+}
+```
+
+**Correctness:**
+- **Function**: `add_suffix`
+- **Issue**: No handling of special floating-point values (NaN, infinity)
+- **Severity**: Medium
+- **Impact**: Could produce unexpected results with invalid floating-point values
+- **Fix**: Add handling for special floating-point values
+```cpp
+std::string add_suffix(T val, char const* suffix = nullptr) {
+    double d = double(val);
+    if (std::isnan(d)) {
+        return std::string("NaN") + (suffix ? suffix : "");
+    }
+    if (std::isinf(d)) {
+        return std::string("inf") + (suffix ? suffix : "");
+    }
+    return add_suffix_float(d, suffix);
+}
+```
+
+**Code Quality:**
+- **Function**: `add_suffix`
+- **Issue**: Magic number in the function name and lack of documentation
+- **Severity**: Low
+- **Impact**: Reduced code readability and maintainability
+- **Fix**: Add more descriptive documentation and consider renaming to something more descriptive
+```cpp
+// Consider renaming to something more descriptive like:
+// std::string format_with_suffix(T val, char const* suffix = nullptr)
+```
+
+### Modernization Opportunities
+
+- **Function**: `add_suffix`
+- **Opportunity**: Use `[[nodiscard]]` attribute for functions that return important values
+- **Benefit**: Prevents accidental discarding of return values
+```cpp
+[[nodiscard]] auto add_suffix(T val, char const* suffix = nullptr) {
+    return add_suffix_float(double(val), suffix);
+}
+```
+
+- **Function**: `add_suffix`
+- **Opportunity**: Use `std::string_view` for the suffix parameter
+- **Benefit**: Avoids unnecessary string copying for read-only operations
+```cpp
+auto add_suffix(T val, std::string_view suffix = "") {
+    return add_suffix_float(double(val), suffix.data());
+}
+```
+
+- **Function**: `add_suffix`
+- **Opportunity**: Use `constexpr` if the function can be evaluated at compile time
+- **Benefit**: Enables compile-time evaluation for constant inputs
+```cpp
+// This would require significant changes to the implementation
+// and may not be feasible due to the dependency on add_suffix_float
+```
+
+### Refactoring Suggestions
+
+- **Function**: `add_suffix`
+- **Suggestion**: Move to a utility namespace like `libtorrent::utils` or `libtorrent::format`
+- **Benefit**: Better organization of code and clearer separation of concerns
+```cpp
+namespace libtorrent {
+namespace utils {
+    template<typename T>
+    std::string add_suffix(T val, char const* suffix = nullptr) {
+        return add_suffix_float(double(val), suffix);
+    }
+}
+}
+```
+
+### Performance Optimizations
+
+1. **Function**: `add_suffix`
+   - **Optimization**: Use `std::string_view` for the suffix parameter to avoid copying
+   - **Benefit**: Reduces memory allocation for the suffix parameter
+   ```cpp
+   auto add_suffix(T val, std::string_view suffix = "") {
+       return add_suffix_float(double(val), suffix.data());
+   }
+   ```
+
+2. **Function**: `add_suffix`
+   - **Optimization**: Consider using `std::to_string` with manual suffix concatenation for simple cases
+   - **Benefit**: Potentially faster for simple string conversions
+   ```cpp
+   auto add_suffix(T val, char const* suffix = nullptr) {
+       std::string result = std::to_string(double(val));
+       if (suffix != nullptr) {
+           result += suffix;
+       }
+       return result;
+   }
+   ```
+
+3. **Function**: `add_suffix`
+   - **Optimization**: Add `noexcept` specification if the function is guaranteed not to throw
+   - **Benefit**: Enables compiler optimizations and clearer code semantics
+   ```cpp
+   auto add_suffix(T val, char const* suffix = nullptr) noexcept {
+       return add_suffix_float(double(val), suffix);
+   }
+   ```

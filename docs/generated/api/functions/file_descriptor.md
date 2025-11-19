@@ -1,138 +1,126 @@
-# `file_descriptor` Class API Documentation
+# file_descriptor Class API Documentation
 
-## Class Overview
-
-The `file_descriptor` class is a RAII (Resource Acquisition Is Initialization) wrapper for file descriptors in C++. It manages the lifecycle of a file descriptor, ensuring that it is properly closed when the object goes out of scope. The class follows the Rule of Five (or Rule of Zero, since it manages a resource), and provides safe, exception-aware resource management.
-
-## Public Member Functions
-
-### `file_descriptor`
+## file_descriptor(int fd)
 
 - **Signature**: `file_descriptor(int fd)`
-- **Description**: Constructs a `file_descriptor` object that wraps the given file descriptor. The constructor takes ownership of the file descriptor and will ensure it is closed when the object is destroyed.
+- **Description**: Constructs a file descriptor wrapper object that manages a file descriptor. This constructor initializes the internal file descriptor with the provided value, ensuring it is properly tracked for automatic cleanup when the object goes out of scope.
 - **Parameters**:
-  - `fd` (`int`): The file descriptor to wrap. Valid values are non-negative integers representing an open file descriptor. A value of -1 is invalid and should not be passed to this constructor.
-- **Return Value**: None (constructor).
-- **Exceptions/Errors**: 
-  - No exceptions thrown by the constructor itself. However, if the `fd` parameter is invalid (e.g., negative or already closed), the behavior is undefined.
+  - `fd` (int): The file descriptor to wrap. Must be a valid file descriptor (non-negative integer). The function does not validate the file descriptor's validity.
+- **Return Value**:
+  - None (constructor)
+- **Exceptions/Errors**:
+  - No exceptions thrown
 - **Example**:
 ```cpp
-#include <libtorrent/aux_/file_descriptor.hpp>
-#include <fcntl.h>
-#include <unistd.h>
-
-int main() {
-    int fd = open("example.txt", O_RDONLY);
-    if (fd == -1) {
-        // Handle error
-        return 1;
-    }
-    file_descriptor descriptor(fd); // Takes ownership of the file descriptor
-    // Use descriptor
-    return 0;
+// Create a file descriptor wrapper for a file opened elsewhere
+int raw_fd = open("example.txt", O_RDONLY);
+if (raw_fd != -1) {
+    file_descriptor fd(raw_fd);
+    // fd will automatically close when it goes out of scope
 }
 ```
-- **Preconditions**: The `fd` parameter must be a valid, open file descriptor.
-- **Postconditions**: The `file_descriptor` object is constructed and owns the file descriptor. The file descriptor will be closed when the object is destroyed.
-- **Thread Safety**: The constructor is thread-safe as long as the file descriptor is not accessed concurrently by other threads.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: The file descriptor `fd` must be valid and not already managed by another `file_descriptor` object.
+- **Postconditions**: The `file_descriptor` object is constructed with the provided file descriptor, and the file descriptor will be closed when the object is destroyed.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `~file_descriptor()`, `fd()`
 
-### `~file_descriptor`
+## ~file_descriptor()
 
 - **Signature**: `~file_descriptor()`
-- **Description**: Destructor that closes the file descriptor if it is still valid. This ensures that the file descriptor is properly cleaned up when the `file_descriptor` object is destroyed, preventing resource leaks.
-- **Parameters**: None.
-- **Return Value**: None.
-- **Exceptions/Errors**: 
-  - If the file descriptor is invalid (e.g., negative), `::close()` may not be called or may result in undefined behavior. However, the class ensures that `m_fd >= 0` before calling `::close()`, so this is safe in normal usage.
+- **Description**: Destructor that closes the managed file descriptor if it is still open. This ensures that file descriptors are properly cleaned up even if the program exits unexpectedly or if the object goes out of scope.
+- **Parameters**: None
+- **Return Value**:
+  - None (destructor)
+- **Exceptions/Errors**:
+  - No exceptions thrown
 - **Example**:
 ```cpp
-#include <libtorrent/aux_/file_descriptor.hpp>
-
-void example() {
-    file_descriptor descriptor(1); // e.g., stdout
-    // descriptor is automatically closed when it goes out of scope
-}
+{
+    file_descriptor fd(3); // Assume fd 3 is a valid file descriptor
+    // Use fd...
+} // fd goes out of scope, file descriptor 3 is closed automatically
 ```
-- **Preconditions**: The object must be in a valid state (i.e., not already destroyed).
-- **Postconditions**: The file descriptor is closed if it was valid. The file descriptor is no longer accessible through this object.
-- **Thread Safety**: The destructor is thread-safe as long as no other thread is accessing the file descriptor.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: The object must be in a valid state (constructed with a valid file descriptor or moved from).
+- **Postconditions**: The file descriptor is closed if it was open, and the object is destroyed.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `file_descriptor(int fd)`, `fd()`
 
-### `file_descriptor`
+## file_descriptor(file_descriptor const&) = delete
 
 - **Signature**: `file_descriptor(file_descriptor const&) = delete`
-- **Description**: Deleted copy constructor. This prevents copying of `file_descriptor` objects, ensuring that each file descriptor is owned by exactly one object. This is a safety feature to prevent double-closing of file descriptors.
-- **Parameters**: None (deleted function).
-- **Return Value**: None.
-- **Exceptions/Errors**: Not applicable (function is deleted).
-- **Example**: Attempting to copy a `file_descriptor` object will result in a compile-time error:
+- **Description**: Deleted copy constructor prevents copying of `file_descriptor` objects. This ensures that file descriptors are not accidentally duplicated, which could lead to double-closing or resource leaks.
+- **Parameters**: 
+  - `other` (file_descriptor const&): The object to copy from (not actually used since the function is deleted)
+- **Return Value**:
+  - None (deleted function)
+- **Exceptions/Errors**:
+  - Compilation error if attempted to copy
+- **Example**:
 ```cpp
-file_descriptor descriptor(1);
-file_descriptor descriptor2 = descriptor; // Compilation error: copy constructor is deleted
+// This will cause a compilation error:
+// file_descriptor fd1(3);
+// file_descriptor fd2 = fd1; // Error: copy constructor is deleted
 ```
-- **Preconditions**: None.
-- **Postconditions**: The object remains unchanged (no action taken).
-- **Thread Safety**: Not applicable (function is deleted).
-- **Complexity**: N/A.
+- **Preconditions**: None (function is deleted)
+- **Postconditions**: None
+- **Thread Safety**: N/A
+- **Complexity**: N/A
 - **See Also**: `file_descriptor(file_descriptor&&)`, `fd()`
 
-### `file_descriptor`
+## file_descriptor(file_descriptor&& rhs)
 
 - **Signature**: `file_descriptor(file_descriptor&& rhs)`
-- **Description**: Move constructor that transfers ownership of the file descriptor from the source object to the new object. This allows efficient transfer of ownership without copying the file descriptor.
+- **Description**: Move constructor that transfers ownership of the file descriptor from the source object to the new object. This allows efficient transfer of file descriptor ownership without copying.
 - **Parameters**:
-  - `rhs` (`file_descriptor&&`): The source object whose file descriptor will be moved. After the move, the source object's file descriptor will be set to -1 to indicate that it no longer owns the file descriptor.
-- **Return Value**: None (constructor).
-- **Exceptions/Errors**: 
-  - No exceptions thrown by the move constructor. The move operation is guaranteed to succeed as long as the source object is in a valid state.
+  - `rhs` (file_descriptor&&): The source object to move from. After the move, the source object's file descriptor is set to -1 to indicate it no longer owns the file descriptor.
+- **Return Value**:
+  - None (constructor)
+- **Exceptions/Errors**:
+  - No exceptions thrown
 - **Example**:
 ```cpp
-#include <libtorrent/aux_/file_descriptor.hpp>
+file_descriptor create_fd() {
+    file_descriptor fd(3); // Assume fd 3 is a valid file descriptor
+    return fd; // Move constructor is called
+}
 
-void example() {
-    file_descriptor descriptor1(1);
-    file_descriptor descriptor2(std::move(descriptor1)); // Move ownership
-    // descriptor1 is now invalid (m_fd = -1)
-    // descriptor2 now owns the file descriptor
+{
+    file_descriptor fd = create_fd(); // Move constructor is called
+    // fd now owns the file descriptor
 }
 ```
-- **Preconditions**: The source object (`rhs`) must be in a valid state (i.e., not already moved from).
+- **Preconditions**: The source object must be in a valid state (constructed with a valid file descriptor or moved from).
 - **Postconditions**: The new object owns the file descriptor, and the source object's file descriptor is set to -1.
-- **Thread Safety**: The move constructor is thread-safe as long as the source object is not being accessed concurrently.
-- **Complexity**: O(1) time and space complexity.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `file_descriptor(int fd)`, `fd()`
 
-### `fd`
+## fd()
 
 - **Signature**: `int fd() const`
-- **Description**: Returns the underlying file descriptor value. This allows access to the raw file descriptor if needed, for example, when interfacing with system calls or other libraries that expect a file descriptor.
-- **Parameters**: None.
+- **Description**: Returns the underlying file descriptor value. This accessor allows the wrapped file descriptor to be used in system calls that require a raw file descriptor.
+- **Parameters**: None
 - **Return Value**:
-  - Returns the file descriptor value (`int`) if it is valid.
-  - Returns -1 if the file descriptor is not valid (i.e., if it has been closed or moved from).
-- **Exceptions/Errors**: 
-  - No exceptions thrown by this function.
+  - `int`: The file descriptor value. Returns -1 if the file descriptor was invalid or closed.
+- **Exceptions/Errors**:
+  - No exceptions thrown
 - **Example**:
 ```cpp
-#include <libtorrent/aux_/file_descriptor.hpp>
-#include <unistd.h>
-
-void example() {
-    file_descriptor descriptor(1);
-    int fd = descriptor.fd(); // Get the file descriptor
-    if (fd != -1) {
-        // Use the file descriptor with system calls
-        write(fd, "Hello, world!", 13);
+file_descriptor fd(3);
+if (fd.fd() != -1) {
+    // Use the file descriptor with system calls
+    ssize_t result = read(fd.fd(), buffer, sizeof(buffer));
+    if (result == -1) {
+        // Handle read error
     }
 }
 ```
-- **Preconditions**: The object must be in a valid state (i.e., not destroyed).
-- **Postconditions**: The file descriptor value is returned without modifying the object.
-- **Thread Safety**: This function is thread-safe as long as the underlying file descriptor is not being modified concurrently.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: The object must be in a valid state (constructed with a valid file descriptor or moved from).
+- **Postconditions**: The returned file descriptor value reflects the current state of the managed file descriptor.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `file_descriptor(int fd)`, `~file_descriptor()`
 
 ## Usage Examples
@@ -141,17 +129,25 @@ void example() {
 
 ```cpp
 #include <libtorrent/aux_/file_descriptor.hpp>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 
 int main() {
-    int fd = open("example.txt", O_RDONLY);
-    if (fd == -1) {
-        // Handle error
-        return 1;
+    // Open a file and wrap it in a file_descriptor
+    int raw_fd = open("example.txt", O_RDONLY);
+    if (raw_fd != -1) {
+        file_descriptor fd(raw_fd);
+        
+        // Use the file descriptor with system calls
+        char buffer[1024];
+        ssize_t result = read(fd.fd(), buffer, sizeof(buffer));
+        if (result > 0) {
+            // Process data
+        }
+        
+        // The file descriptor is automatically closed when fd goes out of scope
     }
-    file_descriptor descriptor(fd); // Takes ownership of the file descriptor
-    // Use descriptor
     return 0;
 }
 ```
@@ -160,19 +156,36 @@ int main() {
 
 ```cpp
 #include <libtorrent/aux_/file_descriptor.hpp>
-#include <fcntl.h>
-#include <unistd.h>
-#include <cerrno>
 #include <iostream>
+#include <stdexcept>
 
 int main() {
-    int fd = open("nonexistent.txt", O_RDONLY);
-    if (fd == -1) {
-        std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
-        return 1;
+    try {
+        // Attempt to open a file
+        int raw_fd = open("nonexistent.txt", O_RDONLY);
+        if (raw_fd == -1) {
+            throw std::runtime_error("Failed to open file");
+        }
+        
+        file_descriptor fd(raw_fd);
+        
+        // Check if the file descriptor is valid before using it
+        if (fd.fd() == -1) {
+            throw std::runtime_error("Invalid file descriptor");
+        }
+        
+        // Use the file descriptor
+        char buffer[1024];
+        ssize_t result = read(fd.fd(), buffer, sizeof(buffer));
+        if (result == -1) {
+            throw std::runtime_error("Failed to read from file");
+        }
+        
+        std::cout << "Read " << result << " bytes" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
-    file_descriptor descriptor(fd);
-    // Use descriptor
+    
     return 0;
 }
 ```
@@ -181,158 +194,120 @@ int main() {
 
 ```cpp
 #include <libtorrent/aux_/file_descriptor.hpp>
-#include <fcntl.h>
-#include <unistd.h>
+#include <iostream>
 
 int main() {
-    // Edge case: file descriptor is already closed
-    int fd = -1;
-    file_descriptor descriptor(fd); // This is valid but not useful
-    // The file descriptor will not be closed since m_fd < 0
+    // Test with invalid file descriptor
+    file_descriptor invalid_fd(-1);
+    if (invalid_fd.fd() == -1) {
+        std::cout << "Invalid file descriptor detected" << std::endl;
+    }
+    
+    // Test move semantics
+    {
+        file_descriptor fd1(3);
+        file_descriptor fd2 = std::move(fd1);
+        
+        // fd1 is now in a valid but unspecified state
+        // fd2 owns the file descriptor
+        std::cout << "Moved file descriptor from fd1 to fd2" << std::endl;
+    }
+    
+    // Test copy prevention
+    // file_descriptor fd3 = fd2; // This would cause a compilation error
+    
     return 0;
 }
 ```
 
 ## Best Practices
 
-### How to Use These Functions Effectively
+1. **Always check file descriptor validity**: Verify that a file descriptor is valid before using it with system calls.
+2. **Use move semantics**: Prefer move construction over copying when transferring ownership of file descriptors.
+3. **Handle errors properly**: Check return values from system calls and handle errors appropriately.
+4. **Avoid raw file descriptors**: Use `file_descriptor` objects to ensure automatic cleanup and prevent resource leaks.
+5. **Don't copy**: Remember that `file_descriptor` objects cannot be copied - use move semantics instead.
 
-- Always ensure that the file descriptor passed to the constructor is valid and open.
-- Use the move constructor to transfer ownership of file descriptors between objects.
-- Avoid copying `file_descriptor` objects; use move semantics instead.
-- Use the `fd()` method only when necessary, as it exposes the raw file descriptor.
+## Common Mistakes to Avoid
 
-### Common Mistakes to Avoid
-
-- Passing an invalid file descriptor (e.g., -1) to the constructor, which may lead to undefined behavior.
-- Attempting to copy a `file_descriptor` object, which will result in a compile-time error.
-- Using the `fd()` method to access a file descriptor that has already been moved from or closed.
-
-### Performance Tips
-
-- Use move semantics to transfer ownership of file descriptors efficiently.
-- Avoid unnecessary calls to `fd()` unless you need the raw file descriptor.
-- Ensure that the file descriptor is closed when it is no longer needed to prevent resource leaks.
+1. **Assuming file descriptors are valid**: Always check the return value of `fd()` before using it.
+2. **Copying file descriptors**: Attempting to copy a `file_descriptor` will result in a compilation error.
+3. **Not handling error conditions**: Forgetting to check for errors in system calls can lead to undefined behavior.
+4. **Using moved-from objects**: Don't use a `file_descriptor` object after it has been moved from.
 
 ## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
 **Function**: `file_descriptor(int fd)`
-**Issue**: No validation of the `fd` parameter. If `fd` is negative or invalid, the behavior is undefined.
-**Severity**: Medium
-**Impact**: Could lead to undefined behavior or crashes if an invalid file descriptor is passed.
-**Fix**: Add validation and handle invalid file descriptors gracefully:
+**Issue**: No validation of the file descriptor parameter
+**Severity**: Low
+**Impact**: Could lead to undefined behavior if an invalid file descriptor is passed
+**Fix**: Add validation and handle invalid cases:
+
 ```cpp
 file_descriptor(int fd) : m_fd(fd) {
     if (fd < 0) {
-        // Handle invalid file descriptor (e.g., throw exception)
-        throw std::invalid_argument("File descriptor must be non-negative");
+        // Handle invalid file descriptor case
+        // Could throw an exception or set to a default value
+        m_fd = -1;
     }
 }
 ```
 
 **Function**: `~file_descriptor()`
-**Issue**: The destructor calls `::close(m_fd)` without checking if `m_fd` is already -1, which is safe but could be optimized.
+**Issue**: No error checking when closing the file descriptor
 **Severity**: Low
-**Impact**: Minimal impact on performance or correctness.
-**Fix**: No change needed; the current implementation is safe and correct.
+**Impact**: Could silently ignore errors when closing the file descriptor
+**Fix**: Add error checking and logging:
 
-**Function**: `file_descriptor(file_descriptor const&) = delete`
-**Issue**: The deletion of the copy constructor is correct, but could be documented more clearly.
-**Severity**: Low
-**Impact**: None.
-**Fix**: Add a comment to clarify the reason for deletion:
 ```cpp
-// Deleted copy constructor to prevent double-closing of file descriptors
-file_descriptor(file_descriptor const&) = delete;
+~file_descriptor() {
+    if (m_fd >= 0) {
+        if (::close(m_fd) == -1) {
+            // Handle error - log or throw
+            // This is a rare case, but should be handled
+        }
+    }
+}
 ```
-
-**Function**: `file_descriptor(file_descriptor&& rhs)`
-**Issue**: The move constructor is correct but could be optimized for performance by avoiding unnecessary checks.
-**Severity**: Low
-**Impact**: Minimal impact on performance.
-**Fix**: No change needed; the current implementation is efficient and correct.
 
 **Function**: `fd()`
-**Issue**: The `fd()` method returns -1 when the file descriptor is invalid, but this could be documented more clearly.
+**Issue**: No const-correctness in function signature
 **Severity**: Low
-**Impact**: None.
-**Fix**: Add a comment to clarify the return value:
-```cpp
-/// Returns the underlying file descriptor value.
-/// Returns -1 if the file descriptor is invalid or has been moved from.
-int fd() const { return m_fd; }
-```
+**Impact**: Could lead to confusion about whether the function modifies the object
+**Fix**: Ensure the function is properly marked as const (already correct in the provided code)
 
 ### Modernization Opportunities
 
 **Function**: `file_descriptor(int fd)`
-**Opportunity**: Use `[[nodiscard]]` to indicate that the constructor should not be ignored.
-**Suggestion**: Add `[[nodiscard]]` to the constructor:
+**Opportunity**: Use `[[nodiscard]]` to indicate that the result is important
+**Suggestion**:
 ```cpp
-[[nodiscard]] file_descriptor(int fd) : m_fd(fd) {}
+[[nodiscard]] file_descriptor(int fd);
 ```
 
 **Function**: `fd()`
-**Opportunity**: Use `std::expected` (C++23) for error handling.
-**Suggestion**: Return `std::expected<int, std::error_code>` instead of `int` to indicate success or failure:
+**Opportunity**: Use `[[nodiscard]]` to indicate that the result is important
+**Suggestion**:
 ```cpp
-std::expected<int, std::error_code> fd() const {
-    if (m_fd == -1) {
-        return std::unexpected<std::error_code>(std::errc::bad_file_descriptor);
-    }
-    return m_fd;
-}
+[[nodiscard]] int fd() const { return m_fd; }
 ```
 
 ### Refactoring Suggestions
 
-**Function**: `file_descriptor(int fd)`
-**Suggestion**: Move the constructor into a factory function to centralize file descriptor creation.
-**Reason**: This could make it easier to add validation or logging.
-**Example**:
-```cpp
-file_descriptor create_file_descriptor(int fd) {
-    if (fd < 0) {
-        throw std::invalid_argument("File descriptor must be non-negative");
-    }
-    return file_descriptor(fd);
-}
-```
-
-**Function**: `~file_descriptor()`
-**Suggestion**: Move the destructor into a separate class to allow for more complex cleanup logic.
-**Reason**: This could be useful if additional cleanup is needed in the future.
-**Example**:
-```cpp
-class file_descriptor_cleaner {
-public:
-    ~file_descriptor_cleaner() {
-        if (m_fd >= 0) {
-            ::close(m_fd);
-        }
-    }
-private:
-    int m_fd;
-};
-```
+1. **Consider making this a class instead of a standalone function**: The `file_descriptor` is already a class, so no refactoring needed.
+2. **Add a factory method**: Consider adding a factory method for creating file descriptors from file paths.
+3. **Add a comparison operator**: Consider adding comparison operators to allow easier testing of file descriptor objects.
 
 ### Performance Optimizations
 
-**Function**: `file_descriptor(int fd)`
-**Opportunity**: Use move semantics in the constructor to avoid unnecessary copies.
-**Suggestion**: No change needed; the constructor already takes the file descriptor by value and is efficient.
+1. **Add `noexcept` specifier**: The destructor and move constructor can be marked as `noexcept` since they don't throw exceptions.
+2. **Use `std::move` for parameter passing**: The move constructor is already using move semantics appropriately.
+3. **Consider adding `constexpr`**: For constructor if the file descriptor is known at compile time, though this is rare.
 
-**Function**: `fd()`
-**Opportunity**: Use `std::span` for array parameters.
-**Suggestion**: Not applicable; the `fd()` method does not take array parameters.
-
-**Function**: `file_descriptor(file_descriptor&& rhs)`
-**Opportunity**: Add `noexcept` to the move constructor.
-**Suggestion**: Add `noexcept` to the move constructor:
 ```cpp
-file_descriptor(file_descriptor&& rhs) noexcept : m_fd(rhs.m_fd) {
-    rhs.m_fd = -1;
-}
+// Add to class declaration
+~file_descriptor() noexcept;
+file_descriptor(file_descriptor&& rhs) noexcept;
 ```

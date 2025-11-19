@@ -1,30 +1,19 @@
-# API Documentation for `proxy_settings`
-
-## proxy_settings
+# proxy_settings
 
 - **Signature**: `auto proxy_settings()`
-- **Description**: The `proxy_settings` struct is a configuration class for proxy settings in the libtorrent library. It provides a way to configure how torrents should connect through a proxy server. The struct contains various fields for configuring different aspects of proxy connectivity. The default constructor initializes the settings to their default values.
-- **Parameters**: 
-  - This function is a constructor and does not take any parameters.
-- **Return Value**: 
-  - The function does not return a value as it is a constructor.
-- **Exceptions/Errors**: 
-  - No exceptions are thrown by the default constructor. The constructor that takes `settings_p` is implemented in `session_impl.cpp` and may throw exceptions related to memory allocation or invalid settings.
+- **Description**: The `proxy_settings` struct is a configuration class in libtorrent that defines settings for proxy connections. It allows users to configure various proxy types (HTTP, SOCKS4, SOCKS5) and their associated parameters. This struct provides a way to set up proxy configurations for torrent clients, enabling communication through proxies for privacy, network isolation, or access to restricted networks. The struct is exported with the `TORRENT_EXPORT` macro, making it accessible to external code.
+- **Parameters**: None
+- **Return Value**: Returns an instance of the `proxy_settings` struct, which contains the default proxy configuration settings.
+- **Exceptions/Errors**: This function does not throw exceptions as it is a constructor that initializes the struct with default values.
 - **Example**:
 ```cpp
-// Create a proxy_settings object with default settings
-libtorrent::aux_::proxy_settings settings;
+// Create a proxy settings object with default values
+proxy_settings settings;
 ```
-- **Preconditions**: 
-  - None. The constructor can be called without any prerequisites.
-- **Postconditions**: 
-  - The `proxy_settings` object is initialized with default values.
-- **Thread Safety**: 
-  - The constructor is thread-safe as it only initializes the object.
-- **Complexity**: 
-  - O(1) time complexity and O(1) space complexity.
-- **See Also**: 
-  - `session_impl.cpp`
+- **Preconditions**: None
+- **Postconditions**: A `proxy_settings` object is created and initialized with default values.
+- **Thread Safety**: This function is thread-safe as it only initializes a local object.
+- **Complexity**: O(1) - constant time complexity.
 
 ## Usage Examples
 
@@ -32,8 +21,26 @@ libtorrent::aux_::proxy_settings settings;
 ```cpp
 #include <libtorrent/aux_/proxy_settings.hpp>
 
-// Create a proxy settings object with default configuration
-libtorrent::aux_::proxy_settings proxy;
+int main() {
+    // Create proxy settings with default values
+    proxy_settings settings;
+    
+    // Configure proxy type (e.g., HTTP)
+    settings.proxy_type = proxy_settings::http;
+    
+    // Set proxy address and port
+    settings.proxy_address = "127.0.0.1";
+    settings.proxy_port = 8080;
+    
+    // Set username and password if required
+    settings.proxy_username = "user";
+    settings.proxy_password = "password";
+    
+    // Set proxy for torrent client
+    // (This would be used in a torrent session setup)
+    
+    return 0;
+}
 ```
 
 ### Error Handling
@@ -41,11 +48,31 @@ libtorrent::aux_::proxy_settings proxy;
 #include <libtorrent/aux_/proxy_settings.hpp>
 #include <iostream>
 
-try {
-    libtorrent::aux_::proxy_settings proxy;
-    // Use the proxy settings
-} catch (const std::exception& e) {
-    std::cerr << "Error initializing proxy settings: " << e.what() << std::endl;
+int main() {
+    try {
+        // Create proxy settings
+        proxy_settings settings;
+        
+        // Validate proxy settings
+        if (settings.proxy_port <= 0 || settings.proxy_port > 65535) {
+            std::cerr << "Invalid proxy port" << std::endl;
+            return 1;
+        }
+        
+        if (settings.proxy_address.empty()) {
+            std::cerr << "Proxy address cannot be empty" << std::endl;
+            return 1;
+        }
+        
+        // Use settings...
+        std::cout << "Proxy settings configured successfully" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error configuring proxy: " << e.what() << std::endl;
+        return 1;
+    }
+    
+    return 0;
 }
 ```
 
@@ -53,73 +80,143 @@ try {
 ```cpp
 #include <libtorrent/aux_/proxy_settings.hpp>
 
-// Initialize with default settings
-libtorrent::aux_::proxy_settings proxy;
-
-// Ensure the proxy is set to a valid type
-if (proxy.type == libtorrent::aux_::proxy_settings::none) {
-    proxy.type = libtorrent::aux_::proxy_settings::http;
+int main() {
+    // Edge case 1: Empty address with valid port
+    proxy_settings empty_address;
+    empty_address.proxy_port = 8080;
+    // This is valid but will result in connection errors
+    
+    // Edge case 2: Invalid port range
+    proxy_settings invalid_port;
+    invalid_port.proxy_port = 0; // Invalid port
+    // This will likely cause connection issues
+    
+    // Edge case 3: Different proxy types
+    proxy_settings socks5;
+    socks5.proxy_type = proxy_settings::socks5;
+    socks5.proxy_address = "192.168.1.1";
+    socks5.proxy_port = 1080;
+    
+    proxy_settings http;
+    http.proxy_type = proxy_settings::http;
+    http.proxy_address = "127.0.0.1";
+    http.proxy_port = 8080;
+    
+    return 0;
 }
 ```
 
 ## Best Practices
 
-- **Use Default Settings**: Start with the default `proxy_settings` and only modify specific fields as needed.
-- **Validate Settings**: After setting up proxy settings, validate them to ensure they are correct for your use case.
-- **Avoid Unnecessary Configurations**: Only configure fields that are necessary to avoid complexity and potential errors.
-- **Handle Exceptions**: When using the constructor that takes `settings_p`, ensure proper exception handling is in place.
+1. **Always validate proxy settings** before using them, especially ports and addresses
+2. **Use appropriate proxy types** based on your network requirements
+3. **Consider security implications** when using proxies, especially with credentials
+4. **Handle proxy configuration errors gracefully** in production code
+5. **Use constants or configuration files** for proxy settings rather than hardcoding them
+6. **Document proxy settings** in your application's configuration documentation
+7. **Test proxy configurations** in different network environments
+8. **Use default settings** when no specific proxy configuration is needed
 
 ## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
-**Function**: `proxy_settings()`
-**Issue**: The function signature is incomplete and does not match the actual constructor. The provided signature shows `auto proxy_settings()` which is not a valid function signature for a constructor. The constructor should be `proxy_settings()`.
+**Function**: `proxy_settings`
+**Issue**: Incomplete constructor implementation
 **Severity**: High
-**Impact**: Incorrect function signature can lead to confusion and compilation errors.
-**Fix**: Correct the function signature to match the actual constructor:
-```cpp
-// Before
-auto proxy_settings();
+**Impact**: The constructor is incomplete and references code in `session_impl.cpp` without providing the implementation, making it impossible to use the class as intended.
+**Fix**: Complete the implementation of the constructor and provide the necessary logic:
 
-// After
-proxy_settings();
-```
-
-**Function**: `proxy_settings(settings_p)`
-**Issue**: The constructor is implemented in `session_impl.cpp` and the signature is incomplete. This can lead to confusion about how to use the constructor.
-**Severity**: Medium
-**Impact**: Users may not know how to properly construct the object with custom settings.
-**Fix**: Provide a complete and accurate signature:
 ```cpp
-// After
-explicit proxy_settings(settings_p settings);
+struct TORRENT_EXPORT proxy_settings
+{
+    // Default constructor - initializes to default settings
+    proxy_settings() 
+        : proxy_type(proxy_settings::none)
+        , proxy_port(0)
+        , proxy_address()
+        , proxy_username()
+        , proxy_password()
+    {
+    }
+    
+    // Constructor from settings
+    explicit proxy_settings(settings_p settings) 
+    {
+        // Implementation in session_impl.cpp
+        // This would need to be provided or moved to this file
+    }
+    
+    // Proxy type enumeration
+    enum proxy_type_t {
+        none,
+        http,
+        socks4,
+        socks5
+    };
+    
+    // Members
+    proxy_type_t proxy_type;
+    int proxy_port;
+    std::string proxy_address;
+    std::string proxy_username;
+    std::string proxy_password;
+    
+    // Additional methods and properties would be needed
+};
 ```
 
 ### Modernization Opportunities
 
-**Function**: `proxy_settings()`
-**Issue**: The function does not use modern C++ features.
-**Severity**: Medium
-**Impact**: The code could be more readable and safer.
-**Fix**: Use `explicit` for constructors to prevent implicit conversions and consider using `constexpr` if the initialization can be done at compile time:
 ```cpp
-// After
-explicit proxy_settings(settings_p settings);
+// Modernized version with C++17 features
+struct TORRENT_EXPORT proxy_settings
+{
+    // Use enum class for better type safety
+    enum class proxy_type_t : int {
+        none = 0,
+        http = 1,
+        socks4 = 2,
+        socks5 = 3
+    };
+    
+    // Use std::string_view for read-only string parameters
+    // Use constexpr for compile-time constants
+    
+    // Add move constructor and assignment operator
+    proxy_settings(proxy_settings&& other) noexcept = default;
+    proxy_settings& operator=(proxy_settings&& other) noexcept = default;
+    
+    // Add noexcept specification for exception safety
+    ~proxy_settings() noexcept = default;
+    
+    // Add constexpr for compile-time construction
+    constexpr proxy_settings() noexcept 
+        : proxy_type(proxy_type_t::none)
+        , proxy_port(0)
+        , proxy_address()
+        , proxy_username()
+        , proxy_password()
+    {
+    }
+    
+    // Use std::optional for optional parameters
+    // Use std::expected (C++23) for error handling
+};
 ```
 
 ### Refactoring Suggestions
 
-**Function**: `proxy_settings()`
-**Issue**: The constructor could be split into smaller functions to make it easier to manage and test.
-**Severity**: Low
-**Impact**: The code is not overly complex but could benefit from better organization.
-**Fix**: Consider creating separate functions for setting different types of proxy configurations.
+1. **Split the proxy settings into smaller classes**: Consider separating proxy configuration into distinct classes for different proxy types (HTTPProxyConfig, SocksProxyConfig, etc.)
+2. **Create a factory pattern**: Implement a factory to create proxy settings based on configuration parameters
+3. **Move to utility namespace**: Consider moving this to a utility namespace like `libtorrent::network`
+4. **Add validation methods**: Add methods to validate proxy settings before use
 
 ### Performance Optimizations
 
-**Function**: `proxy_settings()`
-**Issue**: The constructor may involve unnecessary allocations.
-**Severity**: Low
-**Impact**: The performance impact is minimal but could be improved.
-**Fix**: Ensure that the constructor initializes the object efficiently without unnecessary allocations. Use move semantics if applicable.
+1. **Use move semantics**: Ensure the class supports move operations for efficient resource management
+2. **Return by value for RVO**: Consider returning proxy_settings by value for Return Value Optimization
+3. **Use string_view for read-only strings**: Use `std::string_view` for string parameters that are only read
+4. **Add noexcept specification**: Add noexcept to constructors and destructors where appropriate
+5. **Pre-allocate memory**: For frequently used strings, consider pre-allocating memory
+6. **Use constexpr for default values**: Make default values constexpr for compile-time evaluation

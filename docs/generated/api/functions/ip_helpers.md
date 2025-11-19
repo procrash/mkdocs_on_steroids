@@ -1,87 +1,80 @@
 # API Documentation for `is_v4` and `is_v6` Functions
 
-## Function: is_v4
+## is_v4
 
 - **Signature**: `bool is_v4(Endpoint const& ep)`
-- **Description**: Determines whether the given endpoint is an IPv4 endpoint by checking its protocol type. This function is used to identify if an endpoint uses the IPv4 addressing scheme, which is essential for network communication protocols that need to differentiate between IPv4 and IPv6 addresses.
+- **Description**: Determines whether the given endpoint uses IPv4 protocol. This function checks if the endpoint's protocol type matches the IPv4 protocol type.
 - **Parameters**:
-  - `ep` (Endpoint const&): The endpoint object to check. This parameter must be a valid `Endpoint` object. The function will not perform any null checks on the endpoint object, so it is the caller's responsibility to ensure the endpoint is valid.
+  - `ep` (Endpoint const&): The endpoint object to check. This must be a valid endpoint object that has a protocol type. The endpoint must be properly initialized and cannot be null.
 - **Return Value**:
-  - Returns `true` if the endpoint's protocol is IPv4 (`Endpoint::protocol_type::v4()`).
-  - Returns `false` if the endpoint's protocol is not IPv4 (e.g., IPv6 or another protocol type).
+  - `true`: The endpoint uses IPv4 protocol.
+  - `false`: The endpoint uses a different protocol (e.g., IPv6) or is invalid.
 - **Exceptions/Errors**:
-  - No exceptions are thrown by this function.
+  - No exceptions are thrown. The function assumes the endpoint is valid and does not perform additional validation.
 - **Example**:
 ```cpp
 // Practical example of using this function
-Endpoint ep;
-// ... initialize ep with an IPv4 address
-if (is_v4(ep)) {
-    // The endpoint is IPv4, proceed with IPv4-specific logic
+Endpoint ep = createEndpoint("192.168.1.1", 8080); // Example endpoint creation
+bool isIPv4 = is_v4(ep);
+if (isIPv4) {
+    std::cout << "Endpoint uses IPv4" << std::endl;
+} else {
+    std::cout << "Endpoint uses IPv6 or other protocol" << std::endl;
 }
 ```
-- **Preconditions**: The `ep` parameter must be a valid `Endpoint` object. It is undefined behavior to pass an invalid or null endpoint.
-- **Postconditions**: The function returns a boolean indicating whether the endpoint is IPv4. The endpoint object `ep` is not modified.
-- **Thread Safety**: This function is thread-safe as it only reads the endpoint's protocol type and does not modify any shared state.
-- **Complexity**: 
-  - Time Complexity: O(1) - The function performs a single comparison.
-  - Space Complexity: O(1) - No additional memory is allocated.
-- **See Also**: `is_v6(Endpoint const&)`
+- **Preconditions**: The `ep` parameter must be a valid `Endpoint` object. The endpoint should be properly initialized and not in an undefined state.
+- **Postconditions**: The function returns a boolean value indicating whether the endpoint uses IPv4. The endpoint object itself remains unchanged.
+- **Thread Safety**: This function is thread-safe as it only reads from the endpoint object and does not modify any shared state.
+- **Complexity**: O(1) time complexity and O(1) space complexity, as it performs a simple comparison of protocol types.
+- **See Also**: `is_v6`, `Endpoint::protocol_type`, `Endpoint::v4()`, `Endpoint::v6()`
 
-## Function: is_v6
+## is_v6
 
 - **Signature**: `bool is_v6(Endpoint const& ep)`
-- **Description**: Determines whether the given endpoint is an IPv6 endpoint by checking its protocol type. This function is used to identify if an endpoint uses the IPv6 addressing scheme, which is essential for network communication protocols that need to differentiate between IPv4 and IPv6 addresses.
+- **Description**: Determines whether the given endpoint uses IPv6 protocol. This function checks if the endpoint's protocol type matches the IPv6 protocol type.
 - **Parameters**:
-  - `ep` (Endpoint const&): The endpoint object to check. This parameter must be a valid `Endpoint` object. The function will not perform any null checks on the endpoint object, so it is the caller's responsibility to ensure the endpoint is valid.
+  - `ep` (Endpoint const&): The endpoint object to check. This must be a valid endpoint object that has a protocol type. The endpoint must be properly initialized and cannot be null.
 - **Return Value**:
-  - Returns `true` if the endpoint's protocol is IPv6 (`Endpoint::protocol_type::v6()`).
-  - Returns `false` if the endpoint's protocol is not IPv6 (e.g., IPv4 or another protocol type).
+  - `true`: The endpoint uses IPv6 protocol.
+  - `false`: The endpoint uses a different protocol (e.g., IPv4) or is invalid.
 - **Exceptions/Errors**:
-  - No exceptions are thrown by this function.
+  - No exceptions are thrown. The function assumes the endpoint is valid and does not perform additional validation.
 - **Example**:
 ```cpp
 // Practical example of using this function
-Endpoint ep;
-// ... initialize ep with an IPv6 address
-if (is_v6(ep)) {
-    // The endpoint is IPv6, proceed with IPv6-specific logic
+Endpoint ep = createEndpoint("2001:0db8:85a3:0000:0000:8a2e:0370:7334", 8080); // Example IPv6 endpoint
+bool isIPv6 = is_v6(ep);
+if (isIPv6) {
+    std::cout << "Endpoint uses IPv6" << std::endl;
+} else {
+    std::cout << "Endpoint uses IPv4 or other protocol" << std::endl;
 }
 ```
-- **Preconditions**: The `ep` parameter must be a valid `Endpoint` object. It is undefined behavior to pass an invalid or null endpoint.
-- **Postconditions**: The function returns a boolean indicating whether the endpoint is IPv6. The endpoint object `ep` is not modified.
-- **Thread Safety**: This function is thread-safe as it only reads the endpoint's protocol type and does not modify any shared state.
-- **Complexity**: 
-  - Time Complexity: O(1) - The function performs a single comparison.
-  - Space Complexity: O(1) - No additional memory is allocated.
-- **See Also**: `is_v4(Endpoint const&)`
+- **Preconditions**: The `ep` parameter must be a valid `Endpoint` object. The endpoint should be properly initialized and not in an undefined state.
+- **Postconditions**: The function returns a boolean value indicating whether the endpoint uses IPv6. The endpoint object itself remains unchanged.
+- **Thread Safety**: This function is thread-safe as it only reads from the endpoint object and does not modify any shared state.
+- **Complexity**: O(1) time complexity and O(1) space complexity, as it performs a simple comparison of protocol types.
+- **See Also**: `is_v4`, `Endpoint::protocol_type`, `Endpoint::v4()`, `Endpoint::v6()`
 
 # Usage Examples
 
 ## Basic Usage
 
 ```cpp
-#include "libtorrent/aux_/ip_helpers.hpp"
-#include "libtorrent/endpoint.hpp"
+#include <libtorrent/aux_/ip_helpers.hpp>
+#include <libtorrent/endpoint.hpp>
 
 int main() {
     // Create an IPv4 endpoint
-    Endpoint ipv4_ep;
-    ipv4_ep.address(ip::address_v4::loopback());
-    ipv4_ep.port(8080);
-
-    // Create an IPv6 endpoint
-    Endpoint ipv6_ep;
-    ipv6_ep.address(ip::address_v6::loopback());
-    ipv6_ep.port(8080);
-
-    // Check if endpoints are IPv4 or IPv6
+    Endpoint ipv4_ep("192.168.1.1", 8080);
     if (is_v4(ipv4_ep)) {
-        std::cout << "ipv4_ep is IPv4\n";
+        std::cout << "IPv4 endpoint detected" << std::endl;
     }
 
+    // Create an IPv6 endpoint
+    Endpoint ipv6_ep("2001:0db8:85a3:0000:0000:8a2e:0370:7334", 8080);
     if (is_v6(ipv6_ep)) {
-        std::cout << "ipv6_ep is IPv6\n";
+        std::cout << "IPv6 endpoint detected" << std::endl;
     }
 
     return 0;
@@ -91,23 +84,23 @@ int main() {
 ## Error Handling
 
 ```cpp
-#include "libtorrent/aux_/ip_helpers.hpp"
-#include "libtorrent/endpoint.hpp"
+#include <libtorrent/aux_/ip_helpers.hpp>
+#include <libtorrent/endpoint.hpp>
+#include <iostream>
 
 int main() {
     Endpoint ep;
-    // ... populate endpoint with valid data
-
     try {
+        // This might fail if the endpoint is not properly initialized
         if (is_v4(ep)) {
-            std::cout << "Endpoint is IPv4\n";
+            std::cout << "IPv4 endpoint" << std::endl;
         } else if (is_v6(ep)) {
-            std::cout << "Endpoint is IPv6\n";
+            std::cout << "IPv6 endpoint" << std::endl;
         } else {
-            std::cerr << "Endpoint is neither IPv4 nor IPv6\n";
+            std::cout << "Unknown or invalid endpoint protocol" << std::endl;
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
+        std::cerr << "Error: " << e.what() << std::endl;
     }
 
     return 0;
@@ -117,25 +110,37 @@ int main() {
 ## Edge Cases
 
 ```cpp
-#include "libtorrent/aux_/ip_helpers.hpp"
-#include "libtorrent/endpoint.hpp"
+#include <libtorrent/aux_/ip_helpers.hpp>
+#include <libtorrent/endpoint.hpp>
+#include <iostream>
 
 int main() {
-    // Test with invalid endpoint (in practice, this would be undefined behavior)
-    Endpoint invalid_ep;
-    // invalid_ep is not properly initialized
-
-    // In real usage, ensure the endpoint is valid
-    if (is_v4(invalid_ep)) {
-        std::cout << "Invalid endpoint is IPv4\n"; // This would be undefined behavior
+    // Test with an uninitialized endpoint
+    Endpoint uninitialized_ep;
+    if (is_v4(uninitialized_ep)) {
+        std::cout << "Uninitialized endpoint is IPv4" << std::endl;
+    } else {
+        std::cout << "Uninitialized endpoint is not IPv4" << std::endl;
     }
 
-    // Test with non-IP endpoints (if such exist in the implementation)
-    Endpoint non_ip_ep;
-    // non_ip_ep would have a different protocol type
+    // Test with a default endpoint
+    Endpoint default_ep;
+    if (is_v4(default_ep)) {
+        std::cout << "Default endpoint is IPv4" << std::endl;
+    } else {
+        std::cout << "Default endpoint is not IPv4" << std::endl;
+    }
 
-    if (is_v4(non_ip_ep)) {
-        std::cout << "Non-IP endpoint is IPv4\n"; // This should not happen
+    // Test with a valid IPv4 endpoint
+    Endpoint ipv4_ep("127.0.0.1", 8080);
+    if (is_v4(ipv4_ep)) {
+        std::cout << "Valid IPv4 endpoint detected" << std::endl;
+    }
+
+    // Test with a valid IPv6 endpoint
+    Endpoint ipv6_ep("::1", 8080);
+    if (is_v6(ipv6_ep)) {
+        std::cout << "Valid IPv6 endpoint detected" << std::endl;
     }
 
     return 0;
@@ -144,106 +149,211 @@ int main() {
 
 # Best Practices
 
-1. **Always validate endpoints before passing to these functions**: Ensure that the `Endpoint` object is properly initialized and valid before calling `is_v4` or `is_v6`.
+## How to Use Effectively
 
-2. **Use these functions in conjunction with other network operations**: These functions are most useful when you need to determine the protocol type for routing, connection establishment, or protocol-specific behavior.
+1. **Use these functions for protocol classification**: These functions are ideal for determining the IP version of endpoints in network applications.
+2. **Combine with other endpoint operations**: Use these functions in conjunction with other endpoint operations like address conversion, socket creation, and network communication.
+3. **Use in conditional logic**: These functions are perfect for conditional statements that need to handle IPv4 and IPv6 differently.
 
-3. **Avoid redundant checks**: If you need to check both IPv4 and IPv6, consider using a switch statement or a more complex condition to avoid multiple function calls.
+## Common Mistakes to Avoid
 
-4. **Consider the context**: In some cases, you might want to use a more general approach that handles multiple protocol types rather than just IPv4 and IPv6.
+1. **Assuming endpoint validity**: Don't assume that the endpoint is valid without proper initialization. Always ensure endpoints are properly constructed before use.
+2. **Using uninitialized endpoints**: Avoid passing uninitialized or default-constructed endpoints to these functions, as the behavior may not be predictable.
+3. **Ignoring return values**: Always check the return values to ensure correct protocol handling.
 
-5. **Use modern C++ features**: Consider using `constexpr` if you need to determine protocol types at compile time, though this may not be applicable in this context due to runtime dependencies.
+## Performance Tips
+
+1. **Cache results**: If you need to check the protocol type multiple times for the same endpoint, consider caching the result rather than calling the function repeatedly.
+2. **Use in performance-critical code**: These functions have O(1) complexity, making them suitable for performance-critical code paths.
+3. **Minimize function calls**: Avoid unnecessary function calls by checking the protocol type only when necessary.
 
 # Code Review & Improvement Suggestions
 
-## Function: is_v4
+## Modernization Opportunities
 
-### Potential Issues
-
-**Security:**
-- **Issue**: No input validation for the endpoint parameter. Passing an invalid or null endpoint could lead to undefined behavior.
-- **Severity**: Medium
-- **Impact**: Could result in crashes or undefined behavior if the endpoint is not properly initialized.
-- **Fix**: Add runtime checks to ensure the endpoint is valid, or document that the caller must ensure the endpoint is valid.
-
-**Performance:**
-- **Issue**: The function is already optimal with O(1) time complexity, but could benefit from `constexpr` if possible.
-- **Severity**: Low
-- **Impact**: Minimal performance improvement, but could help with compile-time evaluation.
-- **Fix**: Consider making the function `constexpr` if the `Endpoint` class supports it.
-
-**Correctness:**
-- **Issue**: No error handling for invalid endpoints.
-- **Severity**: Medium
-- **Impact**: Could lead to undefined behavior if the endpoint is invalid.
-- **Fix**: Add assertions or runtime checks to validate the endpoint.
-
-**Code Quality:**
-- **Issue**: The function name could be more descriptive.
-- **Severity**: Low
-- **Impact**: Slight improvement in code readability.
-- **Fix**: Consider renaming to `is_ipv4_endpoint` for clarity.
-
-### Modernization Opportunities
-
-- **Use [[nodiscard]]**: The return value is important and should not be ignored.
+```markdown
+**Function**: `is_v4`
+**Issue**: No `[[nodiscard]]` attribute for functions that return important values
+**Severity**: Low
+**Impact**: Users might ignore the return value, leading to potential logic errors
+**Fix**: Add `[[nodiscard]]` attribute:
 ```cpp
-[[nodiscard]] bool is_v4(Endpoint const& ep);
+[[nodiscard]] bool is_v4(Endpoint const& ep)
+{
+    return ep.protocol() == Endpoint::protocol_type::v4();
+}
 ```
 
-### Refactoring Suggestions
-
-- **Combine with is_v6**: Consider creating a unified function that returns the protocol type instead of separate functions for each.
-
-### Performance Optimizations
-
-- **Add noexcept**: The function does not throw exceptions and could be marked as `noexcept`.
+**Function**: `is_v6`
+**Issue**: No `[[nodiscard]]` attribute for functions that return important values
+**Severity**: Low
+**Impact**: Users might ignore the return value, leading to potential logic errors
+**Fix**: Add `[[nodiscard]]` attribute:
 ```cpp
-bool is_v4(Endpoint const& ep) noexcept;
+[[nodiscard]] bool is_v6(Endpoint const& ep)
+{
+    return ep.protocol() == Endpoint::protocol_type::v6();
+}
 ```
 
-## Function: is_v6
+## Refactoring Suggestions
 
-### Potential Issues
-
-**Security:**
-- **Issue**: No input validation for the endpoint parameter. Passing an invalid or null endpoint could lead to undefined behavior.
-- **Severity**: Medium
-- **Impact**: Could result in crashes or undefined behavior if the endpoint is not properly initialized.
-- **Fix**: Add runtime checks to ensure the endpoint is valid, or document that the caller must ensure the endpoint is valid.
-
-**Performance:**
-- **Issue**: The function is already optimal with O(1) time complexity, but could benefit from `constexpr` if possible.
-- **Severity**: Low
-- **Impact**: Minimal performance improvement, but could help with compile-time evaluation.
-- **Fix**: Consider making the function `constexpr` if the `Endpoint` class supports it.
-
-**Correctness:**
-- **Issue**: No error handling for invalid endpoints.
-- **Severity**: Medium
-- **Impact**: Could lead to undefined behavior if the endpoint is invalid.
-- **Fix**: Add assertions or runtime checks to validate the endpoint.
-
-**Code Quality:**
-- **Issue**: The function name could be more descriptive.
-- **Severity**: Low
-- **Impact**: Slight improvement in code readability.
-- **Fix**: Consider renaming to `is_ipv6_endpoint` for clarity.
-
-### Modernization Opportunities
-
-- **Use [[nodiscard]]**: The return value is important and should not be ignored.
+```markdown
+**Function**: `is_v4`
+**Issue**: These functions could be combined into a single function with a parameter for protocol type
+**Severity**: Medium
+**Impact**: Code duplication and maintenance overhead
+**Fix**: Combine into a single function:
 ```cpp
-[[nodiscard]] bool is_v6(Endpoint const& ep);
+[[nodiscard]] bool is_protocol(Endpoint const& ep, Endpoint::protocol_type protocol)
+{
+    return ep.protocol() == protocol;
+}
+
+// Usage:
+bool isIPv4 = is_protocol(ep, Endpoint::protocol_type::v4());
+bool isIPv6 = is_protocol(ep, Endpoint::protocol_type::v6());
 ```
 
-### Refactoring Suggestions
-
-- **Combine with is_v4**: Consider creating a unified function that returns the protocol type instead of separate functions for each.
-
-### Performance Optimizations
-
-- **Add noexcept**: The function does not throw exceptions and could be marked as `noexcept`.
+**Function**: `is_v6`
+**Issue**: These functions could be combined into a single function with a parameter for protocol type
+**Severity**: Medium
+**Impact**: Code duplication and maintenance overhead
+**Fix**: Combine into a single function:
 ```cpp
-bool is_v6(Endpoint const& ep) noexcept;
+[[nodiscard]] bool is_protocol(Endpoint const& ep, Endpoint::protocol_type protocol)
+{
+    return ep.protocol() == protocol;
+}
+
+// Usage:
+bool isIPv4 = is_protocol(ep, Endpoint::protocol_type::v4());
+bool isIPv6 = is_protocol(ep, Endpoint::protocol_type::v6());
 ```
+
+## Performance Optimizations
+
+```markdown
+**Function**: `is_v4`
+**Issue**: No `noexcept` specifier for functions that don't throw exceptions
+**Severity**: Low
+**Impact**: Potential performance overhead from exception handling
+**Fix**: Add `noexcept` specifier:
+```cpp
+[[nodiscard]] bool is_v4(Endpoint const& ep) noexcept
+{
+    return ep.protocol() == Endpoint::protocol_type::v4();
+}
+```
+
+**Function**: `is_v6`
+**Issue**: No `noexcept` specifier for functions that don't throw exceptions
+**Severity**: Low
+**Impact**: Potential performance overhead from exception handling
+**Fix**: Add `noexcept` specifier:
+```cpp
+[[nodiscard]] bool is_v6(Endpoint const& ep) noexcept
+{
+    return ep.protocol() == Endpoint::protocol_type::v6();
+}
+```
+
+## Potential Issues
+
+### Security
+
+```markdown
+**Function**: `is_v4`
+**Issue**: No input validation for the endpoint parameter
+**Severity**: Medium
+**Impact**: Could lead to undefined behavior if an invalid endpoint is passed
+**Fix**: Add input validation:
+```cpp
+[[nodiscard]] bool is_v4(Endpoint const& ep)
+{
+    if (!ep.is_valid()) {
+        throw std::invalid_argument("Invalid endpoint");
+    }
+    return ep.protocol() == Endpoint::protocol_type::v4();
+}
+```
+
+**Function**: `is_v6`
+**Issue**: No input validation for the endpoint parameter
+**Severity**: Medium
+**Impact**: Could lead to undefined behavior if an invalid endpoint is passed
+**Fix**: Add input validation:
+```cpp
+[[nodiscard]] bool is_v6(Endpoint const& ep)
+{
+    if (!ep.is_valid()) {
+        throw std::invalid_argument("Invalid endpoint");
+    }
+    return ep.protocol() == Endpoint::protocol_type::v6();
+}
+```
+
+### Performance
+
+```markdown
+**Function**: `is_v4`
+**Issue**: Pass-by-value could be improved to pass-by-const-reference
+**Severity**: Low
+**Impact**: Slight performance overhead due to copying
+**Fix**: The function already uses pass-by-const-reference, so no change needed.
+
+**Function**: `is_v6`
+**Issue**: Pass-by-value could be improved to pass-by-const-reference
+**Severity**: Low
+**Impact**: Slight performance overhead due to copying
+**Fix**: The function already uses pass-by-const-reference, so no change needed.
+```
+
+### Correctness
+
+```markdown
+**Function**: `is_v4`
+**Issue**: No edge case handling for invalid endpoints
+**Severity**: Medium
+**Impact**: Could return incorrect results for invalid endpoints
+**Fix**: Add validation as shown above.
+
+**Function**: `is_v6`
+**Issue**: No edge case handling for invalid endpoints
+**Severity**: Medium
+**Impact**: Could return incorrect results for invalid endpoints
+**Fix**: Add validation as shown above.
+```
+
+### Code Quality
+
+```markdown
+**Function**: `is_v4`
+**Issue**: Duplicate code with `is_v6` function
+**Severity**: Medium
+**Impact**: Code duplication makes maintenance harder
+**Fix**: Combine into a single function as shown above.
+
+**Function**: `is_v6`
+**Issue**: Duplicate code with `is_v4` function
+**Severity**: Medium
+**Impact**: Code duplication makes maintenance harder
+**Fix**: Combine into a single function as shown above.
+```
+
+# Final Improved Code
+
+```cpp
+#include <libtorrent/aux_/ip_helpers.hpp>
+#include <libtorrent/endpoint.hpp>
+#include <stdexcept>
+
+[[nodiscard]] bool is_protocol(Endpoint const& ep, Endpoint::protocol_type protocol)
+{
+    if (!ep.is_valid()) {
+        throw std::invalid_argument("Invalid endpoint");
+    }
+    return ep.protocol() == protocol;
+}
+
+[[nodiscard]] bool is_v4

@@ -1,394 +1,197 @@
 # polymorphic_socket API Documentation
 
-## Overview
-The `polymorphic_socket` class provides a polymorphic interface for network sockets, allowing different socket implementations to be used interchangeably. It leverages `boost::variant` to store different socket types and uses the `TORRENT_FWD_CALL` macro to forward calls to the underlying socket implementation.
+## polymorphic_socket
 
-## Class: polymorphic_socket
-
-### Constructor: polymorphic_socket(S s)
-- **Signature**: `explicit polymorphic_socket(S s)`
-- **Description**: Constructs a `polymorphic_socket` from a socket of type `S`. This constructor is explicit to prevent unintended implicit conversions.
+- **Signature**: `polymorphic_socket(S s)`
+- **Description**: Constructs a `polymorphic_socket` from a socket object `s`. This is the primary constructor that initializes the variant with a specific socket type.
 - **Parameters**:
-  - `s` (S): The socket object to wrap. Must be move-constructible and nothrow move-constructible.
+  - `s` (S): The socket object to construct the polymorphic socket from. This must be a type that is compatible with one of the types in the `Sockets...` template parameter pack.
 - **Return Value**: None (constructor)
 - **Exceptions/Errors**: 
-  - Throws if the socket type is not nothrow move-constructible (asserted at compile time)
-  - May throw if the underlying socket construction fails
+  - Static assertion failure if the socket type is not nothrow move constructible
+  - The static_assert ensures that the socket type can be moved without throwing exceptions
 - **Example**:
 ```cpp
-tcp::socket socket(io_context);
-polymorphic_socket sock(std::move(socket));
+// Create a polymorphic socket from an IPv4 socket
+boost::asio::ip::tcp::socket tcp_socket(io_context);
+polymorphic_socket socket(std::move(tcp_socket));
 ```
-- **Preconditions**: The socket `s` must be in a valid state.
-- **Postconditions**: The `polymorphic_socket` object is constructed and contains a valid socket.
-- **Thread Safety**: Not thread-safe during construction.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `polymorphic_socket(polymorphic_socket&&)`, `~polymorphic_socket()`
+- **Preconditions**: The socket object `s` must be valid and in a state where it can be moved.
+- **Postconditions**: The `polymorphic_socket` is initialized with the provided socket object.
+- **Thread Safety**: Thread-safe if the socket object is thread-safe.
+- **Complexity**: O(1)
+- **See Also**: `polymorphic_socket(polymorphic_socket&&)`
 
-### Constructor: polymorphic_socket(polymorphic_socket&&)
-- **Signature**: `polymorphic_socket(polymorphic_socket&&) = default`
-- **Description**: Default move constructor for `polymorphic_socket`. Allows efficient transfer of ownership of the socket.
-- **Parameters**: None
-- **Return Value**: None
+## polymorphic_socket
+
+- **Signature**: `polymorphic_socket(polymorphic_socket&&)`
+- **Description**: Move constructor for `polymorphic_socket`. Creates a new `polymorphic_socket` by moving the contents of another `polymorphic_socket` object.
+- **Parameters**: 
+  - `other` (polymorphic_socket&&): The source `polymorphic_socket` to move from.
+- **Return Value**: None (constructor)
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-polymorphic_socket sock1 = create_socket();
-polymorphic_socket sock2 = std::move(sock1); // Efficient move
+polymorphic_socket socket1;
+polymorphic_socket socket2(std::move(socket1)); // Move constructor
 ```
-- **Preconditions**: `sock1` must be in a valid state.
-- **Postconditions**: `sock1` is in a valid but unspecified state, `sock2` contains the moved socket.
-- **Thread Safety**: Not thread-safe during move.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `polymorphic_socket(S s)`, `~polymorphic_socket()`
+- **Preconditions**: The source `polymorphic_socket` must be in a valid state.
+- **Postconditions**: The source `polymorphic_socket` is left in a valid but unspecified state.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(1)
+- **See Also**: `polymorphic_socket(S s)`
 
-### Destructor: ~polymorphic_socket()
-- **Signature**: `~polymorphic_socket() = default`
-- **Description**: Default destructor for `polymorphic_socket`. Properly cleans up the underlying socket.
+## polymorphic_socket
+
+- **Signature**: `~polymorphic_socket()`
+- **Description**: Destructor for `polymorphic_socket`. Cleans up the socket resources and destroys the object.
 - **Parameters**: None
 - **Return Value**: None
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 {
-    polymorphic_socket sock;
+    polymorphic_socket socket;
     // Use socket
-} // Automatic cleanup when sock goes out of scope
+} // socket is destroyed here, resources are cleaned up
 ```
 - **Preconditions**: None
-- **Postconditions**: The socket is properly closed and resources are released.
-- **Thread Safety**: Not thread-safe during destruction.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `polymorphic_socket(polymorphic_socket&&)`, `polymorphic_socket(S s)`
+- **Postconditions**: The object is destroyed and any associated resources are freed.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(1)
+- **See Also**: `polymorphic_socket(polymorphic_socket&&)`
 
-## Socket Operations
+## is_open
 
-### is_open
 - **Signature**: `bool is_open() const`
-- **Description**: Checks if the socket is open and connected.
+- **Description**: Checks if the socket is currently open.
 - **Parameters**: None
-- **Return Value**: `true` if the socket is open, `false` otherwise.
+- **Return Value**: 
+  - `true` if the socket is open
+  - `false` if the socket is closed
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-if (sock.is_open()) {
-    std::cout << "Socket is open" << std::endl;
+if (socket.is_open()) {
+    // Socket is open, can perform operations
 }
 ```
 - **Preconditions**: None
-- **Postconditions**: Returns the open status of the socket.
+- **Postconditions**: The socket state is unchanged.
 - **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) - constant time.
+- **Complexity**: O(1)
 - **See Also**: `open()`, `close()`
 
-### open(protocol_type const& p, error_code& ec)
+## open
+
 - **Signature**: `void open(protocol_type const& p, error_code& ec)`
-- **Description**: Opens the socket with the specified protocol. The error code is set if an error occurs.
+- **Description**: Opens the socket using the specified protocol. This function forwards to the underlying socket's open function.
 - **Parameters**:
-  - `p` (protocol_type): The protocol to use for the connection.
-  - `ec` (error_code&): Error code to store any error that occurs.
+  - `p` (protocol_type const&): The protocol to use for opening the socket.
+  - `ec` (error_code&): Error code that will be set if an error occurs.
 - **Return Value**: None
 - **Exceptions/Errors**: 
-  - Sets `ec` if an error occurs
-  - May throw if the underlying socket operation fails
+  - Error code will be set if an error occurs
 - **Example**:
 ```cpp
 error_code ec;
-sock.open(protocol_type(), ec);
+socket.open(protocol, ec);
 if (ec) {
-    std::cerr << "Failed to open socket: " << ec.message() << std::endl;
+    // Handle error
 }
 ```
 - **Preconditions**: The socket must not be already open.
-- **Postconditions**: The socket is open and ready for use, or an error is set in `ec`.
-- **Thread Safety**: Not thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `open(protocol_type const& p)`, `close()`
+- **Postconditions**: The socket is open if no error occurs.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(1)
+- **See Also**: `open(protocol_type const& p)`
 
-### open(protocol_type const& p)
-- **Signature**: `void open(protocol_type const& p)`
-- **Description**: Opens the socket with the specified protocol. Throws an exception if an error occurs.
-- **Parameters**:
-  - `p` (protocol_type): The protocol to use for the connection.
-- **Return Value**: None
-- **Exceptions/Errors**: 
-  - Throws `std::system_error` if the socket cannot be opened
-- **Example**:
-```cpp
-try {
-    sock.open(protocol_type());
-    std::cout << "Socket opened successfully" << std::endl;
-} catch (const std::system_error& e) {
-    std::cerr << "Failed to open socket: " << e.what() << std::endl;
-}
-```
-- **Preconditions**: The socket must not be already open.
-- **Postconditions**: The socket is open and ready for use.
-- **Thread Safety**: Not thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `open(protocol_type const& p, error_code& ec)`, `close()`
+## close
 
-### close(error_code& ec)
 - **Signature**: `void close(error_code& ec)`
-- **Description**: Closes the socket. The error code is set if an error occurs.
+- **Description**: Closes the socket and releases associated resources. This function forwards to the underlying socket's close function.
 - **Parameters**:
-  - `ec` (error_code&): Error code to store any error that occurs.
+  - `ec` (error_code&): Error code that will be set if an error occurs.
 - **Return Value**: None
 - **Exceptions/Errors**: 
-  - Sets `ec` if an error occurs
-  - May throw if the underlying socket operation fails
+  - Error code will be set if an error occurs
 - **Example**:
 ```cpp
 error_code ec;
-sock.close(ec);
+socket.close(ec);
 if (ec) {
-    std::cerr << "Failed to close socket: " << ec.message() << std::endl;
-}
-```
-- **Preconditions**: The socket must be open.
-- **Postconditions**: The socket is closed and resources are released, or an error is set in `ec`.
-- **Thread Safety**: Not thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `close()`, `is_open()`
-
-### close()
-- **Signature**: `void close()`
-- **Description**: Closes the socket. Throws an exception if an error occurs.
-- **Parameters**: None
-- **Return Value**: None
-- **Exceptions/Errors**: 
-  - Throws `std::system_error` if the socket cannot be closed
-- **Example**:
-```cpp
-try {
-    sock.close();
-    std::cout << "Socket closed successfully" << std::endl;
-} catch (const std::system_error& e) {
-    std::cerr << "Failed to close socket: " << e.what() << std::endl;
+    // Handle error
 }
 ```
 - **Preconditions**: The socket must be open.
 - **Postconditions**: The socket is closed and resources are released.
-- **Thread Safety**: Not thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `close(error_code& ec)`, `is_open()`
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(1)
+- **See Also**: `close()`
 
-### local_endpoint(error_code& ec) const
+## local_endpoint
+
 - **Signature**: `endpoint_type local_endpoint(error_code& ec) const`
-- **Description**: Returns the local endpoint of the socket. The error code is set if an error occurs.
+- **Description**: Gets the local endpoint of the socket. This function forwards to the underlying socket's local_endpoint function.
 - **Parameters**:
-  - `ec` (error_code&): Error code to store any error that occurs.
-- **Return Value**: The local endpoint as an `endpoint_type` object.
+  - `ec` (error_code&): Error code that will be set if an error occurs.
+- **Return Value**: The local endpoint of the socket.
 - **Exceptions/Errors**: 
-  - Sets `ec` if an error occurs
-  - May throw if the underlying socket operation fails
+  - Error code will be set if an error occurs
 - **Example**:
 ```cpp
 error_code ec;
-auto endpoint = sock.local_endpoint(ec);
+endpoint_type ep = socket.local_endpoint(ec);
 if (ec) {
-    std::cerr << "Failed to get local endpoint: " << ec.message() << std::endl;
-} else {
-    std::cout << "Local endpoint: " << endpoint << std::endl;
+    // Handle error
 }
 ```
 - **Preconditions**: The socket must be open.
-- **Postconditions**: Returns the local endpoint, or `ec` is set if an error occurs.
+- **Postconditions**: The endpoint is returned if no error occurs.
 - **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `local_endpoint()`, `remote_endpoint()`
+- **Complexity**: O(1)
+- **See Also**: `local_endpoint()`
 
-### local_endpoint() const
-- **Signature**: `endpoint_type local_endpoint() const`
-- **Description**: Returns the local endpoint of the socket. Throws an exception if an error occurs.
-- **Parameters**: None
-- **Return Value**: The local endpoint as an `endpoint_type` object.
-- **Exceptions/Errors**: 
-  - Throws `std::system_error` if the socket cannot be queried
-- **Example**:
-```cpp
-try {
-    auto endpoint = sock.local_endpoint();
-    std::cout << "Local endpoint: " << endpoint << std::endl;
-} catch (const std::system_error& e) {
-    std::cerr << "Failed to get local endpoint: " << e.what() << std::endl;
-}
-```
-- **Preconditions**: The socket must be open.
-- **Postconditions**: Returns the local endpoint.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `local_endpoint(error_code& ec)`, `remote_endpoint()`
+## remote_endpoint
 
-### remote_endpoint(error_code& ec) const
 - **Signature**: `endpoint_type remote_endpoint(error_code& ec) const`
-- **Description**: Returns the remote endpoint of the socket. The error code is set if an error occurs.
+- **Description**: Gets the remote endpoint of the socket. This function forwards to the underlying socket's remote_endpoint function.
 - **Parameters**:
-  - `ec` (error_code&): Error code to store any error that occurs.
-- **Return Value**: The remote endpoint as an `endpoint_type` object.
+  - `ec` (error_code&): Error code that will be set if an error occurs.
+- **Return Value**: The remote endpoint of the socket.
 - **Exceptions/Errors**: 
-  - Sets `ec` if an error occurs
-  - May throw if the underlying socket operation fails
+  - Error code will be set if an error occurs
 - **Example**:
 ```cpp
 error_code ec;
-auto endpoint = sock.remote_endpoint(ec);
+endpoint_type ep = socket.remote_endpoint(ec);
 if (ec) {
-    std::cerr << "Failed to get remote endpoint: " << ec.message() << std::endl;
-} else {
-    std::cout << "Remote endpoint: " << endpoint << std::endl;
+    // Handle error
 }
 ```
-- **Preconditions**: The socket must be open and connected.
-- **Postconditions**: Returns the remote endpoint, or `ec` is set if an error occurs.
+- **Preconditions**: The socket must be open.
+- **Postconditions**: The endpoint is returned if no error occurs.
 - **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `remote_endpoint()`, `local_endpoint()`
+- **Complexity**: O(1)
+- **See Also**: `remote_endpoint()`
 
-### remote_endpoint() const
-- **Signature**: `endpoint_type remote_endpoint() const`
-- **Description**: Returns the remote endpoint of the socket. Throws an exception if an error occurs.
-- **Parameters**: None
-- **Return Value**: The remote endpoint as an `endpoint_type` object.
-- **Exceptions/Errors**: 
-  - Throws `std::system_error` if the socket cannot be queried
-- **Example**:
-```cpp
-try {
-    auto endpoint = sock.remote_endpoint();
-    std::cout << "Remote endpoint: " << endpoint << std::endl;
-} catch (const std::system_error& e) {
-    std::cerr << "Failed to get remote endpoint: " << e.what() << std::endl;
-}
-```
-- **Preconditions**: The socket must be open and connected.
-- **Postconditions**: Returns the remote endpoint.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `remote_endpoint(error_code& ec)`, `local_endpoint()`
+## bind
 
-### bind(endpoint_type const& endpoint, error_code& ec)
 - **Signature**: `void bind(endpoint_type const& endpoint, error_code& ec)`
-- **Description**: Binds the socket to the specified endpoint. The error code is set if an error occurs.
+- **Description**: Binds the socket to a specific endpoint. This function forwards to the underlying socket's bind function.
 - **Parameters**:
   - `endpoint` (endpoint_type const&): The endpoint to bind to.
-  - `ec` (error_code&): Error code to store any error that occurs.
+  - `ec` (error_code&): Error code that will be set if an error occurs.
 - **Return Value**: None
 - **Exceptions/Errors**: 
-  - Sets `ec` if an error occurs
-  - May throw if the underlying socket operation fails
+  - Error code will be set if an error occurs
 - **Example**:
 ```cpp
 error_code ec;
-sock.bind(endpoint_type(), ec);
+socket.bind(endpoint, ec);
 if (ec) {
-    std::cerr << "Failed to bind socket: " << ec.message() << std::endl;
-}
-```
-- **Preconditions**: The socket must be open and not bound.
-- **Postconditions**: The socket is bound to the specified endpoint, or an error is set in `ec`.
-- **Thread Safety**: Not thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `bind(endpoint_type const& endpoint)`, `open()`
-
-### bind(endpoint_type const& endpoint)
-- **Signature**: `void bind(endpoint_type const& endpoint)`
-- **Description**: Binds the socket to the specified endpoint. Throws an exception if an error occurs.
-- **Parameters**:
-  - `endpoint` (endpoint_type const&): The endpoint to bind to.
-- **Return Value**: None
-- **Exceptions/Errors**: 
-  - Throws `std::system_error` if the socket cannot be bound
-- **Example**:
-```cpp
-try {
-    sock.bind(endpoint_type());
-    std::cout << "Socket bound successfully" << std::endl;
-} catch (const std::system_error& e) {
-    std::cerr << "Failed to bind socket: " << e.what() << std::endl;
-}
-```
-- **Preconditions**: The socket must be open and not bound.
-- **Postconditions**: The socket is bound to the specified endpoint.
-- **Thread Safety**: Not thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `bind(endpoint_type const& endpoint, error_code& ec)`, `open()`
-
-### available(error_code& ec) const
-- **Signature**: `std::size_t available(error_code& ec) const`
-- **Description**: Returns the number of bytes available for reading. The error code is set if an error occurs.
-- **Parameters**:
-  - `ec` (error_code&): Error code to store any error that occurs.
-- **Return Value**: The number of bytes available for reading.
-- **Exceptions/Errors**: 
-  - Sets `ec` if an error occurs
-  - May throw if the underlying socket operation fails
-- **Example**:
-```cpp
-error_code ec;
-std::size_t bytes = sock.available(ec);
-if (ec) {
-    std::cerr << "Failed to check available bytes: " << ec.message() << std::endl;
-} else {
-    std::cout << "Available bytes: " << bytes << std::endl;
+    // Handle error
 }
 ```
 - **Preconditions**: The socket must be open.
-- **Postconditions**: Returns the number of available bytes, or `ec` is set if an error occurs.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `available()`, `read_some()`
-
-### available() const
-- **Signature**: `std::size_t available() const`
-- **Description**: Returns the number of bytes available for reading. Throws an exception if an error occurs.
-- **Parameters**: None
-- **Return Value**: The number of bytes available for reading.
-- **Exceptions/Errors**: 
-  - Throws `std::system_error` if the socket cannot be queried
-- **Example**:
-```cpp
-try {
-    std::size_t bytes = sock.available();
-    std::cout << "Available bytes: " << bytes << std::endl;
-} catch (const std::system_error& e) {
-    std::cerr << "Failed to check available bytes: " << e.what() << std::endl;
-}
-```
-- **Preconditions**: The socket must be open.
-- **Postconditions**: Returns the number of available bytes.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) - constant time.
-- **See Also**: `available(error_code& ec)`, `read_some()`
-
-## Data Transfer Operations
-
-### read_some(Mutable_Buffers const& buffers, error_code& ec)
-- **Signature**: `std::size_t read_some(Mutable_Buffers const& buffers, error_code& ec)`
-- **Description**: Reads data from the socket into the specified buffers. The error code is set if an error occurs.
-- **Parameters**:
-  - `buffers` (Mutable_Buffers const&): The buffers to read into.
-  - `ec` (error_code&): Error code to store any error that occurs.
-- **Return Value**: The number of bytes read.
-- **Exceptions/Errors**: 
-  - Sets `ec` if an error occurs
-  - May throw if the underlying socket operation fails
-- **Example**:
-```cpp
-error_code ec;
-std::size_t bytes = sock.read_some(buffer, ec);
-if (ec) {
-    std::cerr << "Failed to read from socket: " << ec.message() << std::endl;
-} else {
-    std::cout << "Read " << bytes << " bytes" << std::endl;
-}
-```
-- **Preconditions**: The socket must be open and connected.
-- **Postconditions**: Returns the number of bytes read, or `ec` is set if an error occurs.
-- **Thread Safety**: Not thread-safe.
-- **Complexity**: O(n) - linear in the number of bytes read.
-- **See Also**: `read_some(Mutable_Buffers const& buffers)`, `write_some()`
-
-### read_some(Mutable_Buffers const& buffers)
-- **Signature**: `std::size_t read_some(Mutable_Buffers const& buffers)`
-- **Description**: Reads data from the socket into
+-

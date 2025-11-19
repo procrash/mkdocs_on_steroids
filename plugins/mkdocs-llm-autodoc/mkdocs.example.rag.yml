@@ -1,0 +1,119 @@
+# Example MkDocs Configuration with RAG Integration
+# Copy this to your project and customize
+
+site_name: My C++ Project Documentation
+site_description: Auto-generated documentation with RAG upload
+
+# Theme configuration
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - toc.integrate
+
+# Plugin configuration
+plugins:
+  - search
+
+  # LLM AutoDoc with RAG Integration
+  - llm-autodoc:
+      # Enable the plugin
+      enabled: true
+
+      # C++ project path (relative or absolute)
+      cpp_project_path: '../my-cpp-project'
+
+      # LLM Configuration
+      llm_provider: 'anthropic'  # or 'openai', 'ollama', 'lmstudio'
+      llm_model: 'claude-3-5-sonnet-20241022'
+      # llm_api_key: 'sk-ant-...'  # Or use ANTHROPIC_API_KEY env variable
+      llm_timeout: 600.0  # 10 minutes
+
+      # Documentation levels to generate
+      generate_high_level: true       # Project overview
+      generate_mid_level: true        # Module documentation
+      generate_detailed_level: true   # API reference
+
+      # Output paths (relative to docs_dir)
+      high_level_output: 'generated'
+      mid_level_output: 'generated/modules'
+      detailed_level_output: 'generated/api'
+
+      # Caching (speeds up incremental builds)
+      enable_cache: true
+      cache_dir: '.cache/llm-autodoc'
+      force_regenerate: false  # Set to true to regenerate all
+
+      # Quality control
+      enable_quality_check: true
+      enable_cross_references: true
+      enable_code_review: true
+
+      # File patterns
+      include_patterns:
+        - '**/*.h'
+        - '**/*.hpp'
+        - '**/*.cpp'
+      exclude_patterns:
+        - '**/build/**'
+        - '**/third_party/**'
+        - '**/external/**'
+        - '**/test/**'  # Uncomment to exclude tests
+
+      # Performance
+      max_concurrent_llm_calls: 3
+      retry_failed: true
+      verbose: false
+
+      # Background processing
+      background_generation: true
+      show_generation_progress: true
+
+      # ========================================
+      # RAG INTEGRATION (NEW!)
+      # ========================================
+
+      # Enable automatic RAG upload
+      enable_rag_upload: true
+
+      # n8n webhook URL (Option B - Server-side splitting)
+      # You can also set N8N_WEBHOOK_URL environment variable instead
+      rag_webhook_url: "http://192.168.0.72:5678/webhook/upload_data_raw"
+
+      # What to upload
+      rag_upload_source_files: true      # Upload C++ source files
+      rag_upload_generated_docs: true    # Upload generated markdown docs
+
+# Navigation (optional - MkDocs auto-generates from files)
+nav:
+  - Home: index.md
+  - Architecture:
+    - Overview: generated/overview.md
+    - Components: generated/components.md
+  - Modules: generated/modules/
+  - API Reference: generated/api/
+
+# Markdown extensions
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+# Extra CSS/JS
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/extra.js
+
+# Repository info
+repo_url: https://github.com/yourname/yourproject
+repo_name: yourname/yourproject
+
+# Copyright
+copyright: Copyright &copy; 2024 Your Name

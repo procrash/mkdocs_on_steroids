@@ -1,275 +1,363 @@
-# API Documentation for `posix_storage`
+# POSIX Storage API Documentation
 
-## Function: `posix_storage`
+## posix_storage
 
-### **Signature**: `auto posix_storage()`
-
-### **Description**:  
-The `posix_storage` function is a factory function that returns an instance of the `posix_storage` class, which is a storage implementation for libtorrent that uses POSIX file system operations. This class is designed to handle file storage operations for torrent files, including reading and writing pieces to disk. The function is typically used by libtorrent's storage system to create a storage backend that operates on the underlying file system using standard POSIX APIs.
-
-The `posix_storage` class is marked with `TORRENT_EXTRA_EXPORT`, indicating that it is part of the exported interface of the libtorrent library and can be used by external applications. The function is part of the `aux_` namespace, which contains auxiliary and internal utilities.
-
-### **Parameters**:  
-*None. This function is a factory function and does not take any parameters.*
-
-### **Return Value**:  
-Returns an instance of the `posix_storage` class. The returned object can be used to perform file operations related to torrent storage, such as reading pieces from disk.
-
-### **Exceptions/Errors**:  
-- No exceptions are thrown by this function.
-- The function is expected to succeed unless there is an underlying system error (e.g., insufficient memory, file system issues), in which case the behavior is undefined or may result in a runtime error during subsequent operations.
-
-### **Example**:  
+### Signature
 ```cpp
-#include <libtorrent/aux_/posix_storage.hpp>
-#include <libtorrent/storage.hpp>
-
-// Create a posix storage instance
-auto storage = posix_storage();
+struct TORRENT_EXTRA_EXPORT posix_storage
 ```
 
-### **Preconditions**:  
-- The libtorrent library must be properly initialized.
-- The underlying file system must be accessible and operational.
-- The `storage_params` passed to the constructor must be valid.
+### Description
+The `posix_storage` class implements a POSIX-compliant file storage backend for the libtorrent library. It provides a platform-independent interface for reading and writing torrent data to the file system using standard POSIX file operations. This storage implementation is designed for Unix-like systems and handles file operations for torrent files, including piece-level access and error reporting.
 
-### **Postconditions**:  
-- A valid `posix_storage` instance is returned.
-- The storage object is ready for use in reading and writing pieces from disk.
+The class is designed to be used as a storage backend for torrent operations, allowing libtorrent to read and write data from/to the file system in a standardized way. It provides methods for accessing file information, reading data from specific pieces, and managing the storage lifecycle.
 
-### **Thread Safety**:  
-- The `posix_storage` class is not inherently thread-safe. However, multiple instances can be created and used in different threads.
-- Concurrent access to the same `posix_storage` instance from multiple threads is not safe unless external synchronization is applied.
+### Class Members
 
-### **Complexity**:  
-- **Time Complexity**: O(1) - the function creates a storage object in constant time.
-- **Space Complexity**: O(1) - the function only returns a reference to a constructed object, and no additional memory is allocated.
+#### Constructor
+```cpp
+explicit posix_storage(storage_params const& p);
+```
+**Description**: Constructs a new POSIX storage instance with the specified storage parameters. This constructor initializes the storage system with the given configuration, including file paths, storage mode, and other parameters.
 
-### **See Also**:  
-- `file_storage` - for file metadata
-- `storage_params` - for configuration parameters
-- `read` - for reading pieces from storage
+**Parameters**:
+- `p` (storage_params const&): Configuration parameters for the storage system. This includes the directory path where files will be stored, the storage mode (e.g., sparse files, pre-allocating space), and other relevant settings.
 
----
+**Return Value**: None (constructor)
 
-## Usage Examples
+**Exceptions/Errors**:
+- Throws std::system_error if the storage directory cannot be accessed or created
+- Throws std::invalid_argument if the provided parameters are invalid
+- May throw exceptions related to file system operations (e.g., insufficient permissions)
 
-### 1. Basic Usage
+**Preconditions**:
+- The storage parameters must be valid and complete
+- The specified directory path must be accessible
+- The storage mode must be supported
 
+**Postconditions**:
+- The storage system is initialized and ready for use
+- File system operations can be performed
+- The storage system is in a consistent state
+
+**Thread Safety**: Not thread-safe during construction. Once constructed, the object can be used by multiple threads, but concurrent access to the same storage must be synchronized.
+
+**Complexity**: O(1) - The constructor performs initialization but does not perform any I/O operations that scale with the size of the data.
+
+**See Also**: `storage_params`, `file_storage`
+
+#### files() Method
+```cpp
+file_storage const& files() const;
+```
+**Description**: Returns a reference to the file storage object that contains information about the torrent files. This method provides access to the metadata about the files in the torrent, including their names, sizes, and piece assignments.
+
+**Parameters**: None
+
+**Return Value**:
+- `file_storage const&`: A constant reference to the file storage object containing information about the torrent files.
+
+**Exceptions/Errors**: None
+
+**Preconditions**: The `posix_storage` object must be properly initialized.
+
+**Postconditions**: The returned reference remains valid as long as the `posix_storage` object exists.
+
+**Thread Safety**: Thread-safe (read-only access to the file storage)
+
+**Complexity**: O(1) - Returns a reference to an existing object
+
+**See Also**: `file_storage`, `storage_params`
+
+#### Destructor
+```cpp
+~posix_storage();
+```
+**Description**: Destructor that cleans up the POSIX storage system. This method closes any open file handles, releases allocated resources, and ensures that any pending operations are completed before the storage system is destroyed.
+
+**Parameters**: None
+
+**Return Value**: None
+
+**Exceptions/Errors**: May throw std::system_error if there are issues with closing files or releasing resources.
+
+**Preconditions**: The `posix_storage` object must be properly constructed.
+
+**Postconditions**: All resources are released, file handles are closed, and the storage system is in a clean state.
+
+**Thread Safety**: Not thread-safe during destruction. Should not be called while other threads are using the storage.
+
+**Complexity**: O(n) where n is the number of files, as it may need to close multiple file handles.
+
+**See Also**: `files()`, `read()`
+
+#### read() Method
+```cpp
+int read(settings_interface const& sett
+    , span<char> bufs
+    , piece_index_t const piece, int const offset
+    , storage_error& error);
+```
+**Description**: Reads data from a specific piece and offset in the torrent storage. This method reads the requested data from the specified piece and offset, applying any necessary transformations based on the settings provided.
+
+**Parameters**:
+- `sett` (settings_interface const&): Interface to access configuration settings that may affect the reading behavior (e.g., encryption settings, compression).
+- `bufs` (span<char>): Buffer where the read data will be stored. The span provides a safe, non-owning view of the buffer.
+- `piece` (piece_index_t const): Index of the piece to read from. This must be a valid piece index within the torrent's file layout.
+- `offset` (int const): Offset within the piece where reading should start. This must be within the bounds of the piece size.
+- `error` (storage_error&): Reference to a storage_error object where any errors during the read operation will be recorded.
+
+**Return Value**:
+- `int`: The number of bytes successfully read, or -1 if an error occurred.
+
+**Exceptions/Errors**:
+- Throws std::system_error if there are file system errors during reading
+- Throws std::invalid_argument if the piece index or offset is invalid
+- The `error` parameter will be populated with details about any storage-related errors
+
+**Preconditions**:
+- The `posix_storage` object must be properly initialized
+- The `bufs` span must point to a valid buffer of sufficient size
+- The `piece` index must be valid (0 ≤ piece < total number of pieces)
+- The `offset` must be within the bounds of the piece (0 ≤ offset < piece size)
+- The `error` parameter must be a valid reference
+
+**Postconditions**:
+- The buffer will contain the requested data if the read was successful
+- The `error` parameter will contain information about any errors that occurred
+- The file position is not modified (this is a random-access read operation)
+
+**Thread Safety**: Not thread-safe. Concurrent read operations should be synchronized.
+
+**Complexity**: O(1) - The method performs a direct file read operation that is independent of the data size, though the actual I/O time depends on the amount of data read.
+
+**See Also**: `file_storage`, `storage_error`, `span`
+
+### Usage Examples
+
+#### Basic Usage
 ```cpp
 #include <libtorrent/aux_/posix_storage.hpp>
-#include <libtorrent/storage.hpp>
-#include <libtorrent/settings_interface.hpp>
-#include <libtorrent/aux_/span.hpp>
+#include <libtorrent/storage_params.hpp>
+#include <libtorrent/storage_error.hpp>
 
-// Create storage parameters (example)
-storage_params params;
+// Create storage parameters
+libtorrent::storage_params params;
 params.save_path = "/path/to/torrent/files";
+params.torrent_file = "example.torrent";
 
-// Create a posix storage instance
-auto storage = posix_storage(params);
+// Create POSIX storage
+libtorrent::posix_storage storage(params);
 
-// Read a piece from the storage
-settings_interface sett;
-span<char> buffer(1024); // 1KB buffer
-piece_index_t piece = 0;
-int offset = 0;
-storage_error error;
-int result = storage.read(sett, buffer, piece, offset, error);
+// Get file information
+auto& file_info = storage.files();
 
-if (result == -1) {
-    // Handle error
-    std::cerr << "Failed to read piece: " << error.message() << std::endl;
-} else {
-    // Success, data is in buffer
-    std::cout << "Read " << result << " bytes." << std::endl;
+// Read data from piece 5, offset 1024
+char buffer[1024];
+libtorrent::storage_error error;
+int bytes_read = storage.read(
+    params.settings,
+    libtorrent::span<char>(buffer, sizeof(buffer)),
+    libtorrent::piece_index_t(5),
+    1024,
+    error
+);
+
+if (bytes_read != -1) {
+    // Process the read data
+    // buffer contains the data read from the torrent
 }
 ```
 
-### 2. Error Handling
-
+#### Error Handling
 ```cpp
 #include <libtorrent/aux_/posix_storage.hpp>
-#include <libtorrent/storage.hpp>
-#include <libtorrent/settings_interface.hpp>
-#include <libtorrent/aux_/span.hpp>
+#include <libtorrent/storage_params.hpp>
+#include <libtorrent/storage_error.hpp>
+#include <iostream>
 
-// Create storage
-storage_params params;
-params.save_path = "/path/to/torrent/files";
-auto storage = posix_storage(params);
-
-// Define a buffer
-span<char> buffer(1024);
-piece_index_t piece = 1;
-int offset = 0;
-storage_error error;
-
-// Read the piece
-int bytes_read = storage.read(params.sett, buffer, piece, offset, error);
-
-if (bytes_read == -1) {
-    // Check for specific error types
-    if (error.ec.category() == std::generic_category()) {
-        std::cerr << "I/O error: " << error.ec.message() << std::endl;
-    } else {
-        std::cerr << "Unknown error: " << error.message() << std::endl;
+void read_with_error_handling() {
+    libtorrent::storage_params params;
+    params.save_path = "/path/to/torrent/files";
+    
+    try {
+        libtorrent::posix_storage storage(params);
+        
+        char buffer[4096];
+        libtorrent::storage_error error;
+        int bytes_read = storage.read(
+            params.settings,
+            libtorrent::span<char>(buffer, sizeof(buffer)),
+            libtorrent::piece_index_t(10),
+            0,
+            error
+        );
+        
+        if (bytes_read == -1) {
+            std::cerr << "Read failed: " << error.ec.message() << std::endl;
+            std::cerr << "Error code: " << error.ec.value() << std::endl;
+            if (error.operation == libtorrent::storage_error::read) {
+                std::cerr << "Failed to read from storage" << std::endl;
+            }
+            return;
+        }
+        
+        // Process successful read
+        std::cout << "Read " << bytes_read << " bytes successfully" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Storage initialization failed: " << e.what() << std::endl;
     }
-} else if (bytes_read == 0) {
-    std::cout << "Reached end of file." << std::endl;
-} else {
-    std::cout << "Successfully read " << bytes_read << " bytes." << std::endl;
 }
 ```
 
-### 3. Edge Cases
-
+#### Edge Cases
 ```cpp
 #include <libtorrent/aux_/posix_storage.hpp>
-#include <libtorrent/storage.hpp>
-#include <libtorrent/settings_interface.hpp>
-#include <libtorrent/aux_/span.hpp>
+#include <libtorrent/storage_params.hpp>
+#include <libtorrent/storage_error.hpp>
+#include <iostream>
 
-// Edge case: Reading a piece that doesn't exist
-storage_params params;
-params.save_path = "/path/to/torrent/files";
-auto storage = posix_storage(params);
-
-span<char> buffer(1024);
-piece_index_t piece = 10000; // Piece index far beyond available pieces
-int offset = 0;
-storage_error error;
-
-int bytes_read = storage.read(params.sett, buffer, piece, offset, error);
-
-if (bytes_read == -1) {
-    if (error.ec == std::errc::no_such_file_or_directory) {
-        std::cout << "Piece does not exist." << std::endl;
-    } else {
-        std::cerr << "Error reading piece: " << error.message() << std::endl;
+void handle_edge_cases() {
+    libtorrent::storage_params params;
+    params.save_path = "/path/to/torrent/files";
+    
+    try {
+        libtorrent::posix_storage storage(params);
+        
+        // Test with invalid piece index
+        char buffer[1];
+        libtorrent::storage_error error;
+        int bytes_read = storage.read(
+            params.settings,
+            libtorrent::span<char>(buffer, sizeof(buffer)),
+            libtorrent::piece_index_t(1000000), // Invalid piece index
+            0,
+            error
+        );
+        
+        if (bytes_read == -1) {
+            std::cerr << "Invalid piece index error: " << error.ec.message() << std::endl;
+        }
+        
+        // Test with offset beyond piece size
+        char buffer2[1];
+        error = libtorrent::storage_error(); // Reset error
+        bytes_read = storage.read(
+            params.settings,
+            libtorrent::span<char>(buffer2, sizeof(buffer2)),
+            libtorrent::piece_index_t(5),
+            1000000000, // Offset beyond piece size
+            error
+        );
+        
+        if (bytes_read == -1) {
+            std::cerr << "Invalid offset error: " << error.ec.message() << std::endl;
+        }
+        
+        // Test with empty buffer
+        char buffer3[0];
+        error = libtorrent::storage_error(); // Reset error
+        bytes_read = storage.read(
+            params.settings,
+            libtorrent::span<char>(buffer3, sizeof(buffer3)),
+            libtorrent::piece_index_t(0),
+            0,
+            error
+        );
+        
+        if (bytes_read == -1) {
+            std::cerr << "Empty buffer error: " << error.ec.message() << std::endl;
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Storage error: " << e.what() << std::endl;
     }
 }
 ```
 
----
+### Best Practices
 
-## Best Practices
+1. **Proper Error Handling**: Always check the return value of `read()` and examine the `storage_error` object for details about any failures.
 
-### How to Use Effectively
-- Always validate the `storage_params` before creating a `posix_storage` instance.
-- Use the `read` function with appropriate buffer sizes to avoid memory issues.
-- Handle `storage_error` properly to ensure robust error reporting.
+2. **Buffer Size Management**: Ensure that the buffer provided to `read()` is large enough to hold the requested data and that the `span` correctly represents the buffer size.
 
-### Common Mistakes to Avoid
-- **Assuming thread safety**: Do not share a `posix_storage` instance across threads without synchronization.
-- **Ignoring error codes**: Always check the return value and error object from `read`.
-- **Using invalid piece indices**: Ensure that the piece index is valid before calling `read`.
+3. **Thread Safety**: Use appropriate synchronization mechanisms when accessing `posix_storage` objects from multiple threads.
 
-### Performance Tips
-- Use `std::span` for buffer management to avoid manual memory allocation.
-- Reuse `storage_error` objects to avoid repeated allocations.
-- Ensure that the `save_path` is on a fast storage device for optimal performance.
+4. **Resource Management**: Ensure that the storage object is properly destroyed and that all file handles are closed before the program terminates.
 
----
+5. **Parameter Validation**: Validate piece indices and offsets before calling `read()` to avoid runtime errors.
 
-## Code Review & Improvement Suggestions
+6. **Memory Alignment**: Ensure that the buffer provided to `read()` is properly aligned for the target architecture, especially when dealing with large amounts of data.
 
-### **Potential Issues**
+### Code Review & Improvement Suggestions
 
-#### **Security**
-- **Function**: `posix_storage`
-- **Issue**: The function does not validate input parameters (e.g., `save_path` in `storage_params`), which could lead to invalid file system operations or crashes.
-- **Severity**: Medium
-- **Impact**: Could result in undefined behavior if the `save_path` is invalid (e.g., non-existent directory, permission issues).
-- **Fix**: Add validation of `save_path` in the constructor:
+#### Function: `posix_storage::posix_storage`
+**Issue**: No explicit exception specification for the constructor
+**Severity**: Medium
+**Impact**: Lack of exception specification could lead to unexpected behavior in exception handling
+**Fix**: Add explicit exception specification
 ```cpp
-explicit posix_storage(storage_params const& p) {
-    if (p.save_path.empty() || !std::filesystem::exists(p.save_path)) {
-        throw std::invalid_argument("Invalid save path");
-    }
-    // Proceed with initialization
-}
+explicit posix_storage(storage_params const& p) noexcept(false);
 ```
 
-#### **Performance**
-- **Function**: `read`
-- **Issue**: The function uses `span<char>` which requires bounds checking at runtime. This could introduce overhead.
-- **Severity**: Low
-- **Impact**: Slight performance degradation in performance-critical paths.
-- **Fix**: Consider using `std::byte*` or raw pointers if bounds checking is not required for the application.
-
-#### **Correctness**
-- **Function**: `read`
-- **Issue**: The function signature is incomplete; it appears to be truncated in the provided code.
-- **Severity**: High
-- **Impact**: The incomplete signature makes the function unusable and could lead to compilation errors.
-- **Fix**: Complete the function signature with appropriate parameters and return type:
+#### Function: `posix_storage::files()`
+**Issue**: Returns a reference to internal data without clear ownership semantics
+**Severity**: Medium
+**Impact**: Could lead to confusion about object lifetime and ownership
+**Fix**: Add documentation about the lifetime of the returned reference
 ```cpp
-int read(settings_interface const& sett, span<char> bufs, piece_index_t const piece, int const offset, storage_error& error);
+/**
+ * Returns a reference to the file storage object.
+ * The returned reference is valid for the lifetime of this posix_storage object.
+ */
+file_storage const& files() const;
 ```
 
-#### **Code Quality**
-- **Function**: `posix_storage`
-- **Issue**: The class name `posix_storage` is not descriptive of its purpose. It could be confused with a generic storage class.
-- **Severity**: Low
-- **Impact**: Poor naming may lead to confusion in larger codebases.
-- **Fix**: Consider renaming to something more descriptive, such as `posix_file_storage`, but this would be a breaking change.
-
----
-
-### **Modernization Opportunities**
-
-- **Function**: `posix_storage`
-- **Suggestion**: Use `std::expected` (C++23) or `std::optional` for error handling instead of `storage_error` by reference.
-- **Example**:
+#### Function: `posix_storage::~posix_storage()`
+**Issue**: No noexcept specification for the destructor
+**Severity**: Medium
+**Impact**: Could prevent the use of this class in noexcept contexts
+**Fix**: Add noexcept specification
 ```cpp
-// Before
-int read(settings_interface const& sett, span<char> bufs, piece_index_t const piece, int const offset, storage_error& error);
-
-// After (using std::expected)
-std::expected<int, storage_error> read(settings_interface const& sett, span<char> bufs, piece_index_t const piece, int const offset);
-```
-
-- **Function**: `posix_storage`
-- **Suggestion**: Use `[[nodiscard]]` to prevent misuse of the function result.
-- **Example**:
-```cpp
-[[nodiscard]] auto posix_storage() -> posix_storage;
-```
-
----
-
-### **Refactoring Suggestions**
-
-- **Function**: `posix_storage`
-- **Suggestion**: Split the `posix_storage` class into smaller, more focused components (e.g., `FileReader`, `FileWriter`) for better maintainability and testability.
-- **Rationale**: This would make the code easier to unit test and extend.
-
----
-
-### **Performance Optimizations**
-
-- **Function**: `read`
-- **Suggestion**: Use `iovec` for scatter-gather I/O if the buffer is not contiguous.
-- **Rationale**: This would improve performance when reading non-contiguous data.
-- **Example**:
-```cpp
-struct iovec {
-    void* iov_base;
-    size_t iov_len;
-};
-```
-
-- **Function**: `posix_storage`
-- **Suggestion**: Add `noexcept` specifier to the constructor and destructor if no exceptions are thrown.
-- **Example**:
-```cpp
-explicit posix_storage(storage_params const& p) noexcept;
 ~posix_storage() noexcept;
 ```
 
----
+#### Function: `posix_storage::read()`
+**Issue**: The `error` parameter is passed by reference but not marked as const
+**Severity**: Low
+**Impact**: Could lead to confusion about whether the error object can be modified
+**Fix**: Mark as const reference
+```cpp
+int read(settings_interface const& sett
+    , span<char> bufs
+    , piece_index_t const piece, int const offset
+    , storage_error& error) const;
+```
 
-## Summary
+### Modernization Opportunities
 
-The `posix_storage` function is a critical component of libtorrent's storage system, enabling file operations on POSIX-compliant systems. While the current implementation is functional, there are opportunities for improvement in error handling, performance, and code maintainability. By adopting modern C++ practices and addressing potential issues, the library can become more robust and easier to use.
+1. **Use of [[nodiscard]]**: The `read()` function should be marked as `[[nodiscard]]` since its return value is important:
+```cpp
+[[nodiscard]] int read(settings_interface const& sett
+    , span<char> bufs
+    , piece_index_t const piece, int const offset
+    , storage_error& error);
+```
+
+2. **Use of std::expected**: Replace the error-handling pattern with `std::expected` if available in the C++ standard:
+```cpp
+// Using std::expected (C++23)
+std::expected<int, storage_error> read(settings_interface const& sett
+    , span<char> bufs
+    , piece_index_t const piece, int const offset);
+```
+
+3. **Use of std::span**: The function already uses `std::span`, which is good practice. This should be maintained.
+
+4. **Use of concepts**: Consider adding constraints for the parameters to improve type safety:
+```cpp
+template<typename Settings>
+requires std::is_same_v<Settings, settings_interface>
+int read(Settings const& sett
+    ,

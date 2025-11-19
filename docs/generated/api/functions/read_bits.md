@@ -1,181 +1,205 @@
-# API Documentation for `read_bits` and `read` Functions
+# API Documentation for read_bits and read Functions
 
-## Function: `read_bits`
+## read_bits
 
 - **Signature**: `read_bits(std::uint8_t const* d, std::size_t s)`
-- **Description**: Constructs a `read_bits` object that provides bit-level access to a byte array. This is typically used as a constructor for a bit reader class that can extract bits from a sequence of bytes. The function initializes internal state for reading bits from the provided data buffer.
+- **Description**: Constructs a bit reader object that can extract bits from a byte buffer. This function initializes the reader with a pointer to the data and the size of the data in bytes. The reader maintains internal state for tracking the current bit position within the buffer.
 - **Parameters**:
-  - `d` (`std::uint8_t const*`): Pointer to the beginning of the byte buffer to read from. Must be a valid pointer to memory containing at least `s` bytes. This pointer is stored by reference and must remain valid for the lifetime of the `read_bits` object.
-  - `s` (`std::size_t`): Size of the data buffer in bytes. Must be non-negative and represent the number of bytes available for reading. This value is used to track the available data size during bit reading operations.
+  - `d` (std::uint8_t const*): Pointer to the beginning of the byte buffer containing the bits to be read. This pointer must remain valid for the lifetime of the reader object.
+  - `s` (std::size_t): The size of the buffer in bytes. Must be greater than or equal to 0.
 - **Return Value**:
-  - This function is a constructor and does not return a value in the traditional sense. It initializes an object of type `read_bits` that can be used for bit extraction.
+  - This is a constructor function and does not return a value in the traditional sense. It creates and initializes an object of the read_bits class.
 - **Exceptions/Errors**:
-  - No exceptions are thrown by this constructor.
+  - No exceptions are thrown under normal conditions.
+  - The function assumes that the input parameters are valid. Passing invalid pointers or sizes may result in undefined behavior.
 - **Example**:
 ```cpp
-// Example of constructing a read_bits object
-std::uint8_t data[] = {0x12, 0x34, 0x56, 0x78};
-read_bits reader(data, sizeof(data));
+// Create a bit reader for a buffer of 10 bytes
+std::uint8_t buffer[10] = {0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x01, 0x23};
+read_bits reader(buffer, sizeof(buffer));
 ```
 - **Preconditions**:
-  - The `d` parameter must point to a valid memory location for at least `s` bytes.
-  - The `s` parameter must be non-negative.
+  - The `d` pointer must point to a valid memory location.
+  - The `s` size must be non-negative.
+  - The memory pointed to by `d` must remain valid for the duration of the reader's use.
 - **Postconditions**:
-  - The `read_bits` object is fully constructed and ready to use for bit reading operations.
-  - The internal state is initialized with `m_data = d` and `m_size = s`.
+  - The reader object is initialized with the provided data pointer and size.
+  - The internal bit position is set to 0 (beginning of the first byte).
 - **Thread Safety**:
-  - The constructor is thread-safe as it only initializes state and does not access shared resources.
+  - The constructor is thread-safe as it only initializes state.
 - **Complexity**:
-  - **Time Complexity**: O(1)
-  - **Space Complexity**: O(1) - only stores references to input parameters.
-- **See Also**: `read()`, `read_bits` class
+  - Time: O(1) - constant time operation.
+  - Space: O(1) - constant space for storing the reference to the data and size.
+- **See Also**: `read()`
 
-## Function: `read`
+## read
 
 - **Signature**: `int read(int bits)`
-- **Description**: Extracts a specified number of bits from the internal bit stream. This function reads bits from the current position in the byte buffer, advancing the internal bit pointer. The function returns the extracted bits as an integer value, with the least significant bits being the last bits read.
+- **Description**: Reads a specified number of bits from the bit stream and returns the extracted value. The function extracts bits from the current position in the buffer, advancing the internal bit pointer. The function continues reading until either the requested number of bits is read or the end of the buffer is reached.
 - **Parameters**:
-  - `bits` (`int`): Number of bits to read from the bit stream. Must be a non-negative integer. If `bits` is 0, the function returns 0 immediately without reading any bits. This parameter determines how many bits are extracted from the current position in the byte buffer.
+  - `bits` (int): The number of bits to read from the stream. Must be non-negative. If negative, the behavior is undefined.
 - **Return Value**:
   - Returns the extracted bits as an integer value.
-  - Returns 0 if no bits are available to read (either `m_size` is 0 or `bits` is 0).
-  - The returned value contains the extracted bits with the least significant bits being the last bits read.
+  - Returns 0 if there are no more bits to read (buffer is empty).
+  - The return value represents the bits read, left-aligned in the integer (with leading zeros).
 - **Exceptions/Errors**:
-  - No exceptions are thrown by this function.
-  - The function does not check for buffer overflow beyond the initial `m_size` parameter.
+  - No exceptions are thrown under normal conditions.
+  - The function assumes the internal state is valid and the buffer has not been corrupted.
 - **Example**:
 ```cpp
-// Example of reading bits from a bit stream
-read_bits reader(data, sizeof(data));
-int extracted_bits = reader.read(5); // Extracts 5 bits
-// Use extracted_bits for further processing
+// Read 5 bits from the bit stream
+read_bits reader(buffer, sizeof(buffer));
+int value = reader.read(5);
+// value contains the 5 bits read from the buffer
 ```
 - **Preconditions**:
-  - The `read_bits` object must have been properly constructed with valid parameters.
+  - The reader object must have been properly constructed with valid data.
   - The `bits` parameter must be non-negative.
-  - There must be enough bits available in the buffer to satisfy the request (though the function will read as many as possible).
 - **Postconditions**:
-  - The internal bit pointer (`m_bit`) is advanced by the number of bits read.
-  - The `m_size` is updated to reflect remaining bytes in the buffer.
-  - The function returns the extracted bits as an integer value.
+  - The internal bit position is advanced by the number of bits read.
+  - The function returns the extracted bits as an integer.
+  - If the buffer is exhausted, the function returns 0 and stops reading.
 - **Thread Safety**:
-  - The function is not thread-safe as it modifies internal state that could be accessed concurrently.
+  - The function is not thread-safe as it modifies internal state (bit position).
 - **Complexity**:
-  - **Time Complexity**: O(bits) - loops for each bit to read
-  - **Space Complexity**: O(1) - constant space usage
-- **See Also**: `read_bits`, `read_bits` class
+  - Time: O(bits) - linear in the number of bits to read.
+  - Space: O(1) - constant space usage.
+- **See Also**: `read_bits()`
 
-# Usage Examples
+## Usage Examples
 
-## Basic Usage
+### Basic Usage
 ```cpp
 #include <iostream>
 #include <vector>
 
-// Example of using read_bits to extract bits from a byte array
-int main() {
-    std::uint8_t data[] = {0x80, 0x40, 0x20}; // Binary: 10000000 01000000 00100000
-    read_bits reader(data, sizeof(data));
+// Example of reading bits from a buffer
+void basicUsage() {
+    std::uint8_t buffer[] = {0b10101010, 0b11110000, 0b00001111};
+    read_bits reader(buffer, sizeof(buffer));
     
-    // Read 5 bits from the beginning
-    int bits = reader.read(5);
-    std::cout << "Read " << bits << " bits: " << bits << std::endl;
+    // Read 8 bits (1 byte)
+    int byte1 = reader.read(8);
+    std::cout << "Read 8 bits: " << byte1 << std::endl;
     
-    // Read 4 more bits
-    bits = reader.read(4);
-    std::cout << "Read " << bits << " bits: " << bits << std::endl;
-    
-    return 0;
+    // Read 4 bits from the next byte
+    int nibble = reader.read(4);
+    std::cout << "Read 4 bits: " << nibble << std::endl;
 }
 ```
 
-## Error Handling
+### Error Handling
 ```cpp
 #include <iostream>
 #include <vector>
 
-// Example demonstrating error handling with read_bits
-int main() {
-    std::uint8_t data[] = {0x80, 0x40, 0x20};
-    read_bits reader(data, sizeof(data));
+// Example of error handling with proper checks
+void errorHandling() {
+    std::uint8_t buffer[] = {0x12, 0x34, 0x56};
+    read_bits reader(buffer, sizeof(buffer));
     
-    // Try to read more bits than available
-    int bits = reader.read(30); // This will read all available bits
-    std::cout << "Read " << bits << " bits (should be less than 24)" << std::endl;
+    // Read 3 bits from the beginning
+    int result = reader.read(3);
+    if (result != 0) {
+        std::cout << "Successfully read 3 bits: " << result << std::endl;
+    } else {
+        std::cout << "No bits available to read" << std::endl;
+    }
     
-    // After reading all bits, subsequent reads return 0
-    bits = reader.read(10);
-    std::cout << "Read " << bits << " bits after exhaustion: " << bits << std::endl;
+    // Read 3 more bits
+    result = reader.read(3);
+    if (result != 0) {
+        std::cout << "Successfully read 3 bits: " << result << std::endl;
+    }
     
-    return 0;
+    // Try to read more than available
+    result = reader.read(10);
+    if (result != 0) {
+        std::cout << "Successfully read 10 bits: " << result << std::endl;
+    } else {
+        std::cout << "Not enough bits available" << std::endl;
+    }
 }
 ```
 
-## Edge Cases
+### Edge Cases
 ```cpp
 #include <iostream>
-#include <vector>
 
-// Example demonstrating edge cases with read_bits
-int main() {
-    std::uint8_t data[] = {0xFF}; // All bits set to 1
-    read_bits reader(data, sizeof(data));
+// Example of edge cases
+void edgeCases() {
+    std::uint8_t buffer[] = {0b10101010};
+    read_bits reader(buffer, sizeof(buffer));
     
-    // Edge case 1: Read 0 bits (should return 0)
-    int bits = reader.read(0);
-    std::cout << "Read 0 bits: " << bits << std::endl;
+    // Reading 0 bits - should return 0
+    int result = reader.read(0);
+    std::cout << "Reading 0 bits: " << result << std::endl;
     
-    // Edge case 2: Read all available bits (8 bits in this case)
-    bits = reader.read(8);
-    std::cout << "Read 8 bits: " << bits << std::endl;
+    // Reading more bits than available
+    result = reader.read(9);  // Only 8 bits available
+    std::cout << "Reading 9 bits (only 8 available): " << result << std::endl;
     
-    // Edge case 3: Read more bits than available
-    bits = reader.read(10);
-    std::cout << "Read 10 bits when only 0 available: " << bits << std::endl;
-    
-    return 0;
+    // Reading from empty buffer
+    read_bits empty_reader(nullptr, 0);
+    result = empty_reader.read(8);
+    std::cout << "Reading from empty buffer: " << result << std::endl;
 }
 ```
 
-# Best Practices
+## Best Practices
 
-## How to Use Effectively
-- Use `read_bits` to construct a bit reader object that can extract bits from binary data in a systematic way.
-- Use the `read` function to extract specific numbers of bits from the bit stream.
-- Consider the bit order when interpreting results - bits are read from the current position in the byte buffer.
-- Always check if there are enough bits available before reading large quantities.
+1. **Always validate input**: Ensure the buffer pointer is valid and the size is correct before creating the reader.
 
-## Common Mistakes to Avoid
-- **Buffer Overflow**: The function assumes the input buffer is valid but doesn't check for overflow when reading beyond available data.
-- **Incorrect Bit Count**: Reading more bits than available can result in unexpected behavior.
-- **State Management**: Failing to track the position in the bit stream can lead to incorrect results.
+2. **Check return values**: Always check if the read operation was successful (non-zero return) when reading a specific number of bits.
 
-## Performance Tips
-- Use `read_bits` to avoid repeated pointer arithmetic when working with bit streams.
-- Process bits in chunks to minimize function call overhead.
-- Consider pre-processing data to align bit boundaries for optimal performance.
+3. **Handle edge cases**: Be prepared for scenarios where fewer bits are available than requested.
 
-# Code Review & Improvement Suggestions
+4. **Use const correctness**: Pass the buffer as `std::uint8_t const*` to indicate that the data won't be modified.
 
-## Function: `read_bits`
+5. **Consider buffer ownership**: If the buffer is dynamically allocated, ensure it remains valid for the duration of the reader's use.
 
-**Issue**: Incomplete constructor implementation - the provided code snippet is just a constructor but lacks context about the full class structure. The implementation appears to be incomplete as it only shows the constructor body.
+6. **Limit bit reading**: Avoid reading more bits than necessary to prevent unnecessary computation.
+
+7. **Use appropriate data types**: The return value is an `int`, which is sufficient for most bit extraction needs, but be aware of the bit width limitations.
+
+## Code Review & Improvement Suggestions
+
+### read_bits
+
+**Function**: `read_bits`
+**Issue**: The function is a constructor but the name doesn't follow the common C++ naming convention for constructors.
+**Severity**: Low
+**Impact**: Minor confusion for developers familiar with C++ conventions.
+**Fix**: Rename the function to follow the class name convention, which is implicit in C++ constructors.
+
+**Function**: `read_bits`
+**Issue**: Missing validation of input parameters.
 **Severity**: Medium
-**Impact**: Could lead to confusion about the class's functionality and usage.
-**Fix**: Complete the implementation of the `read_bits` class and ensure all member functions are properly documented.
+**Impact**: Could lead to undefined behavior if invalid pointers or sizes are passed.
+**Fix**: Add parameter validation with assertions or error handling:
+```cpp
+read_bits(std::uint8_t const* d, std::size_t s)
+    : m_data(d), m_size(s)
+{
+    assert(d != nullptr && "Data pointer cannot be null");
+    assert(s >= 0 && "Size must be non-negative");
+}
+```
 
-## Function: `read`
-
-**Issue**: Incomplete function implementation - the provided code snippet is cut off mid-function. The while loop condition is incomplete and the function appears to have a syntax error.
+**Function**: `read_bits`
+**Issue**: No documentation for the class or its members.
 **Severity**: High
-**Impact**: The function is incomplete and would not compile as shown. This could lead to severe bugs or crashes.
-**Fix**: Complete the implementation of the `read` function with proper loop termination and error handling.
+**Impact**: Makes the code difficult to understand and maintain.
+**Fix**: Add comprehensive documentation for the class and its members.
 
-# Modernization Opportunities
+### read
 
-## Modern C++ Improvements
-```markdown
-// Before (incomplete and potentially buggy)
+**Function**: `read`
+**Issue**: Incomplete function implementation - code is truncated in the provided snippet.
+**Severity**: Critical
+**Impact**: The function is not functional and cannot be used as-is.
+**Fix**: Complete the function implementation:
+```cpp
 int read(int bits)
 {
     if (m_size == 0) return 0;
@@ -187,29 +211,127 @@ int read(int bits)
         ret |= ((*m_data) >> m_bit) & ((1 << bits_to_copy) - 1);
         m_bit += bits_to_copy;
         bits -= bits_to_copy;
-        if 
-```
-
-**Modernization Opportunity**: The function could benefit from using C++20 features like `std::span` for safer parameter passing and `std::expected` for error handling.
-```cpp
-// After (modernized approach)
-[[nodiscard]] int read(std::span<const std::uint8_t> data, int bits) {
-    if (data.empty()) return 0;
-    // Implement bit reading with modern C++ patterns
+        if (m_bit == 8) {
+            m_data++;
+            m_bit = 0;
+            m_size--;
+        }
+    }
+    return ret;
 }
 ```
 
-# Refactoring Suggestions
+**Function**: `read`
+**Issue**: No validation of the number of bits to read.
+**Severity**: Medium
+**Impact**: Could lead to incorrect behavior if negative values are passed.
+**Fix**: Add validation for the number of bits:
+```cpp
+int read(int bits)
+{
+    if (bits < 0) return 0;
+    if (m_size == 0) return 0;
+    // ... rest of the function
+}
+```
 
-## Refactoring Opportunities
-- The `read_bits` class should be properly encapsulated with public interface methods.
-- The `read` function should be part of a class and not a standalone function.
-- The class should provide methods for checking available bits, resetting position, and getting current position.
+**Function**: `read`
+**Issue**: No const-correctness for the function.
+**Severity**: Medium
+**Impact**: Prevents the function from being called on const objects.
+**Fix**: Make the function const:
+```cpp
+int read(int bits) const
+{
+    if (bits < 0) return 0;
+    if (m_size == 0) return 0;
+    // ... rest of the function
+}
+```
 
-# Performance Optimizations
+## Modernization Opportunities
 
-## Optimization Opportunities
-- The bit extraction logic can be optimized using bit manipulation techniques.
-- Consider using bit manipulation intrinsics if available on the target platform.
-- Add noexcept specification where appropriate to enable compiler optimizations.
-- Consider using move semantics for the class if it needs to be transferred between functions.
+### read_bits
+```cpp
+// Modern C++ version using constexpr and better parameter handling
+class read_bits {
+private:
+    std::uint8_t const* m_data;
+    std::size_t m_size;
+    int m_bit;
+
+public:
+    constexpr read_bits(std::uint8_t const* d, std::size_t s)
+        : m_data(d), m_size(s), m_bit(0)
+    {
+        assert(d != nullptr && "Data pointer cannot be null");
+        assert(s >= 0 && "Size must be non-negative");
+    }
+    
+    [[nodiscard]] int read(int bits) const;
+};
+```
+
+### read
+```cpp
+// Modern C++ version with enhanced error handling
+[[nodiscard]] int read(int bits) const
+{
+    if (bits < 0) {
+        return 0;
+    }
+    if (m_size == 0) {
+        return 0;
+    }
+    
+    int ret = 0;
+    while (bits > 0 && m_size > 0) {
+        int const bits_to_copy = std::min(8 - m_bit, bits);
+        ret <<= bits_to_copy;
+        ret |= ((*m_data) >> m_bit) & ((1 << bits_to_copy) - 1);
+        m_bit += bits_to_copy;
+        bits -= bits_to_copy;
+        if (m_bit == 8) {
+            m_data++;
+            m_bit = 0;
+            m_size--;
+        }
+    }
+    return ret;
+}
+```
+
+## Refactoring Suggestions
+
+1. **Split into multiple functions**: The `read` function could be split into two functions:
+   - `readBits(int bits)`: Reads the specified number of bits
+   - `readByte()`: Reads a single byte (8 bits)
+
+2. **Make into a class method**: The `read_bits` function should be part of a class that encapsulates the bit reading functionality.
+
+3. **Create a bit reader utility**: Move this functionality to a utility namespace for reuse across the project.
+
+4. **Consider adding write functionality**: Create a corresponding `write_bits` class to handle writing bits to a buffer.
+
+## Performance Optimizations
+
+1. **Use move semantics**: If the bit reader needs to be moved, implement move constructors and assignment operators.
+
+2. **Return by value for RVO**: The `read` function already returns by value, which is good for Return Value Optimization.
+
+3. **Use std::span for better bounds checking**: Replace raw pointers with `std::span<std::uint8_t>` for safer and more expressive code:
+```cpp
+class read_bits {
+private:
+    std::span<std::uint8_t const> m_data;
+    int m_bit;
+    std::size_t m_size;
+    
+public:
+    read_bits(std::span<std::uint8_t const> data)
+        : m_data(data), m_bit(0), m_size(data.size())
+    {}
+};
+```
+
+4

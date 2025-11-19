@@ -1,17 +1,24 @@
 # API Documentation for `main` Function
 
 ## main
+**Signature**: `int main()`
 
-- **Signature**: `int main()`
-- **Description**: The `main` function in this example program retrieves a list of statistics metrics from a libtorrent session and prints their names, types, and value indices. This function demonstrates how to access and display the available statistics counters and gauges in a libtorrent session.
-- **Parameters**: None
-- **Return Value**:
-  - Returns `0` on successful execution
-  - The function does not return error values as it handles all error conditions internally
-- **Exceptions/Errors**:
-  - No exceptions are thrown by this function
-  - The function assumes that `session_stats_metrics()` returns valid data
-- **Example**:
+**Description**:  
+The `main` function in this example demonstrates how to retrieve and display session statistics metrics from a libtorrent session. It calls `session_stats_metrics()` to get a vector of `stats_metric` objects, then iterates through each metric to print its type (counter or gauge), name, and value index. This function serves as a demonstration of the libtorrent statistics API.
+
+**Parameters**:  
+This function takes no parameters.
+
+**Return Value**:  
+- Returns `0` on successful execution.
+- This return value follows the standard C++ convention where `0` indicates successful program termination.
+
+**Exceptions/Errors**:  
+- No exceptions are thrown by this function.
+- The function assumes that `session_stats_metrics()` returns a valid vector of metrics.
+- If `session_stats_metrics()` fails or returns an invalid state, the behavior is undefined.
+
+**Example**:
 ```cpp
 int main()
 {
@@ -25,276 +32,187 @@ int main()
     return 0;
 }
 ```
-- **Preconditions**: The libtorrent library must be properly initialized and a session must be created before calling `session_stats_metrics()`.
-- **Postconditions**: The function prints a list of statistics metrics to stdout and returns 0 to indicate successful execution.
-- **Thread Safety**: This function is not thread-safe as it assumes a single-threaded execution context and may not work correctly in a multithreaded environment without proper synchronization.
-- **Complexity**: 
-  - Time Complexity: O(n) where n is the number of statistics metrics
-  - Space Complexity: O(n) for storing the vector of statistics metrics
+
+**Preconditions**:  
+- The libtorrent session must be initialized and running before calling `session_stats_metrics()`.
+- The `session_stats_metrics()` function must be available and properly linked.
+- The environment must have the necessary libtorrent library dependencies loaded.
+
+**Postconditions**:  
+- The function prints a list of all available session statistics metrics to standard output.
+- The function returns `0`, indicating successful execution.
+- No side effects are produced beyond the console output.
+
+**Thread Safety**:  
+- This function is not inherently thread-safe because it relies on `session_stats_metrics()` which may have thread-safety requirements.
+- The `session_stats_metrics()` function should be called from a thread-safe context where the libtorrent session is properly synchronized.
+
+**Complexity**:  
+- **Time Complexity**: O(n), where n is the number of metrics returned by `session_stats_metrics()`.
+- **Space Complexity**: O(n), where n is the number of metrics stored in the vector.
+
+**See Also**:  
+- `session_stats_metrics()`: Function to retrieve the list of available statistics metrics.
+
+---
 
 ## Usage Examples
 
 ### Basic Usage
 ```cpp
-#include <iostream>
-#include <vector>
-#include <cstdio>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
 int main()
 {
-    std::vector<stats_metric> metrics = session_stats_metrics();
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::printf("%s: %s (%d)\n", type_str, metric.name, metric.value_index);
+    std::vector<stats_metric> m = session_stats_metrics();
+    for (auto const& c : m)
+    {
+        std::printf("%s: %s (%d)\n"
+            , c.type == metric_type_t::counter ? "CNTR" : "GAUG"
+            , c.name, c.value_index);
     }
     return 0;
 }
 ```
+This example prints all available session statistics metrics in a readable format.
 
 ### Error Handling
 ```cpp
-#include <iostream>
-#include <vector>
-#include <cstdio>
-#include <stdexcept>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
 int main()
 {
     try {
-        std::vector<stats_metric> metrics = session_stats_metrics();
-        if (metrics.empty()) {
-            std::cerr << "No statistics metrics available" << std::endl;
+        std::vector<stats_metric> m = session_stats_metrics();
+        if (m.empty()) {
+            std::cerr << "No statistics metrics available." << std::endl;
             return 1;
         }
         
-        for (const auto& metric : metrics) {
-            const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-            std::printf("%s: %s (%d)\n", type_str, metric.name, metric.value_index);
+        for (auto const& c : m)
+        {
+            std::printf("%s: %s (%d)\n"
+                , c.type == metric_type_t::counter ? "CNTR" : "GAUG"
+                , c.name, c.value_index);
         }
-    } catch (const std::exception& e) {
-        std::cerr << "Error retrieving statistics metrics: " << e.what() << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error retrieving statistics: " << e.what() << std::endl;
         return 1;
     }
-    
     return 0;
 }
 ```
+This example includes basic error handling to catch exceptions and handle cases where no metrics are available.
 
 ### Edge Cases
 ```cpp
-#include <iostream>
-#include <vector>
-#include <cstdio>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
 int main()
 {
-    // Test with empty metrics list
-    std::vector<stats_metric> metrics = session_stats_metrics();
+    // Edge case: session not initialized
+    std::vector<stats_metric> m = session_stats_metrics();
     
-    if (metrics.empty()) {
-        std::cout << "No statistics metrics available." << std::endl;
-        return 0;
+    // Check if metrics are available
+    if (m.empty()) {
+        std::printf("No metrics available - is the session initialized?\n");
+        return 1;
     }
     
-    // Print all metrics
-    for (size_t i = 0; i < metrics.size(); ++i) {
-        const auto& metric = metrics[i];
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::printf("%s: %s (%d)\n", type_str, metric.name, metric.value_index);
-        
-        // Add spacing between entries for readability
-        if (i < metrics.size() - 1) {
-            std::cout << std::endl;
+    // Handle metrics with special names or indices
+    for (auto const& c : m) {
+        if (c.name == nullptr || c.name[0] == '\0') {
+            std::printf("Metric with empty name: %s (%d)\n", 
+                       c.type == metric_type_t::counter ? "CNTR" : "GAUG", c.value_index);
+        } else {
+            std::printf("%s: %s (%d)\n", 
+                       c.type == metric_type_t::counter ? "CNTR" : "GAUG", 
+                       c.name, c.value_index);
         }
     }
     
     return 0;
 }
 ```
+This example demonstrates handling edge cases such as empty metric names or uninitialized sessions.
+
+---
 
 ## Best Practices
 
-### How to Use Effectively
-1. Use this function as a starting point to understand the available statistics metrics in libtorrent
-2. Call `session_stats_metrics()` before starting the main application loop to get the complete list
-3. Use the returned metrics to monitor specific aspects of your torrent session
+### How to Use These Functions Effectively
+- Ensure the libtorrent session is properly initialized before calling `session_stats_metrics()`.
+- Call `session_stats_metrics()` at appropriate intervals to avoid overwhelming the system with too many statistics requests.
+- Use the returned metrics for monitoring or debugging purposes rather than as a primary data source.
 
 ### Common Mistakes to Avoid
-1. **Assuming the metrics list is non-empty**: Always check if the vector is empty before iterating
-2. **Not handling the case where `session_stats_metrics()` returns an empty vector**: This could happen if the libtorrent session is not properly initialized
-3. **Using the function in a multithreaded environment without proper synchronization**: This function assumes a single-threaded execution context
+- Assuming the session is always available - always check that `session_stats_metrics()` returns valid data.
+- Not handling the case where the vector is empty - always validate the return value.
+- Using the output for real-time decision-making without considering sampling frequency.
 
 ### Performance Tips
-1. **Cache the metrics list**: If you need to access the same metrics multiple times, cache the result of `session_stats_metrics()` rather than calling it repeatedly
-2. **Use const references**: When iterating through the metrics, use `const auto&` to avoid unnecessary copying
-3. **Minimize I/O operations**: The `std::printf` function is called for each metric, so if you have a large number of metrics, consider buffering the output
+- Cache the results of `session_stats_metrics()` if you need to access metrics multiple times within a short period.
+- Use `std::vector<stats_metric>` efficiently by avoiding unnecessary copies.
+- Consider using `std::span` for more efficient access to the metric data if using C++20.
+
+---
 
 ## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
-**Security:**
-- **Function**: `main`
-- **Issue**: Uses `std::printf` with format string that could potentially lead to format string attacks if the format string were user-controlled
-- **Severity**: Low
-- **Impact**: Could potentially allow format string attacks in more complex applications
-- **Fix**: The format string is hardcoded and not user-controlled, so the risk is minimal. However, for future improvements, consider using `std::cout` with proper formatting:
-
+**Function**: `main`
+**Issue**: No error handling for `session_stats_metrics()` failure
+**Severity**: Medium
+**Impact**: If `session_stats_metrics()` fails, the program may crash or produce incorrect output.
+**Fix**: Add validation for the returned vector:
 ```cpp
-#include <iostream>
-#include <vector>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
 int main()
 {
-    std::vector<stats_metric> metrics = session_stats_metrics();
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::cout << type_str << ": " << metric.name << " (" << metric.value_index << ")" << std::endl;
-    }
-    return 0;
-}
-```
-
-**Performance:**
-- **Function**: `main`
-- **Issue**: Uses `std::vector` to store metrics, which may involve dynamic allocation
-- **Severity**: Medium
-- **Impact**: Could affect performance in high-frequency applications
-- **Fix**: Consider using a more efficient data structure or pre-allocating memory if the number of metrics is known:
-
-```cpp
-#include <iostream>
-#include <vector>
-#include <array>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-// Assuming we know the maximum number of metrics is 100
-constexpr size_t MAX_METRICS = 100;
-std::vector<stats_metric> session_stats_metrics();
-
-int main()
-{
-    std::vector<stats_metric> metrics = session_stats_metrics();
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::cout << type_str << ": " << metric.name << " (" << metric.value_index << ")" << std::endl;
-    }
-    return 0;
-}
-```
-
-**Correctness:**
-- **Function**: `main`
-- **Issue**: No validation of the return value from `session_stats_metrics()`
-- **Severity**: Low
-- **Impact**: Could lead to undefined behavior if the function returns an invalid vector
-- **Fix**: Add a check to ensure the vector is valid:
-
-```cpp
-#include <iostream>
-#include <vector>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
-int main()
-{
-    std::vector<stats_metric> metrics = session_stats_metrics();
-    if (metrics.empty()) {
-        std::cerr << "Failed to retrieve statistics metrics" << std::endl;
+    std::vector<stats_metric> m = session_stats_metrics();
+    if (m.empty()) {
+        std::cerr << "Failed to retrieve statistics metrics." << std::endl;
         return 1;
     }
     
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::cout << type_str << ": " << metric.name << " (" << metric.value_index << ")" << std::endl;
+    for (auto const& c : m)
+    {
+        std::printf("%s: %s (%d)\n"
+            , c.type == metric_type_t::counter ? "CNTR" : "GAUG"
+            , c.name, c.value_index);
     }
-    
     return 0;
 }
 ```
 
-**Code Quality:**
-- **Function**: `main`
-- **Issue**: Uses `std::printf` instead of `std::cout` for consistency with C++ style
-- **Severity**: Low
-- **Impact**: Less idiomatic C++ code
-- **Fix**: Replace `std::printf` with `std::cout`:
-
+**Function**: `main`
+**Issue**: Uses `std::printf` which can be unsafe if format strings are not properly controlled
+**Severity**: Low
+**Impact**: Could lead to format string vulnerabilities if the format string were constructed dynamically.
+**Fix**: Use `std::cout` for safer output:
 ```cpp
-#include <iostream>
-#include <vector>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
 int main()
 {
-    std::vector<stats_metric> metrics = session_stats_metrics();
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::cout << type_str << ": " << metric.name << " (" << metric.value_index << ")" << std::endl;
+    std::vector<stats_metric> m = session_stats_metrics();
+    for (auto const& c : m)
+    {
+        std::cout << (c.type == metric_type_t::counter ? "CNTR" : "GAUG")
+                  << ": " << c.name << " (" << c.value_index << ")\n";
+    }
+    return 0;
+}
+```
+
+**Function**: `main`
+**Issue**: No validation of `c.name` pointer
+**Severity**: Medium
+**Impact**: Could lead to undefined behavior if `c.name` is null.
+**Fix**: Add null check before using `c.name`:
+```cpp
+int main()
+{
+    std::vector<stats_metric> m = session_stats_metrics();
+    for (auto const& c : m)
+    {
+        const char* name = c.name ? c.name : "(unknown)";
+        std::printf("%s: %s (%d)\n"
+            , c.type == metric_type_t::counter ? "CNTR" : "GAUG"
+            , name, c.value_index);
     }
     return 0;
 }
@@ -303,31 +221,28 @@ int main()
 ### Modernization Opportunities
 
 **Function**: `main`
-**Issue**: The function could benefit from modern C++ features
-**Severity**: Medium
-**Impact**: Could improve code readability and maintainability
-**Fix**: Use `[[nodiscard]]` to indicate the function's return value is important:
-
+**Opportunity**: Use `[[nodiscard]]` to indicate that the return value is important
+**Suggestion**: Add `[[nodiscard]]` to the function signature:
 ```cpp
-#include <iostream>
-#include <vector>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
 [[nodiscard]] int main()
+```
+
+**Function**: `main`
+**Opportunity**: Use `std::span` for more efficient iteration
+**Suggestion**: Replace the vector with `std::span` if using C++20:
+```cpp
+#include <span>
+
+int main()
 {
     std::vector<stats_metric> metrics = session_stats_metrics();
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::cout << type_str << ": " << metric.name << " (" << metric.value_index << ")" << std::endl;
+    std::span<const stats_metric> metric_span(metrics.data(), metrics.size());
+    
+    for (auto const& c : metric_span)
+    {
+        std::printf("%s: %s (%d)\n"
+            , c.type == metric_type_t::counter ? "CNTR" : "GAUG"
+            , c.name, c.value_index);
     }
     return 0;
 }
@@ -336,40 +251,23 @@ std::vector<stats_metric> session_stats_metrics();
 ### Refactoring Suggestions
 
 **Function**: `main`
-**Issue**: The function could be split into smaller, more focused functions
-**Severity**: Low
-**Impact**: Could improve maintainability and testability
-**Fix**: Separate the retrieval of metrics and the display of metrics:
-
+**Suggestion**: Extract the metric display logic into a separate function
+**Reason**: Improves readability and allows reuse in other parts of the application.
+**Implementation**:
 ```cpp
-#include <iostream>
-#include <vector>
-
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
-
-void display_metrics(const std::vector<stats_metric>& metrics) {
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::cout << type_str << ": " << metric.name << " (" << metric.value_index << ")" << std::endl;
+void display_metrics(const std::vector<stats_metric>& metrics)
+{
+    for (auto const& c : metrics)
+    {
+        std::printf("%s: %s (%d)\n"
+            , c.type == metric_type_t::counter ? "CNTR" : "GAUG"
+            , c.name, c.value_index);
     }
 }
 
 int main()
 {
     std::vector<stats_metric> metrics = session_stats_metrics();
-    if (metrics.empty()) {
-        std::cerr << "Failed to retrieve statistics metrics" << std::endl;
-        return 1;
-    }
-    
     display_metrics(metrics);
     return 0;
 }
@@ -378,38 +276,33 @@ int main()
 ### Performance Optimizations
 
 **Function**: `main`
-**Issue**: The function could be optimized for performance by using more efficient output methods
-**Severity**: Low
-**Impact**: Could improve output performance in high-frequency applications
-**Fix**: Use `std::ostream` with `std::endl` instead of `std::printf`:
-
+**Opportunity**: Use move semantics to avoid unnecessary copies
+**Suggestion**: Move the vector instead of copying:
 ```cpp
-#include <iostream>
-#include <vector>
+int main()
+{
+    std::vector<stats_metric> m = session_stats_metrics();  // Copy
+    // Use m as needed
+    return 0;
+}
+```
 
-// Assuming these are declared in the libtorrent header files
-struct stats_metric {
-    enum class metric_type_t { counter, gauge };
-    metric_type_t type;
-    const char* name;
-    int value_index;
-};
-
-std::vector<stats_metric> session_stats_metrics();
+**Function**: `main`
+**Opportunity**: Use `std::string_view` for read-only string access
+**Suggestion**: If `c.name` is always read-only, consider using `std::string_view`:
+```cpp
+#include <string_view>
 
 int main()
 {
-    std::vector<stats_metric> metrics = session_stats_metrics();
-    if (metrics.empty()) {
-        std::cerr << "Failed to retrieve statistics metrics" << std::endl;
-        return 1;
+    std::vector<stats_metric> m = session_stats_metrics();
+    for (auto const& c : m)
+    {
+        std::string_view name(c.name ? c.name : "");
+        std::printf("%s: %s (%d)\n"
+            , c.type == metric_type_t::counter ? "CNTR" : "GAUG"
+            , name.data(), c.value_index);
     }
-    
-    for (const auto& metric : metrics) {
-        const char* type_str = (metric.type == stats_metric::metric_type_t::counter) ? "CNTR" : "GAUG";
-        std::cout << type_str << ": " << metric.name << " (" << metric.value_index << ")" << std::endl;
-    }
-    
     return 0;
 }
 ```

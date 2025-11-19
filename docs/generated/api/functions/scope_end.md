@@ -1,398 +1,308 @@
-# API Documentation for `scope_end` Utility Functions
+# libtorrent Scope End Utility API Documentation
 
-## Function: `scope_end_impl`
+## scope_end_impl
 
-- **Signature**: `scope_end_impl(Fun f)`
-- **Description**: Constructs a scope-end handler that will execute the provided function `f` when the scope-end object goes out of scope. This is a helper class that implements the RAII (Resource Acquisition Is Initialization) pattern for cleanup operations.
+- **Signature**: `explicit scope_end_impl(Fun f)`
+- **Description**: Constructor for the `scope_end_impl` class template. This function initializes a scope-end handler that will execute the provided function when the object goes out of scope. The function is stored by move, allowing it to capture local variables and state.
 - **Parameters**:
-  - `f` (Fun): A callable object (function, lambda, functor) that will be executed when the scope-end object is destroyed. The callable must be movable and callable with no arguments.
+  - `f` (Fun): A callable object (function, lambda, functor) that will be executed when the `scope_end_impl` object is destroyed. The callable must be movable and must not throw exceptions during construction.
 - **Return Value**:
-  - Returns an instance of `scope_end_impl<Fun>` that will execute the provided function when it goes out of scope.
-  - The returned object is used as a local variable in a scope, and its destruction triggers the execution of the function.
+  - This function does not return a value as it is a constructor.
 - **Exceptions/Errors**:
-  - Throws if the provided function `f` cannot be moved (if it's not movable).
-  - Throws if `f()` throws during destruction (this is the expected behavior when the function itself throws).
+  - May throw exceptions if the provided callable `f` throws during construction.
 - **Example**:
 ```cpp
-{
-    auto cleanup = scope_end_impl([]() { 
-        std::cout << "Cleanup executed" << std::endl; 
-    });
-    // ... do work ...
-    // Cleanup will be automatically called when cleanup goes out of scope
-}
+auto cleanup = []() { std::cout << "Cleaning up..." << std::endl; };
+scope_end_impl<decltype(cleanup)> handler(cleanup);
+// When handler goes out of scope, cleanup will be called
 ```
-- **Preconditions**: The function `f` must be movable and callable with no arguments.
-- **Postconditions**: The function `f` will be executed exactly once when the `scope_end_impl` object is destroyed, unless `disarm()` is called first.
-- **Thread Safety**: The class itself is not thread-safe. Multiple threads should not access the same `scope_end_impl` instance concurrently.
-- **Complexity**: O(1) time and space complexity for construction.
-- **See Also**: `scope_end()`, `disarm()`
+- **Preconditions**: The callable `f` must be valid and not throw during construction.
+- **Postconditions**: The `scope_end_impl` object is constructed with the provided function ready to execute on destruction.
+- **Thread Safety**: The constructor is thread-safe as it only initializes the object.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `scope_end`, `~scope_end_impl`, `disarm`
 
-## Function: `scope_end_impl`
+## scope_end_impl
 
 - **Signature**: `~scope_end_impl()`
-- **Description**: Destructor that executes the stored function `m_fun()` if `m_armed` is true. This is the core of the RAII pattern - the function is called when the object goes out of scope.
-- **Parameters**: None.
-- **Return Value**: None.
+- **Description**: Destructor for the `scope_end_impl` class template. This function executes the stored function if it has not been disarmed. The function is called when the object goes out of scope, ensuring cleanup operations are performed.
+- **Parameters**: None
+- **Return Value**: None
 - **Exceptions/Errors**:
-  - May throw if the stored function `m_fun()` throws.
-  - The exception will propagate to the caller of the destructor.
+  - May throw exceptions if the stored function `m_fun()` throws during execution.
 - **Example**:
 ```cpp
 {
-    auto cleanup = scope_end_impl([]() { 
-        std::cout << "Cleanup executed" << std::endl; 
-    });
-    // When cleanup goes out of scope, the lambda will be executed
+    auto cleanup = []() { std::cout << "Resource released" << std::endl; };
+    scope_end_impl<decltype(cleanup)> handler(cleanup);
+    // When handler goes out of scope, cleanup will be called
 }
 ```
-- **Preconditions**: None.
-- **Postconditions**: If `m_armed` is true, the stored function `m_fun()` will be executed exactly once.
-- **Thread Safety**: The destructor may be called from any thread, but the stored function should be thread-safe if called from multiple threads.
-- **Complexity**: O(1) time complexity, depends on the cost of executing the stored function.
-- **See Also**: `scope_end_impl(Fun f)`, `disarm()`
+- **Preconditions**: The object must be in a valid state (not moved from).
+- **Postconditions**: The stored function is executed if `m_armed` is true, and the object is destroyed.
+- **Thread Safety**: The destructor is thread-safe as it only performs cleanup.
+- **Complexity**: O(1) time complexity (assuming the stored function is O(1)).
+- **See Also**: `scope_end_impl`, `disarm`, `scope_end`
 
-## Function: `scope_end_impl`
+## scope_end_impl
 
 - **Signature**: `scope_end_impl(scope_end_impl&&) noexcept = default;`
-- **Description**: Move constructor that allows the scope-end object to be moved from one scope to another. This is essential for the RAII pattern when objects need to be passed between functions.
+- **Description**: Move constructor for the `scope_end_impl` class template. This function enables efficient transfer of ownership of the scope-end handler from one object to another without copying the stored function.
 - **Parameters**: 
-  - `other` (scope_end_impl&&): The source object to move from. The source object will be in a valid but unspecified state after the move.
-- **Return Value**: None.
-- **Exceptions/Errors**: Never throws, as specified by `noexcept`.
+  - `other` (scope_end_impl&&): An rvalue reference to another `scope_end_impl` object to move from.
+- **Return Value**: None
+- **Exceptions/Errors**: None (marked noexcept)
 - **Example**:
 ```cpp
-auto create_cleanup() {
-    return scope_end_impl([]() { 
-        std::cout << "Cleanup executed" << std::endl; 
-    });
-}
-
-{
-    auto cleanup = create_cleanup(); // Move constructor called
-    // cleanup will execute when it goes out of scope
-}
+auto handler1 = scope_end_impl([]() { std::cout << "Cleanup" << std::endl; });
+auto handler2 = std::move(handler1); // Move constructor called
+// handler1 is now in a valid but unspecified state
 ```
 - **Preconditions**: The source object must be in a valid state.
-- **Postconditions**: The target object will contain the same function as the source, and the source will be in a valid but unspecified state.
-- **Thread Safety**: The move constructor is thread-safe as long as the function being moved is thread-safe.
+- **Postconditions**: The source object is left in a valid but unspecified state, and the destination object contains the moved state.
+- **Thread Safety**: Thread-safe as it only transfers ownership.
 - **Complexity**: O(1) time complexity.
-- **See Also**: `scope_end_impl(Fun f)`, `disarm()`
+- **See Also**: `scope_end_impl`, `scope_end_impl`, `disarm`
 
-## Function: `scope_end_impl`
+## scope_end_impl
 
 - **Signature**: `scope_end_impl(scope_end_impl const&) = delete;`
-- **Description**: Deleted copy constructor to prevent copying of the scope-end object. This is intentional to enforce move semantics and prevent accidental copying, which could lead to double-execution of the cleanup function.
+- **Description**: Deleted copy constructor for the `scope_end_impl` class template. This prevents copying of scope-end handlers, ensuring that only one object owns the execution of the cleanup function.
 - **Parameters**: 
-  - `other` (const scope_end_impl&): The source object to copy from.
-- **Return Value**: None.
-- **Exceptions/Errors**: Compilation error if attempted to copy.
+  - `other` (scope_end_impl const&): A const reference to another `scope_end_impl` object to copy from.
+- **Return Value**: None
+- **Exceptions/Errors**: None (function is deleted)
 - **Example**:
 ```cpp
-// This will cause a compilation error:
-// auto cleanup1 = scope_end_impl([]() { std::cout << "Cleanup" << std::endl; });
-// auto cleanup2 = cleanup1; // Error: copy constructor is deleted
+auto handler1 = scope_end_impl([]() { std::cout << "Cleanup" << std::endl; });
+// auto handler2 = handler1; // This would cause a compilation error
 ```
-- **Preconditions**: None (but the copy is not allowed).
-- **Postconditions**: None (copy is not allowed).
-- **Thread Safety**: Not applicable, as copying is not allowed.
-- **Complexity**: N/A.
-- **See Also**: `scope_end_impl(scope_end_impl&&)`, `scope_end()`
+- **Preconditions**: None (function is deleted)
+- **Postconditions**: None (function cannot be called)
+- **Thread Safety**: Not applicable (function is deleted)
+- **Complexity**: Not applicable
+- **See Also**: `scope_end_impl`, `scope_end_impl`, `disarm`
 
-## Function: `disarm`
+## disarm
 
 - **Signature**: `void disarm()`
-- **Description**: Disarms the scope-end handler by setting `m_armed` to false, preventing the stored function from being executed when the object goes out of scope. This is useful when you want to conditionally execute or skip the cleanup.
-- **Parameters**: None.
-- **Return Value**: None.
-- **Exceptions/Errors**: None.
+- **Description**: Disarms the scope-end handler, preventing the stored function from being executed when the object goes out of scope. This function is useful when you want to suppress the cleanup action.
+- **Parameters**: None
+- **Return Value**: None
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-{
-    auto cleanup = scope_end_impl([]() { 
-        std::cout << "Cleanup executed" << std::endl; 
-    });
-    
-    if (some_condition) {
-        cleanup.disarm(); // Prevent cleanup from executing
-    }
-    // If some_condition is true, cleanup will NOT execute
-}
+auto handler = scope_end_impl([]() { std::cout << "This will not be printed" << std::endl; });
+handler.disarm(); // Prevents execution
+// When handler goes out of scope, the function will not be called
 ```
-- **Preconditions**: The function must be called on a valid `scope_end_impl` object.
-- **Postconditions**: The stored function will not be executed when the object goes out of scope.
-- **Thread Safety**: The function is thread-safe if the cleanup function is thread-safe.
-- **Complexity**: O(1) time complexity.
-- **See Also**: `scope_end_impl()`, `scope_end()`
+- **Preconditions**: The object must be in a valid state.
+- **Postconditions**: The `m_armed` flag is set to false, preventing execution of the stored function on destruction.
+- **Thread Safety**: Thread-safe as it only modifies a single boolean flag.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `scope_end_impl`, `scope_end_impl`, `~scope_end_impl`
 
-## Function: `scope_end`
+## scope_end
 
 - **Signature**: `scope_end_impl<Fun> scope_end(Fun f)`
-- **Description**: Creates a `scope_end_impl` object with the provided function, enabling the RAII pattern for cleanup operations. This is the primary factory function for creating scope-end handlers.
+- **Description**: Factory function that creates and returns a `scope_end_impl` object with the provided function. This function is the primary interface for creating scope-end handlers and is templated on the callable type.
 - **Parameters**:
-  - `f` (Fun): A callable object (function, lambda, functor) that will be executed when the scope-end object goes out of scope. The callable must be movable and callable with no arguments.
-- **Return Value**: Returns a `scope_end_impl<Fun>` object that will execute the provided function when it goes out of scope.
+  - `f` (Fun): A callable object (function, lambda, functor) that will be executed when the returned `scope_end_impl` object goes out of scope.
+- **Return Value**:
+  - Returns a `scope_end_impl<Fun>` object that will execute the provided function when it goes out of scope.
 - **Exceptions/Errors**: 
-  - Throws if the provided function `f` cannot be moved (if it's not movable).
+  - May throw exceptions if the provided callable `f` throws during construction.
 - **Example**:
 ```cpp
 {
-    auto cleanup = scope_end([]() { 
-        std::cout << "Cleanup executed" << std::endl; 
-    });
-    // ... do work ...
-    // Cleanup will be automatically called when cleanup goes out of scope
+    auto handler = scope_end([]() { std::cout << "Cleanup" << std::endl; });
+    // When handler goes out of scope, the lambda will be executed
 }
 ```
-- **Preconditions**: The function `f` must be movable and callable with no arguments.
-- **Postconditions**: A `scope_end_impl` object is created that will execute the provided function when it goes out of scope.
-- **Thread Safety**: The function is thread-safe as long as the provided function is thread-safe.
-- **Complexity**: O(1) time complexity.
-- **See Also**: `scope_end_impl()`, `disarm()`
+- **Preconditions**: The callable `f` must be valid and not throw during construction.
+- **Postconditions**: A `scope_end_impl` object is returned that will execute the provided function on destruction.
+- **Thread Safety**: Thread-safe as it only constructs a new object.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `scope_end_impl`, `disarm`
 
 # Usage Examples
 
-## 1. Basic Usage
+## Basic Usage
 
 ```cpp
+#include <libtorrent/aux_/scope_end.hpp>
 #include <iostream>
-#include <vector>
 
-// Example: Using scope_end to ensure cleanup of a file handle
-void process_with_cleanup() {
-    FILE* file = fopen("test.txt", "w");
-    if (!file) {
-        std::cerr << "Failed to open file" << std::endl;
-        return;
-    }
-    
-    // Create a scope-end handler to close the file when we leave the scope
-    auto cleanup = scope_end([file]() { 
-        fclose(file); 
-        std::cout << "File closed" << std::endl; 
+void example_basic_usage() {
+    // Create a scope-end handler that prints a message when the scope ends
+    auto handler = scope_end([]() { 
+        std::cout << "Scope ended - cleaning up resources" << std::endl; 
     });
     
-    // ... do work with the file ...
-    fprintf(file, "Hello, World!");
+    // Any code here will execute normally
+    std::cout << "Inside scope" << std::endl;
     
-    // The file will be automatically closed when cleanup goes out of scope
-}
-
-// Example: Using scope_end to manage a mutex lock
-void process_with_lock() {
-    std::mutex mtx;
-    std::unique_lock<std::mutex> lock(mtx);
-    
-    // Create a scope-end handler to release the lock
-    auto unlock = scope_end([lock = std::move(lock)]() { 
-        // The lock will be released when this function is called
-    });
-    
-    // ... do work with the lock ...
-    std::cout << "Working with locked resource" << std::endl;
-    
-    // The lock will be automatically released when unlock goes out of scope
+    // When handler goes out of scope, the lambda will be called
 }
 ```
 
-## 2. Error Handling
+## Error Handling
 
 ```cpp
+#include <libtorrent/aux_/scope_end.hpp>
 #include <iostream>
 #include <stdexcept>
-#include <memory>
 
-// Example: Using scope_end with error handling
-void process_with_error_handling() {
-    // Create a scope-end handler for cleanup
-    auto cleanup = scope_end([]() { 
-        std::cout << "Cleanup: Resources released" << std::endl; 
-    });
-    
+void example_error_handling() {
     try {
-        // Simulate some work that might fail
-        std::unique_ptr<int> resource(new int(42));
+        auto handler = scope_end([]() { 
+            std::cout << "Cleanup in case of exception" << std::endl; 
+        });
         
-        if (some_condition) {
-            throw std::runtime_error("Something went wrong");
-        }
+        // Simulate an error condition
+        throw std::runtime_error("Something went wrong");
         
-        // If we get here, work succeeded
-        std::cout << "Work succeeded" << std::endl;
-        
-        // The cleanup will be executed even if an exception is thrown
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        // The cleanup will still execute due to RAII
-        throw; // Re-throw the exception
+        // This won't execute due to the exception
+        std::cout << "This won't be printed" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cout << "Caught exception: " << e.what() << std::endl;
+        // The cleanup handler will still execute when the scope ends
     }
 }
 ```
 
-## 3. Edge Cases
+## Edge Cases
 
 ```cpp
+#include <libtorrent/aux_/scope_end.hpp>
 #include <iostream>
-#include <vector>
-#include <memory>
 
-// Example: Using scope_end with temporary objects and complex scenarios
-void complex_scenarios() {
-    // Edge case 1: Disarming the cleanup
-    auto cleanup = scope_end([]() { 
-        std::cout << "Cleanup: This should not execute" << std::endl; 
+void example_edge_cases() {
+    // Case 1: Disarming the handler before scope ends
+    auto handler1 = scope_end([]() { 
+        std::cout << "This will NOT be printed" << std::endl; 
+    });
+    handler1.disarm(); // Prevents execution
+    
+    // Case 2: Moving the handler to prevent execution
+    auto handler2 = scope_end([]() { 
+        std::cout << "This will NOT be printed" << std::endl; 
+    });
+    auto moved_handler = std::move(handler2); // Moves ownership
+    // handler2 is now in a valid but unspecified state
+    
+    // Case 3: Using with different callable types
+    auto handler3 = scope_end([](int x) { 
+        std::cout << "Received: " << x << std::endl; 
     });
     
-    cleanup.disarm(); // Prevent execution of cleanup
-    // The cleanup will not be executed when cleanup goes out of scope
+    // Case 4: Using with member functions
+    struct MyObject {
+        void cleanup() { std::cout << "Object cleanup" << std::endl; }
+    };
     
-    // Edge case 2: Moving the cleanup object
-    auto cleanup2 = scope_end([]() { 
-        std::cout << "Cleanup: This will execute" << std::endl; 
-    });
+    MyObject obj;
+    auto handler4 = scope_end([&obj]() { obj.cleanup(); });
     
-    auto cleanup3 = std::move(cleanup2); // Move the cleanup object
-    // cleanup2 is now in a valid but unspecified state
-    // cleanup3 will execute the cleanup when it goes out of scope
-    
-    // Edge case 3: Multiple cleanup objects in the same scope
-    auto cleanup4 = scope_end([]() { 
-        std::cout << "Cleanup 1" << std::endl; 
-    });
-    
-    auto cleanup5 = scope_end([]() { 
-        std::cout << "Cleanup 2" << std::endl; 
-    });
-    
-    // Both cleanup objects will execute their functions when they go out of scope
+    // All handlers will execute when they go out of scope
 }
 ```
 
 # Best Practices
 
-## How to Use These Functions Effectively
+## How to Use Effectively
 
-1. **Use `scope_end` to implement RAII patterns**: Always use `scope_end` to manage resources that need to be cleaned up when exiting a scope, such as file handles, mutex locks, or memory allocations.
-
-2. **Capture variables by reference when needed**: When your cleanup function needs to access variables from the current scope, capture them by reference in the lambda to avoid dangling references.
-
-3. **Use `disarm()` to conditionally skip cleanup**: Use `disarm()` when you want to prevent the cleanup function from executing under certain conditions (e.g., when a critical error occurs).
-
-4. **Avoid storing `scope_end` objects in classes**: If you need to manage resources that span multiple function calls, consider using a class with proper RAII semantics rather than storing `scope_end` objects.
-
-5. **Use `std::move` to transfer ownership**: When passing a `scope_end` object to another function, use `std::move` to transfer ownership and avoid copying.
+1. **Use for resource cleanup**: This is most useful for cleaning up resources like file handles, mutex locks, or network connections.
+2. **Use in RAII patterns**: Combine with RAII (Resource Acquisition Is Initialization) to ensure cleanup is automatic.
+3. **Use with lambdas**: Lambdas are perfect for capturing local variables and state.
+4. **Use in function scope**: Place the handler at the beginning of a function to ensure cleanup even if the function returns early.
 
 ## Common Mistakes to Avoid
 
-1. **Copying `scope_end` objects**: Never copy a `scope_end` object because the copy constructor is deleted. Use `std::move` instead.
-
-2. **Forgetting to disarm**: If you want to prevent cleanup from executing, remember to call `disarm()` before the object goes out of scope.
-
-3. **Using the object after moving**: After moving a `scope_end` object, the source object is in a valid but unspecified state. Do not use it after moving.
-
-4. **Not handling exceptions properly**: Remember that `scope_end` objects will execute their cleanup functions even if an exception is thrown, so make sure your cleanup code is exception-safe.
+1. **Forgetting to disarm**: If you don't want the cleanup to execute, remember to call `disarm()` or move the handler.
+2. **Copying the handler**: The copy constructor is deleted to prevent multiple objects from owning the same cleanup function.
+3. **Throwing from the cleanup function**: Be careful about exceptions in the cleanup function as they can propagate and cause issues.
 
 ## Performance Tips
 
-1. **Use `std::move` to avoid unnecessary copies**: When passing a `scope_end` object, use `std::move` to avoid copying the object.
-
-2. **Minimize the cost of the cleanup function**: Keep the cleanup function as lightweight as possible to avoid performance overhead.
-
-3. **Consider the scope of the cleanup**: Only use `scope_end` for cleanup operations that are relevant to the current scope. For longer-lived resources, consider other RAII patterns.
+1. **Use move semantics**: When you need to transfer ownership of a handler, use move semantics instead of copying.
+2. **Avoid unnecessary allocations**: The overhead of creating a `scope_end_impl` object is minimal and should not affect performance.
+3. **Use with local variables**: The handler should be created at the beginning of a function to ensure proper cleanup.
 
 # Code Review & Improvement Suggestions
 
-## Function: `scope_end_impl(Fun f)`
+## scope_end_impl
 
-- **Issue**: No explicit documentation of the `Fun` template parameter
-- **Severity**: Low
-- **Impact**: Users may not know what kind of function types are supported
-- **Fix**: Add documentation for the `Fun` template parameter in the function signature and description
-
-## Function: `scope_end_impl()`
-
-- **Issue**: No documentation for the destructor's behavior
-- **Severity**: Low
-- **Impact**: Users may not understand when the cleanup function is executed
-- **Fix**: Add documentation explaining that the destructor executes the stored function when the object goes out of scope
-
-## Function: `scope_end_impl(scope_end_impl&&)`
-
-- **Issue**: No documentation for move semantics
-- **Severity**: Low
-- **Impact**: Users may not understand the behavior of moving the object
-- **Fix**: Add documentation explaining that this function allows the object to be moved from one scope to another
-
-## Function: `scope_end_impl(scope_end_impl const&)`
-
-- **Issue**: No documentation for the deleted copy constructor
-- **Severity**: Low
-- **Impact**: Users may not understand why copying is not allowed
-- **Fix**: Add documentation explaining that copying is intentionally prevented to avoid double-execution of cleanup functions
-
-## Function: `disarm()`
-
-- **Issue**: No documentation for the `m_armed` member variable
-- **Severity**: Low
-- **Impact**: Users may not understand the internal state of the object
-- **Fix**: Add documentation explaining the role of the `m_armed` variable in controlling cleanup execution
-
-## Function: `scope_end()`
-
-- **Issue**: No documentation for the return type
-- **Severity**: Low
-- **Impact**: Users may not understand the type of object returned
-- **Fix**: Add documentation explaining that the function returns a `scope_end_impl<Fun>` object
-
-# Modernization Opportunities
-
-1. **Use `[[nodiscard]]` for functions that return important values**:
+**Function**: `scope_end_impl`
+**Issue**: Constructor does not validate the callable function
+**Severity**: Low
+**Impact**: Could cause undefined behavior if the function is invalid
+**Fix**: Add validation or document the requirement that the function must be valid
 ```cpp
-[[nodiscard]] scope_end_impl<Fun> scope_end(Fun f);
-```
+// Current implementation
+explicit scope_end_impl(Fun f) : m_fun(std::move(f)) {}
 
-2. **Use `std::move` for better performance**:
-The code already uses `std::move` appropriately, which is good.
-
-3. **Use `constexpr` where possible**:
-The functions cannot be `constexpr` because they involve non-constant operations like function calls and memory management.
-
-4. **Use concepts (C++20) for template constraints**:
-```cpp
-template <typename Fun>
-requires std::invocable<Fun>
-scope_end_impl<Fun> scope_end(Fun f) {
-    return scope_end_impl<Fun>(std::move(f));
+// Improved implementation
+explicit scope_end_impl(Fun f) : m_fun(std::move(f)) {
+    if (!f) {
+        throw std::invalid_argument("Function cannot be null");
+    }
 }
 ```
 
-5. **Use `std::expected` (C++23) for error handling**:
-Not applicable here since these functions don't return error values.
+## scope_end_impl
 
-# Refactoring Suggestions
-
-1. **Split into smaller functions**: The functions are already appropriately small and focused.
-
-2. **Combine with similar functions**: No similar functions need to be combined.
-
-3. **Make into class methods**: The functions are already in a logical structure.
-
-4. **Move to a utility namespace**: The `aux_` namespace is appropriate for internal utility functions.
-
-# Performance Optimizations
-
-1. **Use move semantics**: The code already uses move semantics appropriately.
-
-2. **Return by value for RVO**: The functions return by value, which allows for Return Value Optimization.
-
-3. **Use string_view for read-only strings**: Not applicable here as the functions don't handle strings.
-
-4. **Add `noexcept` where applicable**: The move constructor and destructor should be marked as `noexcept` since they don't throw exceptions.
-
+**Function**: `~scope_end_impl`
+**Issue**: No exception handling for the stored function
+**Severity**: Medium
+**Impact**: If the stored function throws, it could cause the program to terminate
+**Fix**: Add exception handling in the destructor
 ```cpp
-// Add noexcept to the move constructor
-scope_end_impl(scope_end_impl&&) noexcept = default;
+// Current implementation
+~scope_end_impl() { if (m_armed) m_fun(); }
 
-// Add noexcept to the destructor
-~scope_end_impl() noexcept { if (m_armed) m_fun(); }
+// Improved implementation
+~scope_end_impl() {
+    if (m_armed) {
+        try {
+            m_fun();
+        }
+        catch (...) {
+            // Log the error or handle it appropriately
+            std::cerr << "Exception in scope end handler" << std::endl;
+        }
+    }
+}
 ```
+
+## scope_end_impl
+
+**Function**: `scope_end_impl(scope_end_impl&&) noexcept = default;`
+**Issue**: Move constructor is not documented
+**Severity**: Low
+**Impact**: Developers might not know that move semantics are supported
+**Fix**: Add documentation about move semantics
+```cpp
+// Add documentation
+/**
+ * Move constructor. Transfers ownership of the scope-end handler
+ * from the source object to this object. The source object is left
+ * in a valid but unspecified state.
+ * 
+ * @param other The source object to move from
+ */
+scope_end_impl(scope_end_impl&&) noexcept = default;
+```
+
+## scope_end_impl
+
+**Function**: `scope_end_impl(scope_end_impl const&) = delete;`
+**Issue**: No documentation about why copy is disabled
+**Severity**: Low
+**Impact**: Developers might be confused about why copying is not allowed
+**Fix**: Add documentation about the reason for disabling copy
+```cpp
+// Add documentation
+/**
+ * Copy constructor is

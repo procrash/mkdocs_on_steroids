@@ -1,252 +1,182 @@
-# API Documentation for bandwidth_socket Interface
+# API Documentation for `bandwidth_socket` Interface
 
-## bandwidth_socket
-
-- **Signature**: `virtual ~bandwidth_socket()`
-- **Description**: The destructor for the `bandwidth_socket` abstract base class. This virtual destructor ensures proper cleanup of derived class objects when deleting through a base class pointer. It follows the standard C++ idiom for polymorphic base classes.
-- **Parameters**: None
-- **Return Value**: None (destructor)
-- **Exceptions/Errors**: 
-  - This destructor does not throw exceptions by default
-  - If derived classes have non-throwing destructors (noexcept), the base class destructor will also be noexcept
-  - Derived classes should ensure their destructors are compatible with the base class
-- **Example**:
-```cpp
-// Example of proper polymorphic deletion
-bandwidth_socket* socket = create_custom_socket();
-delete socket; // Virtual destructor ensures proper cleanup
-```
-- **Preconditions**: 
-  - The object must be properly constructed
-  - The object must be of a derived type that implements the `bandwidth_socket` interface
-  - The object must not be null
-- **Postconditions**: 
-  - The object is completely destroyed
-  - All resources held by the object are released
-  - The memory is freed
-  - The destructor call completes normally
-- **Thread Safety**: 
-  - The destructor is not thread-safe if other threads are accessing the object
-  - It should only be called when no other threads are accessing the object
-- **Complexity**: O(1) time, O(1) space
-- **See Also**: `assign_bandwidth()`, `is_disconnecting()`
-
-## assign_bandwidth
+## Function: `assign_bandwidth`
 
 - **Signature**: `virtual void assign_bandwidth(int channel, int amount) = 0;`
-- **Description**: Assigns bandwidth to a specific channel. This pure virtual function must be implemented by derived classes to control bandwidth allocation for different network channels. The function allows fine-grained control over network resource distribution, enabling quality of service (QoS) management and traffic shaping.
+- **Description**: Assigns bandwidth to a specific channel on the socket. This pure virtual function must be implemented by derived classes to control bandwidth allocation for different data streams. The function allows the system to prioritize network traffic by specifying how much bandwidth should be allocated to each channel.
 - **Parameters**:
-  - `channel` (int): The channel identifier to which bandwidth should be assigned. Valid values are implementation-specific, but typically represent different types of network traffic (e.g., 0 for control traffic, 1 for data transfer, etc.). The function should handle invalid channel values gracefully.
-  - `amount` (int): The amount of bandwidth to assign, typically measured in bytes per second. This value should be non-negative. Negative values may indicate an error condition or be treated as zero.
-- **Return Value**: None (void)
+  - `channel` (int): The channel identifier to which bandwidth should be assigned. Valid values are typically non-negative integers, with specific ranges defined by the implementation. Negative values are generally invalid and may cause undefined behavior.
+  - `amount` (int): The amount of bandwidth to assign to the specified channel. This value represents the bandwidth quota in arbitrary units (e.g., bytes per second or packet rate). Positive values indicate bandwidth allocation, while zero may indicate no bandwidth allocation.
+- **Return Value**:
+  - This function returns `void`, so there is no return value to check.
 - **Exceptions/Errors**:
-  - This function does not throw exceptions by default
-  - Derived implementations may throw exceptions if invalid parameters are provided
-  - No specific error codes are defined at the base class level
+  - This function may throw exceptions if the implementation encounters invalid parameters (e.g., negative channel or amount values) or if the socket is in an invalid state.
+  - Error codes are not explicitly defined, but the implementation may return error codes via exceptions or log messages.
 - **Example**:
 ```cpp
-// Assign 1000 bytes/second to channel 1
+// Practical example of using this function
 class MyBandwidthSocket : public bandwidth_socket {
 public:
     void assign_bandwidth(int channel, int amount) override {
-        if (channel < 0 || channel > MAX_CHANNELS) {
-            throw std::invalid_argument("Invalid channel");
-        }
-        if (amount < 0) {
-            throw std::invalid_argument("Negative bandwidth");
-        }
-        // Implement actual bandwidth assignment
-        std::cout << "Assigned " << amount << " bytes/sec to channel " << channel << std::endl;
+        // Implementation to assign bandwidth to the specified channel
+        std::cout << "Assigning " << amount << " bandwidth to channel " << channel << std::endl;
     }
-    // ... other methods
+    
+    bool is_disconnecting() const override {
+        return false;
+    }
 };
 
 MyBandwidthSocket socket;
-socket.assign_bandwidth(1, 1000);
+socket.assign_bandwidth(1, 1000); // Assign 1000 units of bandwidth to channel 1
 ```
-- **Preconditions**:
-  - The bandwidth_socket object must be properly constructed
-  - The channel parameter must be valid for the implementation
-  - The amount parameter should be non-negative
-  - The object must not be in a state where bandwidth assignment is prohibited
-- **Postconditions**:
-  - The specified bandwidth is assigned to the given channel
-  - The system state is updated to reflect the new bandwidth allocation
-  - The function completes without throwing exceptions
-- **Thread Safety**: 
-  - Not thread-safe by default
-  - Should be called in a thread-safe context or with appropriate synchronization
-  - Implementation-specific thread safety depends on the derived class
-- **Complexity**: O(1) time, O(1) space
-- **See Also**: `is_disconnecting()`, `~bandwidth_socket()`
+- **Preconditions**: The `bandwidth_socket` object must be properly initialized and not in a disconnected state. The `channel` and `amount` parameters must be within valid ranges.
+- **Postconditions**: The specified amount of bandwidth is assigned to the given channel, or the function fails if the parameters are invalid.
+- **Thread Safety**: This function is not thread-safe by default. Multiple threads calling this function simultaneously may cause race conditions unless the implementation provides proper synchronization.
+- **Complexity**: Time complexity: O(1). Space complexity: O(1).
+- **See Also**: `is_disconnecting()`
+
+## Function: `~bandwidth_socket`
+
+- **Signature**: `virtual ~bandwidth_socket() = 0;`
+- **Description**: Virtual destructor for the `bandwidth_socket` class. This pure virtual destructor ensures that derived classes are properly destroyed when the object is deleted through a pointer to the base class. It is essential for proper cleanup of resources and prevents memory leaks.
+- **Parameters**: None
+- **Return Value**: None
+- **Exceptions/Errors**: This function may throw exceptions if the implementation encounters errors during cleanup (e.g., resource release failures). However, it is generally expected to be non-throwing.
+- **Example**:
+```cpp
+// Practical example of using the destructor
+class MyBandwidthSocket : public bandwidth_socket {
+public:
+    ~MyBandwidthSocket() {
+        // Cleanup resources
+        std::cout << "Destroying MyBandwidthSocket" << std::endl;
+    }
+    
+    void assign_bandwidth(int channel, int amount) override {
+        // Implementation
+    }
+    
+    bool is_disconnecting() const override {
+        return false;
+    }
+};
+
+// Usage
+std::unique_ptr<bandwidth_socket> socket = std::make_unique<MyBandwidthSocket>();
+// When socket goes out of scope, ~bandwidth_socket() is called
+```
+- **Preconditions**: The `bandwidth_socket` object must be in a valid state. The destructor should not be called while the object is being used.
+- **Postconditions**: The object is completely destroyed, and all associated resources are released.
+- **Thread Safety**: This function is not thread-safe by default. Multiple threads calling the destructor simultaneously may cause race conditions.
+- **Complexity**: Time complexity: O(1). Space complexity: O(1).
+- **See Also**: `assign_bandwidth()`
 
 # Usage Examples
 
-## Basic Usage
+## 1. Basic Usage
 
 ```cpp
-#include "libtorrent/aux_/bandwidth_socket.hpp"
-#include <iostream>
+#include "aux_/bandwidth_socket.hpp"
 
-// Simple implementation of bandwidth_socket
-class SimpleBandwidthSocket : public bandwidth_socket {
-private:
-    int current_bandwidth[10] = {0}; // Array to store bandwidth per channel
-
+class MyBandwidthSocket : public bandwidth_socket {
 public:
     void assign_bandwidth(int channel, int amount) override {
-        if (channel < 0 || channel >= 10) {
-            std::cerr << "Invalid channel: " << channel << std::endl;
-            return;
-        }
-        current_bandwidth[channel] = amount;
-        std::cout << "Assigned " << amount << " bytes/sec to channel " << channel << std::endl;
+        // Assign bandwidth to the specified channel
+        std::cout << "Assigning " << amount << " bandwidth to channel " << channel << std::endl;
     }
-
+    
     bool is_disconnecting() const override {
-        // For this example, return false (not disconnecting)
         return false;
     }
 };
 
 int main() {
-    SimpleBandwidthSocket socket;
+    std::unique_ptr<bandwidth_socket> socket = std::make_unique<MyBandwidthSocket>();
     
-    // Assign bandwidth to different channels
-    socket.assign_bandwidth(0, 500);  // Control traffic
-    socket.assign_bandwidth(1, 1000); // Data transfer
-    socket.assign_bandwidth(2, 300);  // Metadata
+    // Assign bandwidth to channel 1
+    socket->assign_bandwidth(1, 500);
+    
+    // Check if disconnecting (though in this example it's always false)
+    if (!socket->is_disconnecting()) {
+        std::cout << "Socket is not disconnecting" << std::endl;
+    }
     
     return 0;
 }
 ```
 
-## Error Handling
+## 2. Error Handling
 
 ```cpp
-#include "libtorrent/aux_/bandwidth_socket.hpp"
+#include "aux_/bandwidth_socket.hpp"
 #include <iostream>
 #include <stdexcept>
 
-class RobustBandwidthSocket : public bandwidth_socket {
-private:
-    int current_bandwidth[10] = {0};
-
+class SafeBandwidthSocket : public bandwidth_socket {
 public:
     void assign_bandwidth(int channel, int amount) override {
-        // Validate parameters
-        if (channel < 0 || channel >= 10) {
-            throw std::invalid_argument("Channel must be between 0 and 9");
+        if (channel < 0 || amount < 0) {
+            throw std::invalid_argument("Channel and amount must be non-negative");
         }
-        if (amount < 0) {
-            throw std::invalid_argument("Bandwidth amount cannot be negative");
-        }
-        
-        // Apply bandwidth assignment
-        current_bandwidth[channel] = amount;
-        std::cout << "Successfully assigned " << amount << " bytes/sec to channel " << channel << std::endl;
+        std::cout << "Assigning " << amount << " bandwidth to channel " << channel << std::endl;
     }
-
+    
     bool is_disconnecting() const override {
-        // Simulate disconnection status
         return false;
     }
 };
 
 int main() {
-    RobustBandwidthSocket socket;
-    
-    // Test valid assignment
     try {
-        socket.assign_bandwidth(1, 800);
+        std::unique_ptr<bandwidth_socket> socket = std::make_unique<SafeBandwidthSocket>();
+        
+        // This will succeed
+        socket->assign_bandwidth(1, 500);
+        
+        // This will throw an exception
+        socket->assign_bandwidth(-1, 100);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-    
-    // Test error conditions
-    try {
-        socket.assign_bandwidth(15, 500); // Invalid channel
-    } catch (const std::exception& e) {
-        std::cerr << "Caught expected error: " << e.what() << std::endl;
-    }
-    
-    try {
-        socket.assign_bandwidth(1, -100); // Invalid amount
-    } catch (const std::exception& e) {
-        std::cerr << "Caught expected error: " << e.what() << std::endl;
     }
     
     return 0;
 }
 ```
 
-## Edge Cases
+## 3. Edge Cases
 
 ```cpp
-#include "libtorrent/aux_/bandwidth_socket.hpp"
+#include "aux_/bandwidth_socket.hpp"
 #include <iostream>
-#include <vector>
 
 class EdgeCaseBandwidthSocket : public bandwidth_socket {
-private:
-    int current_bandwidth[10] = {0};
-    bool is_shutting_down = false;
-
 public:
     void assign_bandwidth(int channel, int amount) override {
-        // Check for shutdown state
-        if (is_shutting_down) {
-            std::cerr << "Cannot assign bandwidth: socket is shutting down" << std::endl;
+        // Handle edge cases
+        if (channel == 0) {
+            std::cout << "Channel 0 is special - assigning full bandwidth" << std::endl;
             return;
         }
-        
-        // Validate channel
-        if (channel < 0 || channel >= 10) {
-            std::cerr << "Invalid channel: " << channel << std::endl;
-            return;
-        }
-        
-        // Validate amount
-        if (amount < 0) {
-            std::cerr << "Invalid bandwidth amount: " << amount << std::endl;
-            return;
-        }
-        
-        // Special case: zero bandwidth assignment
-        if (amount == 0) {
-            std::cout << "Assigning 0 bandwidth to channel " << channel << std::endl;
-            current_bandwidth[channel] = 0;
-            return;
-        }
-        
-        // Normal assignment
-        std::cout << "Assigning " << amount << " to channel " << channel << std::endl;
-        current_bandwidth[channel] = amount;
-    }
-
-    bool is_disconnecting() const override {
-        return is_shutting_down;
+        std::cout << "Assigning " << amount << " bandwidth to channel " << channel << std::endl;
     }
     
-    void begin_shutdown() {
-        is_shutting_down = true;
+    bool is_disconnecting() const override {
+        return false;
     }
 };
 
 int main() {
-    EdgeCaseBandwidthSocket socket;
+    std::unique_ptr<bandwidth_socket> socket = std::make_unique<EdgeCaseBandwidthSocket>();
     
-    // Test zero bandwidth assignment
-    socket.assign_bandwidth(0, 0);
+    // Edge case: channel 0
+    socket->assign_bandwidth(0, 1000);
     
-    // Test shutdown state
-    socket.begin_shutdown();
-    socket.assign_bandwidth(1, 500); // Should be rejected
+    // Edge case: zero bandwidth
+    socket->assign_bandwidth(2, 0);
     
-    // Test normal operation before shutdown
-    socket.begin_shutdown(); // Reset for test
-    socket.assign_bandwidth(1, 1000);
+    // Edge case: very high bandwidth
+    socket->assign_bandwidth(3, 1000000);
     
     return 0;
 }
@@ -256,124 +186,189 @@ int main() {
 
 ## How to Use These Functions Effectively
 
-1. **Implement the interface properly**: Always implement both required functions (`assign_bandwidth` and `is_disconnecting`) in derived classes.
-
-2. **Use meaningful channel identifiers**: Choose channel numbers that reflect the actual network traffic types for better maintainability.
-
-3. **Handle bandwidth allocation asynchronously**: Consider implementing a queue system for bandwidth assignment requests to avoid blocking critical operations.
-
-4. **Implement proper error handling**: Validate all input parameters and provide clear error messages.
-
-5. **Use the is_disconnecting() function**: Check this before performing any operations to ensure the socket is still active.
+1. Always implement both `assign_bandwidth()` and `is_disconnecting()` in derived classes.
+2. Use proper error handling when calling `assign_bandwidth()` to catch invalid parameter values.
+3. Ensure that the `bandwidth_socket` object is properly initialized before use.
+4. Consider thread safety when multiple threads access the socket.
 
 ## Common Mistakes to Avoid
 
-1. **Forgetting to implement the virtual destructor**: This can lead to memory leaks in polymorphic scenarios.
-
-2. **Not handling invalid parameters**: Always validate channel and amount parameters to prevent undefined behavior.
-
-3. **Ignoring the return value of assign_bandwidth**: While it returns void, be aware that implementations might have side effects or error conditions.
-
-4. **Calling assign_bandwidth during shutdown**: Always check `is_disconnecting()` before attempting to assign bandwidth.
-
-5. **Using magic numbers for channels**: Define constants for channel identifiers to improve code readability.
+1. **Forgetting to implement the virtual functions**: Deriving from `bandwidth_socket` without implementing `assign_bandwidth()` will result in undefined behavior.
+2. **Incorrect parameter validation**: Not validating input parameters can lead to crashes or undefined behavior.
+3. **Ignoring the destructor**: Failing to properly implement the virtual destructor can cause memory leaks.
+4. **Thread safety issues**: Not synchronizing access to the socket across threads can lead to race conditions.
 
 ## Performance Tips
 
-1. **Minimize allocations**: Avoid dynamic allocations in the `assign_bandwidth` function as it may be called frequently.
-
-2. **Use efficient data structures**: For managing bandwidth assignments, consider using arrays or hash maps with O(1) lookup.
-
-3. **Batch bandwidth assignments**: When possible, group multiple bandwidth assignments into a single operation.
-
-4. **Consider thread safety**: If the function will be called from multiple threads, implement appropriate synchronization.
-
-5. **Profile bandwidth assignment**: Monitor the performance impact of bandwidth allocation operations in your specific use case.
+1. **Minimize allocations**: Avoid creating unnecessary objects or performing expensive operations in the `assign_bandwidth()` function.
+2. **Use efficient data structures**: Use appropriate data structures for tracking bandwidth allocation to ensure O(1) or O(log n) performance.
+3. **Avoid unnecessary function calls**: Only call `assign_bandwidth()` when necessary, and consider batching updates if possible.
+4. **Profile and optimize**: Use profiling tools to identify bottlenecks in bandwidth assignment logic.
 
 # Code Review & Improvement Suggestions
 
-## bandwidth_socket (destructor)
+## Function: `assign_bandwidth`
 
-**Function**: `~bandwidth_socket()`
-**Issue**: The destructor is declared as `virtual` but doesn't have `= default` or an implementation
-**Severity**: Low
-**Impact**: No runtime impact, but could be confusing for developers
-**Fix**: Add `= default` for clarity and consistency
+### Potential Issues
+
+**Security:**
+- **Issue**: Lack of input validation for `channel` and `amount` parameters
+- **Severity**: Medium
+- **Impact**: Invalid parameters could lead to undefined behavior or security vulnerabilities
+- **Fix**: Add parameter validation:
 ```cpp
-virtual ~bandwidth_socket() = default;
+void assign_bandwidth(int channel, int amount) override {
+    if (channel < 0 || amount < 0) {
+        throw std::invalid_argument("Channel and amount must be non-negative");
+    }
+    // Implementation
+}
 ```
 
-## assign_bandwidth
-
-**Function**: `assign_bandwidth(int channel, int amount)`
-**Issue**: No parameter validation in base class
-**Severity**: Medium
-**Impact**: Could lead to undefined behavior in derived classes if not properly validated
-**Fix**: Add parameter validation in the base class or document the requirements clearly
+**Performance:**
+- **Issue**: No optimization for common cases (e.g., zero bandwidth)
+- **Severity**: Low
+- **Impact**: Slight performance degradation for common scenarios
+- **Fix**: Add early returns for common cases:
 ```cpp
-virtual void assign_bandwidth(int channel, int amount) = 0;
-// Add documentation: channel must be >= 0 and < MAX_CHANNELS, amount must be >= 0
+void assign_bandwidth(int channel, int amount) override {
+    if (channel < 0 || amount < 0) {
+        throw std::invalid_argument("Channel and amount must be non-negative");
+    }
+    if (amount == 0) {
+        // Handle zero bandwidth case efficiently
+        return;
+    }
+    // Implementation
+}
 ```
 
-**Function**: `assign_bandwidth(int channel, int amount)`
-**Issue**: No error handling mechanism
-**Severity**: Medium
-**Impact**: Derived classes need to implement their own error handling, leading to inconsistent behavior
-**Fix**: Consider adding a return type for error reporting
+**Correctness:**
+- **Issue**: No error handling for resource allocation failures
+- **Severity**: Medium
+- **Impact**: Could lead to memory leaks or resource exhaustion
+- **Fix**: Add error handling:
 ```cpp
-// Consider changing to:
-virtual bool assign_bandwidth(int channel, int amount) = 0;
-// Return true on success, false on error
+void assign_bandwidth(int channel, int amount) override {
+    if (channel < 0 || amount < 0) {
+        throw std::invalid_argument("Channel and amount must be non-negative");
+    }
+    try {
+        // Attempt to allocate resources
+        allocateResources(channel, amount);
+    } catch (const std::bad_alloc& e) {
+        throw std::runtime_error("Failed to allocate resources for bandwidth assignment");
+    }
+}
 ```
 
-**Function**: `assign_bandwidth(int channel, int amount)`
-**Issue**: No bounds checking on channel parameter
-**Severity**: Medium
-**Impact**: Could lead to buffer overflows in implementations
-**Fix**: Add bounds checking in the base class or document the constraints
+**Code Quality:**
+- **Issue**: Missing documentation comments
+- **Severity**: Low
+- **Impact**: Reduced maintainability
+- **Fix**: Add comprehensive documentation:
 ```cpp
-// In the base class documentation:
-// Precondition: channel must be between 0 and MAX_CHANNELS-1
+/**
+ * Assigns bandwidth to a specific channel
+ * @param channel The channel identifier to assign bandwidth to
+ * @param amount The amount of bandwidth to assign (in arbitrary units)
+ * @throws std::invalid_argument if channel or amount is negative
+ * @throws std::runtime_error if resource allocation fails
+ */
+void assign_bandwidth(int channel, int amount) override;
 ```
 
-# Modernization Opportunities
-
-## assign_bandwidth
+### Modernization Opportunities
 
 ```markdown
-// Modern C++ version
-[[nodiscard]] bool assign_bandwidth(int channel, int amount);
-```
+// Before
+virtual void assign_bandwidth(int channel, int amount) = 0;
 
-This modernization would:
-1. Add `[[nodiscard]]` to indicate the return value is important
-2. Change the return type to indicate success/failure
-3. Make the function more explicit about its behavior
-4. Allow for better error handling patterns
-
-# Refactoring Suggestions
-
-1. **Split the interface**: Consider separating the bandwidth assignment from the connection state management into two distinct interfaces.
-
-2. **Create a factory pattern**: Implement a factory method to create appropriate `bandwidth_socket` implementations based on configuration.
-
-3. **Add bandwidth monitoring**: Introduce a `get_current_bandwidth()` method to complement `assign_bandwidth()`.
-
-4. **Create a bandwidth manager**: Move the bandwidth assignment logic into a separate manager class for better separation of concerns.
-
-# Performance Optimizations
-
-1. **Add noexcept specifier**: If the implementation doesn't throw exceptions, add `noexcept` for better performance.
-```cpp
+// After (Modern C++)
 virtual void assign_bandwidth(int channel, int amount) noexcept = 0;
 ```
 
-2. **Use constexpr for constants**: Define channel constants as `constexpr` for compile-time optimization.
-```cpp
-constexpr int CONTROL_CHANNEL = 0;
-constexpr int DATA_CHANNEL = 1;
+### Refactoring Suggestions
+
+1. **Split into smaller functions**: Consider breaking down complex bandwidth assignment logic into smaller functions.
+2. **Make into class methods**: The function is already a class method, but consider adding stateful behavior to track bandwidth usage.
+
+### Performance Optimizations
+
+```markdown
+// Use move semantics if bandwidth assignment involves large data structures
+void assign_bandwidth(int channel, int amount) override;
 ```
 
-3. **Consider move semantics**: If bandwidth data is passed, consider using move semantics for efficiency.
+## Function: `~bandwidth_socket`
 
-4. **Add cache**: Implement caching for frequently accessed bandwidth values in the derived class.
+### Potential Issues
+
+**Security:**
+- **Issue**: No resource cleanup in base class
+- **Severity**: High
+- **Impact**: Memory leaks or resource exhaustion
+- **Fix**: Ensure derived classes properly clean up resources:
+```cpp
+virtual ~bandwidth_socket() {
+    // Clean up any resources in the base class
+    cleanupResources();
+}
+```
+
+**Performance:**
+- **Issue**: No exception specification
+- **Severity**: Low
+- **Impact**: May affect performance due to exception handling overhead
+- **Fix**: Add noexcept specification:
+```cpp
+virtual ~bandwidth_socket() noexcept = 0;
+```
+
+**Correctness:**
+- **Issue**: No validation of object state before destruction
+- **Severity**: Medium
+- **Impact**: Could lead to undefined behavior if called on invalid objects
+- **Fix**: Add state validation:
+```cpp
+virtual ~bandwidth_socket() noexcept {
+    if (isValid()) {
+        // Perform cleanup
+    }
+}
+```
+
+**Code Quality:**
+- **Issue**: Missing documentation
+- **Severity**: Low
+- **Impact**: Reduced maintainability
+- **Fix**: Add documentation:
+```cpp
+/**
+ * Virtual destructor for bandwidth_socket class
+ * Ensures proper cleanup of derived class resources
+ */
+virtual ~bandwidth_socket() = 0;
+```
+
+### Modernization Opportunities
+
+```markdown
+// Before
+virtual ~bandwidth_socket() = 0;
+
+// After (Modern C++)
+virtual ~bandwidth_socket() noexcept = 0;
+```
+
+### Refactoring Suggestions
+
+1. **Move to utility namespace**: Consider moving the interface to a utility namespace for better organization.
+2. **Make into class template**: If the interface is used with different types, consider making it a template.
+
+### Performance Optimizations
+
+```markdown
+// Add noexcept specification
+virtual ~bandwidth_socket() noexcept = 0;
+```

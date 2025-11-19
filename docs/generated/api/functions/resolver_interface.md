@@ -1,173 +1,133 @@
-# `resolver_interface` Class
+# API Documentation for `resolver_interface`
 
-## Class Overview
+## FunctionName
 
-The `resolver_interface` class is an abstract interface for DNS resolution in the libtorrent library. It provides a way to resolve hostnames to IP addresses asynchronously, with support for caching and custom callback mechanisms.
-
+- **Signature**: `auto void()`
+- **Description**: The `resolver_interface` struct defines an interface for DNS resolution operations within the libtorrent library. It provides a mechanism for asynchronously resolving domain names to IP addresses. The interface is designed to be extensible, allowing different implementations (e.g., system resolver, asynchronous resolver) to be used interchangeably. The `callback_t` type is used to deliver resolution results or errors asynchronously.
+- **Parameters**: 
+  - This is a struct definition, not a function, so it has no parameters.
+- **Return Value**: 
+  - This is a struct definition, not a function, so it does not return a value.
+- **Exceptions/Errors**: 
+  - No exceptions are thrown by the struct definition itself. However, the `callback_t` function may be invoked with an `error_code` indicating resolution failures.
+- **Example**:
 ```cpp
-struct TORRENT_EXTRA_EXPORT resolver_interface
-{
-    using callback_t = std::function<void(error_code const&, std::vector<address> const&)>;
-    
-    // this flag will make async_resolve() only use the cache and fail if we
-    // don't have a cache entry, regardless of how old it is. This is useful
-    // when comp
-};
+// The resolver_interface is typically used as a base class for concrete implementations.
+// It is not meant to be instantiated directly.
+```
+- **Preconditions**: 
+  - The struct must be properly instantiated with a valid implementation of the resolver interface.
+- **Postconditions**: 
+  - The struct provides an interface for DNS resolution operations.
+- **Thread Safety**: 
+  - The interface is designed to be thread-safe, allowing concurrent resolution requests.
+- **Complexity**: 
+  - Time complexity depends on the underlying resolver implementation.
+  - Space complexity depends on the number of addresses and the resolver implementation.
+- **See Also**: 
+  - `async_resolve()`, `callback_t`
+
+## Usage Examples
+
+### Basic Usage
+```cpp
+// The resolver_interface is typically used as a base class for concrete implementations.
+// It is not meant to be instantiated directly.
 ```
 
-## Class: `resolver_interface`
-
-### Description
-The `resolver_interface` class defines the interface for DNS resolution in libtorrent. It provides asynchronous hostname resolution with a callback-based API. This interface is designed to be implemented by concrete resolver classes that provide the actual DNS resolution functionality.
-
-### Members
-
-#### `callback_t` typedef
+### Error Handling
 ```cpp
-using callback_t = std::function<void(error_code const&, std::vector<address> const&)>;
-```
-
-- **Description**: Type alias for the callback function type used when resolving hostnames.
-- **Parameters**:
-  - `error_code const&`: The error code indicating whether the resolution was successful or failed.
-  - `std::vector<address> const&`: A vector of resolved IP addresses (if any).
-
-### Usage Examples
-
-#### Basic Usage
-```cpp
-#include <libtorrent/aux_/resolver_interface.hpp>
-#include <iostream>
-
-// Assume we have a concrete implementation of resolver_interface
-class MyResolver : public resolver_interface {
-public:
-    void async_resolve(
-        std::string const& hostname,
-        flags_t const flags,
-        callback_t const& callback) override
-    {
-        // Implementation would resolve the hostname and call the callback
-        // with the results
+// The callback_t function may be invoked with an error_code indicating resolution failures.
+// Example of handling the error:
+void onResolveComplete(error_code const& ec, std::vector<address> const& addresses) {
+    if (ec) {
+        // Handle error
+        std::cerr << "Resolution failed: " << ec.message() << std::endl;
+    } else {
+        // Process addresses
+        for (const auto& addr : addresses) {
+            std::cout << "Resolved address: " << addr << std::endl;
+        }
     }
-};
-
-int main() {
-    MyResolver resolver;
-    
-    // Resolve a hostname
-    resolver.async_resolve("example.com", 0, [](error_code const& ec, std::vector<address> const& addrs) {
-        if (ec) {
-            std::cerr << "Resolution failed: " << ec.message() << std::endl;
-            return;
-        }
-        
-        std::cout << "Resolved addresses:" << std::endl;
-        for (auto const& addr : addrs) {
-            std::cout << addr << std::endl;
-        }
-    });
-    
-    return 0;
 }
 ```
 
-#### Error Handling
+### Edge Cases
 ```cpp
-#include <libtorrent/aux_/resolver_interface.hpp>
-#include <iostream>
-
-void resolveWithRetry(resolver_interface& resolver, std::string const& hostname) {
-    auto callback = [hostname](error_code const& ec, std::vector<address> const& addrs) {
-        if (ec) {
-            std::cerr << "Failed to resolve " << hostname << ": " << ec.message() << std::endl;
-            
-            // Retry after a delay
-            // This would typically involve using a timer or scheduling another async_resolve
-            std::cout << "Retrying in 5 seconds..." << std::endl;
-            return;
+// Handle cases where no addresses are found or the domain name is invalid.
+void onResolveComplete(error_code const& ec, std::vector<address> const& addresses) {
+    if (ec) {
+        // Handle error
+        if (ec == boost::asio::error::host_not_found) {
+            std::cerr << "Domain not found" << std::endl;
+        } else {
+            std::cerr << "Resolution failed: " << ec.message() << std::endl;
         }
-        
-        std::cout << "Successfully resolved " << hostname << " to:" << std::endl;
-        for (auto const& addr : addrs) {
-            std::cout << "  " << addr << std::endl;
+    } else if (addresses.empty()) {
+        // Handle case where no addresses are found
+        std::cerr << "No addresses found for the domain" << std::endl;
+    } else {
+        // Process addresses
+        for (const auto& addr : addresses) {
+            std::cout << "Resolved address: " << addr << std::endl;
         }
-    };
-    
-    resolver.async_resolve(hostname, 0, callback);
+    }
 }
 ```
 
-### Best Practices
+## Best Practices
 
-1. **Use async_resolve for non-blocking operations**: Always use the asynchronous version to avoid blocking the main thread.
-2. **Handle error codes properly**: Always check the error code returned in the callback.
-3. **Use appropriate flags**: Understand the meaning of the flags parameter for different resolution behaviors.
-4. **Clean up resources**: Ensure that callbacks are not called after their associated objects have been destroyed.
-5. **Consider caching**: Use the cache flag when appropriate to avoid redundant DNS queries.
+- Use the `resolver_interface` as a base class for concrete resolver implementations.
+- Ensure that the `callback_t` function is properly defined and handles both success and error cases.
+- Consider the thread safety of the implementation when using the interface in a multi-threaded environment.
+- Profile the performance of the resolver implementation to ensure it meets the application's requirements.
 
-### Code Review & Improvement Suggestions
+## Code Review & Improvement Suggestions
 
-#### Potential Issues
+### Potential Issues
 
-**Function**: `resolver_interface` struct
-**Issue**: Incomplete documentation and missing member functions
-**Severity**: Medium
-**Impact**: Developers may struggle to understand how to use the interface properly.
-**Fix**: Complete the documentation with all member functions and their signatures.
+**Security:**
+- Input validation: Ensure that domain names are properly validated to prevent injection attacks.
+- Buffer safety: Ensure that the resolution results are stored safely and do not cause buffer overflows.
+- Integer overflow risks: Ensure that the number of addresses and their sizes do not exceed the limits of the data structures used.
+- Resource leaks: Ensure that the resolver implementation properly manages resources.
 
-```markdown
-**Function**: `resolver_interface` struct
-**Issue**: Lack of complete member function documentation
-**Severity**: Medium
-**Impact**: Incomplete API documentation makes it difficult for developers to use the interface.
-**Fix**: Add complete documentation for all member functions, including their parameters, return values, and usage examples.
-```
+**Performance:**
+- Unnecessary allocations: Minimize allocations in the resolver implementation to improve performance.
+- Inefficient algorithms: Use efficient algorithms for DNS resolution to reduce latency.
+- Missing const-correctness: Ensure that the interface and implementation are const-correct.
+- Pass-by-value when pass-by-reference would be better: Use pass-by-reference for large objects to avoid unnecessary copies.
 
-#### Modernization Opportunities
+**Correctness:**
+- Edge case handling: Ensure that the resolver handles edge cases such as invalid domain names and network failures.
+- Null pointer checks: Ensure that the resolver implementation checks for null pointers.
+- Error return values: Ensure that the resolver returns appropriate error values.
+- Exception safety: Ensure that the resolver is exception-safe.
 
-**Function**: `resolver_interface` struct
-**Issue**: No modern C++ features used
-**Severity**: Low
-**Impact**: Code could be more expressive and safer with modern C++ features.
-**Fix**: Use `std::string_view` for string parameters and add `[[nodiscard]]` where appropriate.
+**Code Quality:**
+- Function complexity: The `resolver_interface` struct is simple and well-structured.
+- Unclear naming: The names are clear and descriptive.
+- Magic numbers: There are no magic numbers in the code.
+- Duplicate code: There is no duplicate code in the `resolver_interface` struct.
 
-```markdown
-**Function**: `resolver_interface` struct
-**Issue**: No modern C++ features used
-**Severity**: Low
-**Impact**: Code could be more expressive and safer with modern C++ features.
-**Fix**: Use `std::string_view` for string parameters and add `[[nodiscard]]` where appropriate.
-```
+### Modernization Opportunities
 
-#### Refactoring Suggestions
+- Use `[[nodiscard]]` for functions that return important values.
+- Use `std::span` for array parameters.
+- Use `constexpr` for compile-time evaluation.
+- Use concepts (C++20) for template constraints.
+- Use `std::expected` (C++23) for error handling.
 
-**Function**: `resolver_interface` struct
-**Issue**: Concrete implementations need to be provided by users
-**Severity**: Medium
-**Impact**: Users need to implement the interface for each platform.
-**Fix**: Consider providing a default implementation or platform-specific implementations.
+### Refactoring Suggestions
 
-```markdown
-**Function**: `resolver_interface` struct
-**Issue**: Concrete implementations need to be provided by users
-**Severity**: Medium
-**Impact**: Users need to implement the interface for each platform.
-**Fix**: Consider providing a default implementation or platform-specific implementations.
-```
+- The `resolver_interface` struct is well-designed and does not need to be split into smaller functions.
+- The `resolver_interface` struct is not duplicated and does not need to be combined with similar functions.
+- The `resolver_interface` struct is not a class method and should remain as a standalone struct.
+- The `resolver_interface` struct is not a utility function and should remain in its current location.
 
-#### Performance Optimizations
+### Performance Optimizations
 
-**Function**: `resolver_interface` struct
-**Issue**: Potential for unnecessary allocations
-**Severity**: Low
-**Impact**: Could impact performance in high-frequency resolution scenarios.
-**Fix**: Use move semantics and avoid unnecessary copies in the callback.
-
-```markdown
-**Function**: `resolver_interface` struct
-**Issue**: Potential for unnecessary allocations
-**Severity**: Low
-**Impact**: Could impact performance in high-frequency resolution scenarios.
-**Fix**: Use move semantics and avoid unnecessary copies in the callback.
-```
+- Use move semantics for large objects in the resolver implementation.
+- Return by value for Return Value Optimization (RVO) when appropriate.
+- Use `string_view` for read-only strings to reduce memory usage.
+- Add `noexcept` where applicable to improve performance and reduce overhead.

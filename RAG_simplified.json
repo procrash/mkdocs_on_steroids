@@ -1,0 +1,319 @@
+{
+  "name": "RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "text-embedding-qwen3-embedding-8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        816
+      ],
+      "id": "4a20c83c-d2eb-4c51-a725-7f9c7c9e9432",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "N5P6IkTRdnLNsMoB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        272
+      ],
+      "id": "3a08b896-991f-472e-9fe8-626a3742a1f1",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        864,
+        272
+      ],
+      "id": "c011e3be-efcc-4376-897a-a00e6dcbef7f",
+      "name": "When chat message received",
+      "webhookId": "4091fa09-fb9a-4039-9411-7104d213f601"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "qwen/qwen3-vl-4b",
+          "mode": "list",
+          "cachedResultName": "qwen/qwen3-vl-4b"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        496
+      ],
+      "id": "9ec4fd1c-959d-4944-b30a-95dac93d308a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "N5P6IkTRdnLNsMoB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list",
+          "cachedResultName": "test-collection"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        288,
+        256
+      ],
+      "id": "89fecc07-7581-41f5-86dc-34eeca1afbc1",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        512
+      ],
+      "id": "cbb4197a-5353-40f7-8425-a8c1f521eb76",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "use these documents to answer the questions",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list",
+          "cachedResultName": "test-collection"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        1328,
+        672
+      ],
+      "id": "647f2fbf-af31-45ca-8e7a-bded5597b09e",
+      "name": "Qdrant Vector Store1",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openai/chat/completions",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        560,
+        0
+      ],
+      "id": "464e7fc8-96de-4461-a5a6-c779d20fdfda",
+      "name": "Webhook",
+      "webhookId": "c0d7f7d7-aa32-452a-b71e-3b42afb1fd3f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nconst messages = $input.first().json.body.messages || [];\nconst lastUserMessage = [...messages].reverse().find(m=>m.role == 'user')?.content || '';\n\nconst sessionId = body.sessionId || items[0].sessionId || items[0].json?.sessionId || \"default-session\";\n\nreturn [{json: { model: body.mode,\n               stream: body.stream || false,\n               userMessage: lastUserMessage,\n               rawMessages: messages,\n               sessionId : sessionId,\n               chatInput: lastUserMessage}}];\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "3f425f88-3013-4fbc-891a-65073fd26695",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload_data_raw",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        256
+      ],
+      "id": "c25079b7-b690-405b-abbd-27622dfd6595",
+      "name": "Webhook - Python Upload",
+      "webhookId": "new-python-upload-webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract chunks from Python uploader payload and prepare for Qdrant\nconst body = $input.first().json.body;\n\nif (!body || !body.chunks || !Array.isArray(body.chunks)) {\n  throw new Error('Invalid payload: chunks array required');\n}\n\nconst chunks = body.chunks;\nconst fileName = body.file_name || 'unknown';\nconst filePath = body.file_path || '';\nconst fileType = body.file_type || '';\nconst totalChunks = body.total_chunks || chunks.length;\nconst metadata = body.metadata || {};\n\n// Create output items in the format Qdrant expects\nconst outputItems = chunks.map((chunkText, index) => ({\n  json: {\n    // This is the text that will be embedded\n    text: chunkText,\n    // Metadata that will be stored with the vector\n    metadata: {\n      file_name: fileName,\n      file_path: filePath,\n      file_type: fileType,\n      chunk_index: index,\n      total_chunks: totalChunks,\n      source: filePath,\n      ...metadata\n    }\n  }\n}));\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        256
+      ],
+      "id": "8b30f09d-1abb-42ff-9d37-39e203bd1c29",
+      "name": "Prepare Chunks for Qdrant"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Python Upload": {
+      "main": [
+        [
+          {
+            "node": "Prepare Chunks for Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Chunks for Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e172d619-5604-422e-a6b3-effc0167b3a6",
+  "meta": {
+    "instanceId": "5e78f8d5f9118d329fc0ba3aaf79a26f5e910c2fef84de7504ef6e85cf99f04a"
+  },
+  "id": "1QrD9kMQDwWOQypP",
+  "tags": []
+}

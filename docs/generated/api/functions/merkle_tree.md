@@ -1,314 +1,298 @@
-# libtorrent Merkle Tree API Documentation
+# libtorrent::aux::merkle_tree API Documentation
 
 ## merkle_tree
 
 - **Signature**: `merkle_tree()`
-- **Description**: Default constructor for the merkle_tree class. Creates an uninitialized merkle tree object. This constructor is provided for compatibility but is not recommended for use as it creates an "uninitialized" tree. The preferred approach is to use the parameterized constructor that initializes the tree with the required dimensions.
+- **Description**: Default constructor for the merkle_tree class. Creates an uninitialized merkle tree object. This constructor is provided for compatibility but should not be used for creating actual merkle trees as it doesn't initialize the tree structure. The comment indicates that this constructor should be removed in favor of proper initialization.
 - **Parameters**: None
-- **Return Value**: None (constructor)
+- **Return Value**: Creates a new merkle_tree object with default initialization.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-// Note: This usage is discouraged as it creates an uninitialized tree
+// This constructor should not be used for creating valid merkle trees
 merkle_tree tree;
 ```
 - **Preconditions**: None
-- **Postconditions**: A merkle_tree object is created in an uninitialized state
+- **Postconditions**: A merkle_tree object is created with default initialization.
 - **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
-- **See Also**: `merkle_tree(int num_blocks, int blocks_per_piece)`
+- **See Also**: merkle_tree(int num_blocks, int block_size)
 
 ## merkle_tree
 
-- **Signature**: `merkle_tree(int num_blocks, int blocks_per_piece)`
-- **Description**: Parameterized constructor for the merkle_tree class. Initializes a merkle tree with the specified number of blocks and blocks per piece. This constructor sets up the internal structure of the merkle tree to support the required file layout and piece organization.
+- **Signature**: `merkle_tree(int num_blocks, int block_size)`
+- **Description**: Constructor that creates a merkle tree with the specified number of blocks and block size. This constructor initializes the merkle tree structure based on the provided parameters.
 - **Parameters**:
-  - `num_blocks` (int): The total number of blocks in the file. Must be non-negative. This determines the size of the merkle tree.
-  - `blocks_per_piece` (int): The number of blocks in each piece. Must be a power of 2 and greater than 0. This determines the granularity of the merkle tree.
-- **Return Value**: None (constructor)
-- **Exceptions/Errors**: None
+  - `num_blocks` (int): The total number of blocks in the merkle tree. Must be a positive integer.
+  - `block_size` (int): The size of each block in bytes. Must be a positive integer.
+- **Return Value**: Creates a new merkle_tree object initialized with the specified parameters.
+- **Exceptions/Errors**: Could throw exceptions if the parameters are invalid or if memory allocation fails.
 - **Example**:
 ```cpp
-// Create a merkle tree for a file with 1024 blocks, 8 blocks per piece
-merkle_tree tree(1024, 8);
+// Create a merkle tree with 1024 blocks, each 16KB in size
+merkle_tree tree(1024, 16 * 1024);
 ```
-- **Preconditions**: `num_blocks >= 0`, `blocks_per_piece > 0` and `blocks_per_piece` is a power of 2
-- **Postconditions**: A merkle_tree object is created with the specified dimensions
+- **Preconditions**: `num_blocks > 0` and `block_size > 0`
+- **Postconditions**: A properly initialized merkle_tree object is created with the specified parameters.
 - **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `merkle_tree()`, `blocks_per_piece()`
+- **Complexity**: O(num_blocks)
+- **See Also**: merkle_tree(), end_index(), blocks_per_piece(), piece_levels()
 
 ## end_index
 
 - **Signature**: `int end_index() const`
-- **Description**: Returns the end index of the merkle tree, which is equivalent to the total number of blocks in the tree. This function provides the upper bound for valid block indices in the merkle tree.
+- **Description**: Returns the end index of the merkle tree, which is equivalent to the size of the tree. This function provides the upper bound for valid indices in the merkle tree.
 - **Parameters**: None
-- **Return Value**: 
-  - `int`: The number of blocks in the merkle tree (size of the tree)
+- **Return Value**: Returns the size of the merkle tree as an integer. This value represents the first invalid index in the tree.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-merkle_tree tree(1024, 8);
-int end_idx = tree.end_index();
-// end_idx will be 1024
+merkle_tree tree(1024, 16 * 1024);
+int last_valid_index = tree.end_index() - 1; // Last valid index
 ```
-- **Preconditions**: The merkle_tree object must be properly initialized
-- **Postconditions**: The returned value is equal to the size of the merkle tree
-- **Thread Safety**: Thread-safe
+- **Preconditions**: The merkle_tree object must be properly initialized.
+- **Postconditions**: Returns the size of the merkle tree.
+- **Thread Safety**: Thread-safe (const method)
 - **Complexity**: O(1)
-- **See Also**: `size()`, `blocks_per_piece()`
+- **See Also**: size(), blocks_per_piece(), piece_levels()
 
 ## blocks_per_piece
 
 - **Signature**: `int blocks_per_piece() const`
-- **Description**: Returns the number of blocks per piece in the merkle tree. This value is stored as a logarithm (m_blocks_per_piece_log) and is returned as 2^log_value, which gives the actual number of blocks per piece.
+- **Description**: Returns the number of blocks per piece in the merkle tree. This is a computed value that represents the number of blocks that make up a single piece in the torrent.
 - **Parameters**: None
-- **Return Value**: 
-  - `int`: The number of blocks per piece in the merkle tree
+- **Return Value**: Returns the number of blocks per piece as an integer. This value is calculated as 2 raised to the power of `m_blocks_per_piece_log`.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-merkle_tree tree(1024, 8);
-int blocks_per_piece_val = tree.blocks_per_piece();
-// blocks_per_piece_val will be 8
+merkle_tree tree(1024, 16 * 1024);
+int blocks_per_piece = tree.blocks_per_piece();
+// This might return 4 if m_blocks_per_piece_log is 2
 ```
-- **Preconditions**: The merkle_tree object must be properly initialized
-- **Postconditions**: The returned value is the number of blocks per piece
-- **Thread Safety**: Thread-safe
+- **Preconditions**: The merkle_tree object must be properly initialized.
+- **Postconditions**: Returns the number of blocks per piece.
+- **Thread Safety**: Thread-safe (const method)
 - **Complexity**: O(1)
-- **See Also**: `piece_levels()`, `merkle_tree(int num_blocks, int blocks_per_piece)`
+- **See Also**: piece_levels(), end_index(), merkle_tree()
 
 ## piece_levels
 
 - **Signature**: `int piece_levels() const`
-- **Description**: Returns the number of levels in the piece hierarchy, which is equivalent to the logarithm (base 2) of the number of blocks per piece. This value represents the depth of the merkle tree for each piece.
+- **Description**: Returns the number of levels in the merkle tree structure for pieces. This value represents the logarithm base 2 of the number of blocks per piece, which determines the depth of the merkle tree for piece-level verification.
 - **Parameters**: None
-- **Return Value**: 
-  - `int`: The number of levels in the piece hierarchy (log2(blocks_per_piece))
+- **Return Value**: Returns the number of levels as an integer. This value is stored in the member variable `m_blocks_per_piece_log`.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-merkle_tree tree(1024, 8);
+merkle_tree tree(1024, 16 * 1024);
 int levels = tree.piece_levels();
-// levels will be 3 (since 2^3 = 8)
+// This might return 2 if there are 4 blocks per piece
 ```
-- **Preconditions**: The merkle_tree object must be properly initialized
-- **Postconditions**: The returned value is the logarithm (base 2) of blocks_per_piece
-- **Thread Safety**: Thread-safe
+- **Preconditions**: The merkle_tree object must be properly initialized.
+- **Postconditions**: Returns the number of levels in the merkle tree structure.
+- **Thread Safety**: Thread-safe (const method)
 - **Complexity**: O(1)
-- **See Also**: `blocks_per_piece()`, `merkle_tree(int num_blocks, int blocks_per_piece)`
+- **See Also**: blocks_per_piece(), end_index(), merkle_tree()
 
-## Usage Examples
+# Usage Examples
 
-### Basic Usage
+## Basic Usage
+
 ```cpp
 #include <libtorrent/aux_/merkle_tree.hpp>
 
 int main() {
-    // Create a merkle tree for a file with 1024 blocks, 8 blocks per piece
-    merkle_tree tree(1024, 8);
+    // Create a merkle tree with 256 blocks, each 16KB in size
+    merkle_tree tree(256, 16 * 1024);
     
     // Get the number of blocks per piece
     int blocks_per_piece = tree.blocks_per_piece();
-    // blocks_per_piece will be 8
+    std::cout << "Blocks per piece: " << blocks_per_piece << std::endl;
     
-    // Get the number of levels in the piece hierarchy
-    int piece_levels = tree.piece_levels();
-    // piece_levels will be 3
+    // Get the number of levels in the merkle tree
+    int levels = tree.piece_levels();
+    std::cout << "Piece levels: " << levels << std::endl;
     
-    // Get the end index (total number of blocks)
-    int end_idx = tree.end_index();
-    // end_idx will be 1024
+    // Get the end index (size of the tree)
+    int end_index = tree.end_index();
+    std::cout << "End index: " << end_index << std::endl;
     
     return 0;
 }
 ```
 
-### Error Handling
+## Error Handling
+
 ```cpp
 #include <libtorrent/aux_/merkle_tree.hpp>
 #include <iostream>
 
 int main() {
-    // Proper usage with error checking
     try {
-        // Create a valid merkle tree
-        merkle_tree tree(1024, 8);
+        // Attempt to create a merkle tree with invalid parameters
+        merkle_tree tree(0, 16 * 1024);
         
-        // Use the tree
-        int blocks_per_piece = tree.blocks_per_piece();
-        std::cout << "Blocks per piece: " << blocks_per_piece << std::endl;
-        
-        int piece_levels = tree.piece_levels();
-        std::cout << "Piece levels: " << piece_levels << std::endl;
-        
-        int end_idx = tree.end_index();
-        std::cout << "End index: " << end_idx << std::endl;
-        
+        // If we get here, the tree was created successfully
+        std::cout << "Merkle tree created successfully" << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Error creating merkle tree: " << e.what() << std::endl;
-        return 1;
+    }
+    
+    try {
+        merkle_tree tree(1024, 0);
+        std::cout << "Merkle tree created successfully" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Error creating merkle tree: " << e.what() << std::endl;
     }
     
     return 0;
 }
 ```
 
-### Edge Cases
+## Edge Cases
+
 ```cpp
 #include <libtorrent/aux_/merkle_tree.hpp>
 #include <iostream>
 
 int main() {
-    // Edge case 1: Zero blocks
-    merkle_tree tree_zero(0, 1);
-    std::cout << "Zero blocks end index: " << tree_zero.end_index() << std::endl;
-    // Output: 0
+    // Edge case 1: Empty tree (though this might not be allowed)
+    try {
+        merkle_tree empty_tree(0, 16 * 1024);
+        std::cout << "Empty tree created. Size: " << empty_tree.end_index() << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
     
-    // Edge case 2: Single block per piece
-    merkle_tree tree_single(1024, 1);
-    std::cout << "Single block per piece blocks: " << tree_single.blocks_per_piece() << std::endl;
-    // Output: 1
-    std::cout << "Single block per piece levels: " << tree_single.piece_levels() << std::endl;
-    // Output: 0
+    // Edge case 2: Single block
+    merkle_tree single_block_tree(1, 16 * 1024);
+    std::cout << "Single block tree: " 
+              << "blocks_per_piece=" << single_block_tree.blocks_per_piece() 
+              << ", piece_levels=" << single_block_tree.piece_levels() 
+              << ", end_index=" << single_block_tree.end_index() 
+              << std::endl;
     
     // Edge case 3: Large number of blocks
-    merkle_tree tree_large(1000000, 1024);
-    std::cout << "Large tree end index: " << tree_large.end_index() << std::endl;
-    // Output: 1000000
+    merkle_tree large_tree(1000000, 16 * 1024);
+    std::cout << "Large tree created with " << large_tree.end_index() << " blocks" << std::endl;
     
     return 0;
 }
 ```
 
-## Best Practices
+# Best Practices
 
-1. **Use the parameterized constructor**: Always use the parameterized constructor `merkle_tree(int num_blocks, int blocks_per_piece)` instead of the default constructor to ensure the tree is properly initialized.
+1. **Proper Initialization**: Always use the parameterized constructor with valid parameters rather than the default constructor.
 
-2. **Validate parameters**: Ensure that `num_blocks` is non-negative and `blocks_per_piece` is a positive power of 2 when creating the tree.
+2. **Parameter Validation**: Ensure that both `num_blocks` and `block_size` are positive values when creating a merkle tree.
 
-3. **Use const correctness**: Use `const` methods where possible to avoid unnecessary copies and to make the code more readable.
+3. **Memory Management**: Be aware that large merkle trees can consume significant memory, especially with many blocks.
 
-4. **Consider the tree size**: Be mindful of the memory footprint when creating large merkle trees with many blocks.
+4. **Use Const Correctness**: Use `const` methods when possible to indicate that the function doesn't modify the object.
 
-5. **Avoid uninitialized trees**: The default constructor creates an uninitialized tree, which is not recommended for production use.
+5. **Avoid Magic Numbers**: Use named constants or variables instead of hardcoding values like 16 * 1024.
 
-6. **Use the provided functions**: Use the `blocks_per_piece()`, `piece_levels()`, and `end_index()` functions to access tree properties rather than accessing internal members directly.
+6. **Error Handling**: Implement proper error handling for construction failures, even though the current implementation doesn't throw exceptions.
 
-## Code Review & Improvement Suggestions
+7. **Performance Considerations**: For large torrents, consider the memory footprint of the merkle tree and optimize accordingly.
 
-### Potential Issues
+# Code Review & Improvement Suggestions
 
-**Function**: `merkle_tree()`
-**Issue**: Default constructor creates an uninitialized tree, which is not recommended
+## Potential Issues
+
+### **Function**: `merkle_tree()`
+**Issue**: Default constructor creates an uninitialized tree that should not be used
 **Severity**: High
 **Impact**: Can lead to undefined behavior when using the tree
-**Fix**: Remove the default constructor and require initialization:
+**Fix**: Remove the default constructor or make it private and provide a factory method:
 ```cpp
-// Remove the default constructor
-// merkle_tree() = default;
-
-// Instead, only provide the parameterized constructor
-merkle_tree(int num_blocks, int blocks_per_piece);
+class merkle_tree {
+public:
+    // Remove default constructor
+    merkle_tree(int num_blocks, int block_size);
+    
+    // Add factory method
+    static merkle_tree create_uninitialized();
+    
+private:
+    merkle_tree() = default;
+};
 ```
 
-**Function**: `blocks_per_piece()`
-**Issue**: The function returns the number of blocks per piece, but the internal representation is stored as a logarithm
+### **Function**: `end_index()`
+**Issue**: The function returns an `int` which might be insufficient for very large trees
 **Severity**: Medium
-**Impact**: Could lead to confusion about the internal representation
-**Fix**: Add documentation about the logarithmic storage:
+**Impact**: Potential overflow for very large torrents
+**Fix**: Consider using `std::size_t` or `std::uint32_t` for the return type:
 ```cpp
-// Add documentation
-int blocks_per_piece() const { 
-    // Returns the number of blocks per piece (2^m_blocks_per_piece_log)
-    return 1 << m_blocks_per_piece_log; 
+std::size_t end_index() const { return size(); }
+```
+
+### **Function**: `blocks_per_piece()`
+**Issue**: The calculation `1 << m_blocks_per_piece_log` might overflow for large values of `m_blocks_per_piece_log`
+**Severity**: Medium
+**Impact**: Undefined behavior or incorrect results
+**Fix**: Add a check for overflow:
+```cpp
+int blocks_per_piece() const {
+    if (m_blocks_per_piece_log >= 31) {
+        // Handle overflow case
+        return std::numeric_limits<int>::max();
+    }
+    return 1 << m_blocks_per_piece_log;
 }
 ```
 
-**Function**: `piece_levels()`
-**Issue**: The function returns the logarithm of blocks_per_piece, which might be confusing
-**Severity**: Medium
-**Impact**: Could lead to confusion about the relationship between levels and blocks per piece
-**Fix**: Add documentation about the relationship:
-```cpp
-// Add documentation
-int piece_levels() const { 
-    // Returns the number of levels in the piece hierarchy (log2(blocks_per_piece))
-    return m_blocks_per_piece_log; 
-}
-```
+## Modernization Opportunities
 
-### Modernization Opportunities
-
-**Function**: All functions
-**Opportunity**: Add `[[nodiscard]]` attribute to functions that return important values
-**Benefit**: Prevents ignoring important return values
-**Implementation**:
+1. **Add [[nodiscard]]**: For functions that return important values:
 ```cpp
-// Add [[nodiscard]] to functions that return important values
 [[nodiscard]] int end_index() const;
 [[nodiscard]] int blocks_per_piece() const;
 [[nodiscard]] int piece_levels() const;
 ```
 
-**Function**: `merkle_tree()`
-**Opportunity**: Use `constexpr` for compile-time evaluation of tree properties
-**Benefit**: Enables compile-time checks and optimizations
-**Implementation**:
+2. **Use std::size_t**: For size-related functions to avoid integer overflow:
 ```cpp
-// Add constexpr where possible
-constexpr int end_index() const { return int(size()); }
-constexpr int blocks_per_piece() const { return 1 << m_blocks_per_piece_log; }
-constexpr int piece_levels() const { return m_blocks_per_piece_log; }
+std::size_t end_index() const;
 ```
 
-### Refactoring Suggestions
-
-**Function**: `merkle_tree()`
-**Suggestion**: Remove the default constructor and make the parameterized constructor the only constructor
-**Benefit**: Ensures all merkle trees are properly initialized
-**Implementation**:
+3. **Use constexpr**: For compile-time evaluation of constants:
 ```cpp
-// Remove the default constructor
-// merkle_tree() = default;
-
-// Make the parameterized constructor the only constructor
-merkle_tree(int num_blocks, int blocks_per_piece);
+constexpr static int MAX_BLOCKS_PER_PIECE = 256;
 ```
 
-**Function**: `end_index()`, `blocks_per_piece()`, `piece_levels()`
-**Suggestion**: Consider combining these into a single method that returns a struct with all the information
-**Benefit**: Reduces function calls and provides a more complete view of the tree's configuration
-**Implementation**:
+4. **Add noexcept**: For functions that don't throw exceptions:
 ```cpp
-struct TreeConfig {
-    int num_blocks;
-    int blocks_per_piece;
-    int piece_levels;
-};
-
-[[nodiscard]] TreeConfig get_config() const;
+int end_index() const noexcept;
+int blocks_per_piece() const noexcept;
+int piece_levels() const noexcept;
 ```
 
-### Performance Optimizations
+## Refactoring Suggestions
 
-**Function**: `merkle_tree()`
-**Optimization**: Use move semantics for efficient construction
-**Benefit**: Reduces unnecessary copying of tree data
-**Implementation**:
+1. **Split into separate classes**: Consider separating the merkle tree functionality from the torrent info structure.
+2. **Move to utility namespace**: Consider moving the merkle_tree class to a utility namespace for better organization.
+3. **Create a builder pattern**: For complex initialization scenarios.
+
+## Performance Optimizations
+
+1. **Use move semantics**: For the constructor if needed:
 ```cpp
-// Ensure the class supports move operations
 merkle_tree(merkle_tree&& other) noexcept;
-merkle_tree& operator=(merkle_tree&& other) noexcept;
 ```
 
-**Function**: `end_index()`, `blocks_per_piece()`, `piece_levels()`
-**Optimization**: Ensure these functions are inlined for maximum performance
-**Benefit**: Eliminates function call overhead
-**Implementation**:
+2. **Return by value**: For RVO optimization:
 ```cpp
-// Mark these functions as inline
-inline int end_index() const { return int(size()); }
-inline int blocks_per_piece() const { return 1 << m_blocks_per_piece_log; }
-inline int piece_levels() const { return m_blocks_per_piece_log; }
+int blocks_per_piece() const; // Already returns by value
+```
+
+3. **Add noexcept**: For performance-critical code:
+```cpp
+int end_index() const noexcept;
+```
+
+4. **Use std::span**: For array parameters if needed in future versions:
+```cpp
+void process_blocks(std::span<const int> blocks);
 ```

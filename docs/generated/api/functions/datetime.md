@@ -1,423 +1,230 @@
-# libtorrent Python Bindings - datetime.cpp API Documentation
+# API Documentation for datetime.cpp
 
 ## Function: convert (Duration)
 
-- **Signature**: `static PyObject* convert(Duration const& d)`
-- **Description**: Converts a libtorrent Duration type to a Python datetime.timedelta object. This function extracts microseconds from the duration and creates a timedelta object with appropriate days, seconds, and microseconds components.
+- **Signature**: `PyObject* convert(Duration const& d)`
+- **Description**: Converts a libtorrent Duration object to a Python datetime.timedelta object. The function extracts the total microseconds from the Duration and creates a timedelta object with the corresponding days, seconds, and microseconds.
 - **Parameters**:
-  - `d` (Duration const&): The libtorrent duration object to convert. Must be a valid Duration object representing time duration.
+  - `d` (Duration const&): The libtorrent Duration object to convert. Must be a valid Duration object representing a time interval.
 - **Return Value**:
-  - Returns a PyObject* representing a Python datetime.timedelta object. The returned object is owned by the caller and must be managed properly.
-  - Returns nullptr on error (though this is unlikely as the function doesn't check for errors).
+  - Returns a new Python object (PyObject*) representing a datetime.timedelta object. The reference count is incremented, so the caller must decrement it when done.
 - **Exceptions/Errors**:
-  - No exceptions thrown in normal operation.
-  - The function assumes valid input and doesn't validate the Duration object.
+  - No exceptions are thrown, but the function assumes the input Duration is valid.
 - **Example**:
 ```cpp
-auto result = convert(lt::duration(500000)); // 500,000 microseconds = 0.5 seconds
-if (result != nullptr) {
-    // Use the Python object
-}
+auto result = convert(lt::duration(1000ms));
+// Use result in Python code
 ```
-- **Preconditions**: The Duration object must be valid and contain a non-negative time value.
-- **Postconditions**: A valid Python datetime.timedelta object is returned.
-- **Thread Safety**: Thread-safe as it only reads from the input parameter.
-- **Complexity**: O(1) time, O(1) space.
-- **See Also**: convert(boost::posix_time::time_duration), bind_datetime
+- **Preconditions**: The input Duration must be valid and represent a non-negative time interval.
+- **Postconditions**: The returned PyObject is a valid Python datetime.timedelta object with the correct time interval.
+- **Thread Safety**: This function is thread-safe as it only reads the input and creates new Python objects.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `convert(boost::posix_time::time_duration const&)`, `bind_datetime()`
 
 ## Function: convert (time_duration)
 
-- **Signature**: `static PyObject* convert(boost::posix_time::time_duration const& d)`
-- **Description**: Converts a Boost.Python time_duration object to a Python datetime.timedelta object. The function extracts microseconds from the time duration and creates a timedelta object with appropriate days, seconds, and microseconds components.
+- **Signature**: `PyObject* convert(boost::posix_time::time_duration const& d)`
+- **Description**: Converts a boost::posix_time::time_duration object to a Python datetime.timedelta object. The function extracts the total microseconds from the time_duration and creates a timedelta object with the corresponding seconds and microseconds.
 - **Parameters**:
-  - `d` (boost::posix_time::time_duration const&): The Boost time duration object to convert. Must be a valid time_duration object.
+  - `d` (boost::posix_time::time_duration const&): The time_duration object to convert. Must be a valid time_duration object representing a time interval.
 - **Return Value**:
-  - Returns a PyObject* representing a Python datetime.timedelta object. The returned object is owned by the caller and must be managed properly.
-  - Returns nullptr on error (though this is unlikely as the function doesn't check for errors).
+  - Returns a new Python object (PyObject*) representing a datetime.timedelta object. The reference count is incremented, so the caller must decrement it when done.
 - **Exceptions/Errors**:
-  - No exceptions thrown in normal operation.
-  - The function assumes valid input and doesn't validate the time_duration object.
+  - No exceptions are thrown, but the function assumes the input time_duration is valid.
 - **Example**:
 ```cpp
-auto result = convert(boost::posix_time::time_duration(1, 2, 3)); // 1 hour, 2 minutes, 3 seconds
-if (result != nullptr) {
-    // Use the Python object
-}
+auto result = convert(boost::posix_time::time_duration(1, 2, 3));
+// Use result in Python code
 ```
-- **Preconditions**: The time_duration object must be valid and contain a non-negative time value.
-- **Postconditions**: A valid Python datetime.timedelta object is returned.
-- **Thread Safety**: Thread-safe as it only reads from the input parameter.
-- **Complexity**: O(1) time, O(1) space.
-- **See Also**: convert(Duration), bind_datetime
+- **Preconditions**: The input time_duration must be valid and represent a non-negative time interval.
+- **Postconditions**: The returned PyObject is a valid Python datetime.timedelta object with the correct time interval.
+- **Thread Safety**: This function is thread-safe as it only reads the input and creates new Python objects.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `convert(Duration const&)`, `bind_datetime()`
 
 ## Function: now (time_point)
 
 - **Signature**: `lt::time_point now(::tag<lt::time_point>)`
-- **Description**: Returns the current time point from the libtorrent clock. This function is used to get the current time in the libtorrent system clock, which is typically based on high-resolution time sources.
+- **Description**: Returns the current time point from the libtorrent clock. This function is used to get the current time in the libtorrent system clock.
 - **Parameters**:
-  - `tag<lt::time_point>`: A tag type used to disambiguate overloads. This parameter is used for function overloading and doesn't have a runtime value.
+  - `tag` (::tag<lt::time_point>): A tag type used to disambiguate function overloads. The function uses this to determine which overload to call.
 - **Return Value**:
-  - Returns a lt::time_point object representing the current time.
-  - The returned time point is guaranteed to be valid and represents the current time.
+  - Returns the current time point as `lt::time_point`. This represents the current time in the libtorrent system clock.
 - **Exceptions/Errors**:
-  - No exceptions thrown in normal operation.
+  - No exceptions are thrown.
 - **Example**:
 ```cpp
 auto current_time = now(::tag<lt::time_point>());
-if (current_time != lt::time_point()) {
-    // Use the current time point
-}
+// Use current_time in libtorrent operations
 ```
-- **Preconditions**: The libtorrent clock must be initialized and functional.
-- **Postconditions**: A valid time point representing the current time is returned.
-- **Thread Safety**: Thread-safe as it only calls a thread-safe clock function.
-- **Complexity**: O(1) time, O(1) space.
-- **See Also**: now(time_point32), bind_datetime
+- **Preconditions**: None.
+- **Postconditions**: The returned `lt::time_point` represents the current time in the libtorrent system clock.
+- **Thread Safety**: This function is thread-safe as it only reads the clock.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `now(lt::time_point32)`, `bind_datetime()`
 
 ## Function: now (time_point32)
 
 - **Signature**: `lt::time_point32 now(::tag<lt::time_point32>)`
-- **Description**: Returns the current time point from the libtorrent clock, but casts it to a 32-bit time point. This function is used to get the current time in a 32-bit representation, which may be useful for compatibility with systems that have limited time precision.
+- **Description**: Returns the current time point from the libtorrent clock, but cast to `lt::time_point32` (a 32-bit time point). This function is used to get the current time in a 32-bit format for compatibility with systems that have limited time point precision.
 - **Parameters**:
-  - `tag<lt::time_point32>`: A tag type used to disambiguate overloads. This parameter is used for function overloading and doesn't have a runtime value.
+  - `tag` (::tag<lt::time_point32>): A tag type used to disambiguate function overloads. The function uses this to determine which overload to call.
 - **Return Value**:
-  - Returns a lt::time_point32 object representing the current time in 32-bit precision.
-  - The returned time point is guaranteed to be valid and represents the current time.
+  - Returns the current time point as `lt::time_point32`. This represents the current time in the libtorrent system clock, but truncated to 32 bits.
 - **Exceptions/Errors**:
-  - No exceptions thrown in normal operation.
+  - No exceptions are thrown.
 - **Example**:
 ```cpp
 auto current_time = now(::tag<lt::time_point32>());
-if (current_time != lt::time_point32()) {
-    // Use the current time point
-}
+// Use current_time in libtorrent operations with 32-bit time points
 ```
-- **Preconditions**: The libtorrent clock must be initialized and functional.
-- **Postconditions**: A valid time point in 32-bit precision representing the current time is returned.
-- **Thread Safety**: Thread-safe as it only calls a thread-safe clock function.
-- **Complexity**: O(1) time, O(1) space.
-- **See Also**: now(time_point), bind_datetime
+- **Preconditions**: None.
+- **Postconditions**: The returned `lt::time_point32` represents the current time in the libtorrent system clock, but truncated to 32 bits.
+- **Thread Safety**: This function is thread-safe as it only reads the clock.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `now(lt::time_point)`, `bind_datetime()`
 
 ## Function: convert (T)
 
-- **Signature**: `static PyObject* convert(T const pt)`
-- **Description**: Generic conversion function that converts various time point types to a Python datetime object. This function extracts time information from the given time point and creates a datetime object with appropriate year, month, day, hour, minute, second, and microsecond components.
+- **Signature**: `PyObject* convert(T const pt)`
+- **Description**: Converts a time point of type T to a Python datetime.datetime object. The function converts the time point to a system time, extracts the date and time components, and creates a datetime object. This function is templated and can handle different time point types.
 - **Parameters**:
-  - `pt` (T const): The time point object to convert. This can be any type that supports comparison with T() and has a system_clock::to_time_t conversion.
+  - `pt` (T const): The time point to convert. Must be a valid time point representing a specific date and time.
 - **Return Value**:
-  - Returns a PyObject* representing a Python datetime object. The returned object is owned by the caller and must be managed properly.
-  - Returns nullptr on error (though this is unlikely as the function doesn't check for errors).
+  - Returns a new Python object (PyObject*) representing a datetime.datetime object. The reference count is incremented, so the caller must decrement it when done.
 - **Exceptions/Errors**:
-  - No exceptions thrown in normal operation.
-  - The function assumes valid input and doesn't validate the time point object.
+  - No exceptions are thrown, but the function assumes the input time point is valid.
 - **Example**:
 ```cpp
-auto result = convert(lt::time_point(std::chrono::steady_clock::now()));
-if (result != nullptr) {
-    // Use the Python object
-}
+auto result = convert(lt::time_point_cast<lt::seconds>(lt::clock_type::now()));
+// Use result in Python code
 ```
-- **Preconditions**: The time point object must be valid and contain a non-negative time value.
-- **Postconditions**: A valid Python datetime object is returned.
-- **Thread Safety**: Thread-safe as it only reads from the input parameter.
-- **Complexity**: O(1) time, O(1) space.
-- **See Also**: convert(boost::posix_time::ptime), bind_datetime
+- **Preconditions**: The input time point must be valid and represent a specific date and time.
+- **Postconditions**: The returned PyObject is a valid Python datetime.datetime object with the correct date and time.
+- **Thread Safety**: This function is thread-safe as it only reads the input and creates new Python objects.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `convert(boost::posix_time::ptime const&)`, `bind_datetime()`
 
 ## Function: convert (ptime)
 
-- **Signature**: `static PyObject* convert(boost::posix_time::ptime const& pt)`
-- **Description**: Converts a Boost.Python ptime object to a Python datetime.datetime object. The function extracts date and time components from the ptime object and creates a datetime object with appropriate year, month, day, hour, minute, second, and microsecond components.
+- **Signature**: `PyObject* convert(boost::posix_time::ptime const& pt)`
+- **Description**: Converts a boost::posix_time::ptime object to a Python datetime.datetime object. The function extracts the date and time components from the ptime object and creates a datetime object with the corresponding year, month, day, hour, minute, and second.
 - **Parameters**:
-  - `pt` (boost::posix_time::ptime const&): The Boost ptime object to convert. Must be a valid ptime object.
+  - `pt` (boost::posix_time::ptime const&): The ptime object to convert. Must be a valid ptime object representing a specific date and time.
 - **Return Value**:
-  - Returns a PyObject* representing a Python datetime.datetime object. The returned object is owned by the caller and must be managed properly.
-  - Returns nullptr on error (though this is unlikely as the function doesn't check for errors).
+  - Returns a new Python object (PyObject*) representing a datetime.datetime object. The reference count is incremented, so the caller must decrement it when done.
 - **Exceptions/Errors**:
-  - No exceptions thrown in normal operation.
-  - The function assumes valid input and doesn't validate the ptime object.
+  - No exceptions are thrown, but the function assumes the input ptime is valid.
 - **Example**:
 ```cpp
-auto result = convert(boost::posix_time::ptime(boost::gregorian::date(2023, 1, 1), boost::posix_time::time_duration(12, 30, 0)));
-if (result != nullptr) {
-    // Use the Python object
-}
+auto result = convert(boost::posix_time::ptime(boost::gregorian::date(2023, 1, 1), boost::posix_time::time_duration(12, 0, 0)));
+// Use result in Python code
 ```
-- **Preconditions**: The ptime object must be valid and contain a non-negative time value.
-- **Postconditions**: A valid Python datetime.datetime object is returned.
-- **Thread Safety**: Thread-safe as it only reads from the input parameter.
-- **Complexity**: O(1) time, O(1) space.
-- **See Also**: convert(T), bind_datetime
+- **Preconditions**: The input ptime must be valid and represent a specific date and time.
+- **Postconditions**: The returned PyObject is a valid Python datetime.datetime object with the correct date and time.
+- **Thread Safety**: This function is thread-safe as it only reads the input and creates new Python objects.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `convert(T const)`, `bind_datetime()`
 
 ## Function: bind_datetime
 
 - **Signature**: `void bind_datetime()`
-- **Description**: Binds the datetime functionality to Python, creating the necessary Python objects and converters. This function imports the datetime module, creates references to datetime and timedelta classes, and registers converters for various time types.
-- **Parameters**: None
-- **Return Value**: None
+- **Description**: Registers the datetime module's timedelta and datetime classes with the Python C++ binding system. This function sets up the conversion between libtorrent and Python datetime types by binding the appropriate Python classes and converters.
+- **Parameters**:
+  - None.
+- **Return Value**:
+  - None.
 - **Exceptions/Errors**:
-  - Could throw Python exceptions if the datetime module cannot be imported or if there are issues with the converter registration.
+  - No exceptions are thrown, but the function assumes the Python module system is available and properly initialized.
 - **Example**:
 ```cpp
 bind_datetime();
-// Now datetime functionality is available in Python bindings
+// Now datetime conversions are available in Python
 ```
-- **Preconditions**: The Python interpreter must be initialized and the Python C API must be available.
-- **Postconditions**: The datetime functionality is bound to Python, making datetime objects and converters available.
-- **Thread Safety**: Not thread-safe as it modifies global state.
-- **Complexity**: O(1) time, O(1) space.
-- **See Also**: convert(Duration), convert(boost::posix_time::time_duration)
+- **Preconditions**: The Python C++ binding system must be initialized, and the datetime module must be available.
+- **Postconditions**: The datetime module's timedelta and datetime classes are bound to the Python C++ binding system, allowing conversion between libtorrent and Python datetime types.
+- **Thread Safety**: This function is not thread-safe as it modifies global binding state.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `convert(Duration const&)`, `convert(boost::posix_time::time_duration const&)`
 
 # Usage Examples
 
 ## Basic Usage
 
 ```cpp
-#include <libtorrent/bindings/python/src/datetime.hpp>
+#include "datetime.hpp"
 #include <iostream>
 
-void example_basic_usage() {
-    // Convert a duration to timedelta
-    auto duration = lt::duration(1000000); // 1 second
-    auto timedelta = convert(duration);
-    if (timedelta != nullptr) {
-        // Use the Python object
-        // In practice, this would be passed to Python code
-        std::cout << "Duration converted to timedelta" << std::endl;
-    }
+int main() {
+    // Convert a Duration to Python timedelta
+    auto duration = lt::duration(1000ms);
+    auto result = convert(duration);
+    // Use result in Python code
     
-    // Get current time
+    // Get current time point
     auto current_time = now(::tag<lt::time_point>());
-    std::cout << "Current time: " << current_time.time_since_epoch().count() << std::endl;
+    // Use current_time in libtorrent operations
     
-    // Convert ptime to datetime
-    auto ptime = boost::posix_time::ptime(boost::gregorian::date(2023, 1, 1), boost::posix_time::time_duration(12, 0, 0));
-    auto datetime = convert(ptime);
-    if (datetime != nullptr) {
-        std::cout << "Ptime converted to datetime" << std::endl;
-    }
+    // Convert a ptime to Python datetime
+    auto pt = boost::posix_time::ptime(boost::gregorian::date(2023, 1, 1), boost::posix_time::time_duration(12, 0, 0));
+    auto result2 = convert(pt);
+    // Use result2 in Python code
+    
+    // Bind datetime module
+    bind_datetime();
+    // Now datetime conversions are available
+    
+    return 0;
 }
 ```
 
 ## Error Handling
 
 ```cpp
-#include <libtorrent/bindings/python/src/datetime.hpp>
+#include "datetime.hpp"
 #include <iostream>
 
-void example_error_handling() {
+int main() {
     try {
-        // Attempt to bind datetime functionality
-        bind_datetime();
-        
-        // Convert a time duration
-        auto duration = lt::duration(500000); // 0.5 seconds
-        auto timedelta = convert(duration);
-        
-        if (timedelta == nullptr) {
-            std::cerr << "Failed to convert duration to timedelta" << std::endl;
-            return;
+        // Convert a Duration to Python timedelta
+        auto duration = lt::duration(1000ms);
+        auto result = convert(duration);
+        if (result == nullptr) {
+            std::cerr << "Failed to convert duration to Python object" << std::endl;
+            return 1;
         }
+        // Use result in Python code
         
-        // Get current time
+        // Get current time point
         auto current_time = now(::tag<lt::time_point>());
+        // Use current_time in libtorrent operations
         
-        if (current_time == lt::time_point()) {
-            std::cerr << "Failed to get current time" << std::endl;
-            return;
+        // Convert a ptime to Python datetime
+        auto pt = boost::posix_time::ptime(boost::gregorian::date(2023, 1, 1), boost::posix_time::time_duration(12, 0, 0));
+        auto result2 = convert(pt);
+        if (result2 == nullptr) {
+            std::cerr << "Failed to convert ptime to Python object" << std::endl;
+            return 1;
         }
+        // Use result2 in Python code
         
-        std::cout << "All operations successful" << std::endl;
+        // Bind datetime module
+        bind_datetime();
+        // Now datetime conversions are available
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return 1;
     }
-    catch (const std::exception& e) {
-        std::cerr << "Exception occurred: " << e.what() << std::endl;
-    }
-    catch (...) {
-        std::cerr << "Unknown exception occurred" << std::endl;
-    }
+    
+    return 0;
 }
 ```
 
 ## Edge Cases
 
 ```cpp
-#include <libtorrent/bindings/python/src/datetime.hpp>
+#include "datetime.hpp"
 #include <iostream>
 
-void example_edge_cases() {
-    // Test with zero duration
-    auto zero_duration = lt::duration(0);
-    auto zero_timedelta = convert(zero_duration);
-    if (zero_timedelta != nullptr) {
-        std::cout << "Zero duration converted successfully" << std::endl;
-    }
-    
-    // Test with negative duration (should be handled as zero)
-    auto negative_duration = lt::duration(-1000000);
-    auto negative_timedelta = convert(negative_duration);
-    if (negative_timedelta != nullptr) {
-        std::cout << "Negative duration converted successfully" << std::endl;
-    }
-    
-    // Test with maximum duration
-    auto max_duration = lt::duration::max();
-    auto max_timedelta = convert(max_duration);
-    if (max_timedelta != nullptr) {
-        std::cout << "Maximum duration converted successfully" << std::endl;
-    }
-    
-    // Test with minimum duration
-    auto min_duration = lt::duration::min();
-    auto min_timedelta = convert(min_duration);
-    if (min_timedelta != nullptr) {
-        std::cout << "Minimum duration converted successfully" << std::endl;
-    }
-}
-```
-
-# Best Practices
-
-## Effective Usage
-
-1. **Use appropriate conversion functions**: Use the specific conversion function for your data type (Duration, time_duration, ptime, etc.) rather than generic functions.
-
-2. **Handle null returns**: Always check for null returns from conversion functions, especially when working with Python objects.
-
-3. **Bind datetime early**: Call bind_datetime() early in your application startup to ensure datetime functionality is available when needed.
-
-4. **Use const references**: When passing objects to conversion functions, use const references to avoid unnecessary copies.
-
-5. **Consider time precision**: Be aware of the time precision differences between time_point and time_point32 when choosing which to use.
-
-## Common Mistakes to Avoid
-
-1. **Not checking return values**: Always check for null return values from conversion functions to avoid undefined behavior.
-
-2. **Using invalid time points**: Ensure time points are valid before conversion to avoid undefined behavior.
-
-3. **Ignoring thread safety**: Be aware that bind_datetime() is not thread-safe and should be called during initialization.
-
-4. **Using outdated time types**: Prefer newer time types over older ones when possible.
-
-5. **Not understanding the conversion**: Understand what each conversion function does and which one is appropriate for your use case.
-
-## Performance Tips
-
-1. **Minimize conversions**: Only convert when necessary, as conversions have overhead.
-
-2. **Cache converted objects**: If you need to use the same time object multiple times, consider caching the converted Python object.
-
-3. **Use appropriate time types**: Use time_point32 when you don't need high precision to save memory.
-
-4. **Avoid unnecessary bindings**: Only bind what you need to avoid bloating your application.
-
-5. **Profile conversion performance**: If conversions are a bottleneck, consider optimizing your time handling strategy.
-
-# Code Review & Improvement Suggestions
-
-## Function: convert (Duration)
-
-**Issue**: The function doesn't validate the input duration before processing.
-**Severity**: Medium
-**Impact**: Could lead to undefined behavior if invalid duration is passed.
-**Fix**: Add validation for the duration parameter.
-```cpp
-static PyObject* convert(Duration const& d)
-{
-    if (d <= Duration::zero()) {
-        // Return zero duration
-        object result = datetime_timedelta(
-            0 // days
-          , 0 // seconds
-          , 0 // microseconds
-        );
-        return incref(result.ptr());
-    }
-    
-    std::int64_t const us = lt::total_microseconds(d);
-    object result = datetime_timedelta(
-        0 // days
-      , us / 1000000 // seconds
-      , us % 1000000 // microseconds
-    );
-
-    return incref(result.ptr());
-}
-```
-
-## Function: convert (time_duration)
-
-**Issue**: The function doesn't validate the input time_duration before processing.
-**Severity**: Medium
-**Impact**: Could lead to undefined behavior if invalid time_duration is passed.
-**Fix**: Add validation for the time_duration parameter.
-```cpp
-static PyObject* convert(boost::posix_time::time_duration const& d)
-{
-    if (d <= boost::posix_time::time_duration::zero()) {
-        // Return zero duration
-        object result = datetime_timedelta(
-            0 // days
-          , 0 // seconds
-          , 0 // microseconds
-        );
-        return incref(result.ptr());
-    }
-    
-    object result = datetime_timedelta(
-        0 // days
-      , 0 // seconds
-      , d.total_microseconds()
-    );
-
-    return incref(result.ptr());
-}
-```
-
-## Function: convert (T)
-
-**Issue**: The function is incomplete and contains syntax errors.
-**Severity**: Critical
-**Impact**: The function will not compile or will produce incorrect results.
-**Fix**: Complete the function implementation.
-```cpp
-static PyObject* convert(T const pt)
-{
-    using std::chrono::system_clock;
-    using std::chrono::duration_cast;
-    object result;
-    if (pt > T())
-    {
-        time_t const tm = system_clock::to_time_t(system_clock::now()
-            + duration_cast<system_clock::duration>(pt));
-        // Complete the implementation
-        // ...
-    }
-    else
-    {
-        // Handle zero or negative time
-        object result = datetime_datetime(1970, 1, 1, 0, 0, 0);
-        return incref(result.ptr());
-    }
-}
-```
-
-## Function: convert (ptime)
-
-**Issue**: The function is incomplete and contains syntax errors.
-**Severity**: Critical
-**Impact**: The function will not compile or will produce incorrect results.
-**Fix**: Complete the function implementation.
-```cpp
-static PyObject* convert(boost::posix_time::ptime const& pt)
-{
-    boost::gregorian::date date = pt.date();
-    boost::posix_time::time_duration td = pt.time_of_day();
-
-    object result = datetime_datetime(
-        (int)date.year()
-      , (int)date.month()
-      , (int)date.day()
-      , (int)td.hours()
-      , (int)td.minutes()
-      , (int)td.seconds()
-      , (
+int main() {
+    // Handle zero duration

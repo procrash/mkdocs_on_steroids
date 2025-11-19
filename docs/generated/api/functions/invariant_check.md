@@ -1,191 +1,221 @@
-# libtorrent Invariant Checking API Documentation
+# libtorrent Invariant Check API Documentation
 
-## Function: check_invariant (Static Version)
+## check_invariant (Static Version)
 
 - **Signature**: `static void check_invariant(T const& self)`
-- **Description**: A static function template that calls the `check_invariant()` method on the given object. This is typically used as a helper function in invariant checking systems to ensure that an object's internal state is valid.
+- **Description**: Static helper function that calls the `check_invariant()` method on the given object. This function is designed to be used as a template parameter for `invariant_checker_impl` to perform invariant checking on objects of type T. It is typically used in conjunction with the `invariant_checker_impl` class to ensure object invariants are maintained.
 - **Parameters**:
-  - `self` (T const&): The object whose invariant should be checked. The type `T` must provide a `check_invariant()` method.
-- **Return Value**:
-  - `void`: This function does not return any value.
-- **Exceptions/Errors**:
-  - This function may throw exceptions if the `check_invariant()` method of the `T` type throws an exception.
+  - `self` (T const&): The object whose invariants should be checked. The object must have a `check_invariant()` member function.
+- **Return Value**: None. This function does not return a value.
+- **Exceptions/Errors**: 
+  - May throw exceptions if the `check_invariant()` method of the object throws.
+  - No explicit error handling in this function itself.
 - **Example**:
 ```cpp
-// Assuming class MyClass has a check_invariant() method
+// Example usage in a class template
 class MyClass {
 public:
-    void check_invariant() const;
+    void check_invariant() const {
+        // Validate that my invariant holds
+        assert(some_condition);
+    }
 };
 
-MyClass obj;
-check_invariant(obj);
+// Using check_invariant in a template context
+check_invariant<MyClass>(my_object);
 ```
-- **Preconditions**: The `self` object must be valid and properly constructed.
-- **Postconditions**: The function ensures that the invariant of the `self` object is checked.
-- **Thread Safety**: This function is not inherently thread-safe as it relies on the thread safety of the `check_invariant()` method of the `T` type.
-- **Complexity**: O(1) - assumes the invariant check itself is O(1).
-- **See Also**: `invariant_checker_impl`, `make_invariant_checker`
+- **Preconditions**: 
+  - The type T must have a `check_invariant()` member function.
+  - The object must be in a valid state.
+- **Postconditions**: 
+  - The object's invariants are checked.
+  - No state changes are made to the object.
+- **Thread Safety**: 
+  - Not thread-safe unless the `check_invariant()` method itself is thread-safe.
+- **Complexity**: O(1) - assumes the `check_invariant()` method is O(1).
+- **See Also**: `make_invariant_checker()`, `invariant_checker_impl`
 
-## Function: check_invariant (Non-static Version)
+## check_invariant (Runtime Version)
 
 - **Signature**: `void check_invariant(T const& x)`
-- **Description**: Checks the invariant of the given object `x` by calling `invariant_access::check_invariant(x)` within a try-catch block. If an exception occurs during invariant checking, it prints an error message to stderr. This function is designed to be used in environments where exception handling is enabled.
+- **Description**: Runtime function that checks the invariants of the given object while handling exceptions. This function attempts to call the `invariant_access::check_invariant(x)` function, but catches and reports any exceptions that occur during the invariant check. This provides a safety net for invariant checking in production code where exceptions should not crash the application.
 - **Parameters**:
-  - `x` (T const&): The object whose invariant should be checked.
-- **Return Value**:
-  - `void`: This function does not return any value.
+  - `x` (T const&): The object whose invariants should be checked. The object must be compatible with the `invariant_access::check_invariant` function.
+- **Return Value**: None. This function does not return a value.
 - **Exceptions/Errors**:
-  - This function catches `std::exception` and prints an error message to stderr.
-  - This function catches all other exceptions and prints an error message to stderr.
+  - Catches `std::exception` and prints an error message to stderr.
+  - Catches any other exceptions and prints an error message to stderr.
+  - This function may not handle all possible error conditions due to incomplete error handling code.
 - **Example**:
 ```cpp
-// Assuming class MyClass has a check_invariant method
-class MyClass {
-public:
-    void check_invariant() const;
-};
-
-MyClass obj;
-check_invariant(obj);
+// Example usage
+try {
+    check_invariant(some_object);
+} catch (const std::exception& e) {
+    // Handle the exception
+    std::cerr << "Exception in invariant check: " << e.what() << std::endl;
+}
 ```
-- **Preconditions**: The `x` object must be valid and properly constructed.
-- **Postconditions**: The function ensures that the invariant of the `x` object is checked. If an exception occurs, it is caught and logged.
-- **Thread Safety**: This function is not inherently thread-safe as it relies on the thread safety of the `invariant_access::check_invariant()` method.
-- **Complexity**: O(1) - assumes the invariant check itself is O(1).
+- **Preconditions**: 
+  - The object must be in a valid state.
+  - The `invariant_access::check_invariant` function must be properly implemented for the type T.
+- **Postconditions**: 
+  - The object's invariants are checked.
+  - Any exceptions during invariant checking are caught and reported.
+- **Thread Safety**: 
+  - Not thread-safe unless the `invariant_access::check_invariant` function itself is thread-safe.
+- **Complexity**: O(1) - assumes the `invariant_access::check_invariant` function is O(1).
 - **See Also**: `invariant_checker_impl`, `make_invariant_checker`
 
-## Function: invariant_checker_impl (Constructor)
+## invariant_checker_impl (Constructor)
 
 - **Signature**: `explicit invariant_checker_impl(T const& self_)`
-- **Description**: Constructs an invariant checker object that immediately checks the invariant of the given object `self_`. The check is performed in the constructor, which means the invariant is validated as soon as the `invariant_checker_impl` object is created.
+- **Description**: Constructor for the `invariant_checker_impl` class that initializes the checker with a reference to the object to be checked. The constructor immediately calls `check_invariant(self)` to validate the object's invariants upon construction.
 - **Parameters**:
-  - `self_` (T const&): The object whose invariant should be checked. The object must remain valid for the lifetime of the `invariant_checker_impl` object.
-- **Return Value**:
-  - `void`: This constructor does not return any value as it is a constructor.
+  - `self_` (T const&): The object whose invariants should be checked. This reference must remain valid for the lifetime of the `invariant_checker_impl` instance.
+- **Return Value**: None. This is a constructor, not a function that returns a value.
 - **Exceptions/Errors**:
-  - This constructor may throw an exception if the `check_invariant()` method of the `T` type throws an exception.
+  - May throw exceptions if `check_invariant(self)` throws.
+  - This function does not handle exceptions itself - they will propagate to the caller.
 - **Example**:
 ```cpp
-// Assuming class MyClass has a check_invariant method
-class MyClass {
+// Example usage in a class
+class SomeClass {
 public:
-    void check_invariant() const;
+    void check_invariant() const {
+        // Implementation of invariant checking
+    }
 };
 
-MyClass obj;
-invariant_checker_impl<MyClass> checker(obj);
+void someFunction(SomeClass& obj) {
+    invariant_checker_impl<SomeClass> checker(obj);
+    // Object invariants are checked immediately
+}
 ```
-- **Preconditions**: The `self_` object must be valid and properly constructed.
-- **Postconditions**: The invariant of the `self_` object is checked upon construction.
-- **Thread Safety**: This constructor is not inherently thread-safe as it relies on the thread safety of the `check_invariant()` method.
-- **Complexity**: O(1) - assumes the invariant check itself is O(1).
-- **See Also**: `invariant_checker_impl` (move constructor), `invariant_checker_impl` (destructor)
+- **Preconditions**: 
+  - The object must be in a valid state.
+  - The object must have a `check_invariant()` method.
+- **Postconditions**: 
+  - The object's invariants are checked.
+  - The `invariant_checker_impl` instance is initialized and ready for use.
+- **Thread Safety**: 
+  - Not thread-safe unless the `check_invariant()` method itself is thread-safe.
+- **Complexity**: O(1) - assumes the `check_invariant()` method is O(1).
+- **See Also**: `invariant_checker_impl`, `make_invariant_checker`
 
-## Function: invariant_checker_impl (Move Constructor)
+## invariant_checker_impl (Move Constructor)
 
 - **Signature**: `invariant_checker_impl(invariant_checker_impl&& rhs)`
-- **Description**: Move constructor for `invariant_checker_impl`. This constructor transfers ownership of the invariant checker from the rvalue `rhs` to the new object. The `armed` flag of the `rhs` object is set to false to indicate that it is no longer armed.
+- **Description**: Move constructor for the `invariant_checker_impl` class that transfers ownership from a temporary instance to a new instance. This allows efficient transfer of the checker instance without copying the potentially expensive object reference.
 - **Parameters**:
-  - `rhs` (invariant_checker_impl&&): The rvalue object to move from.
-- **Return Value**:
-  - `void`: This constructor does not return any value as it is a constructor.
-- **Exceptions/Errors**:
-  - This constructor does not throw exceptions (noexcept).
+  - `rhs` (invariant_checker_impl&&): The source instance to move from. After the move, the source instance is in a valid but unspecified state.
+- **Return Value**: None. This is a constructor, not a function that returns a value.
+- **Exceptions/Errors**: 
+  - Should not throw exceptions (noexcept).
 - **Example**:
 ```cpp
-// Assuming class MyClass has a check_invariant method
-class MyClass {
-public:
-    void check_invariant() const;
-};
+// Example of moving an invariant checker
+invariant_checker_impl<SomeClass> createChecker() {
+    SomeClass obj;
+    return invariant_checker_impl<SomeClass>(obj);
+}
 
-MyClass obj;
-invariant_checker_impl<MyClass> checker1(obj);
-invariant_checker_impl<MyClass> checker2(std::move(checker1));
+void useChecker() {
+    auto checker = createChecker(); // Move constructor called
+    // Use checker
+}
 ```
-- **Preconditions**: The `rhs` object must be in a valid state.
-- **Postconditions**: The new `invariant_checker_impl` object has the same state as the `rhs` object, and the `rhs` object is left in a valid but unspecified state.
-- **Thread Safety**: This constructor is not inherently thread-safe as it relies on the thread safety of the underlying operations.
-- **Complexity**: O(1) - assumes the move operation is O(1).
-- **See Also**: `invariant_checker_impl` (constructor), `invariant_checker_impl` (destructor)
+- **Preconditions**: 
+  - The source instance must be in a valid state before the move.
+- **Postconditions**: 
+  - The new instance owns the object reference.
+  - The source instance is in a valid but unspecified state.
+- **Thread Safety**: 
+  - Not thread-safe unless the underlying object is thread-safe.
+- **Complexity**: O(1) - constant time operation.
+- **See Also**: `invariant_checker_impl`, `make_invariant_checker`
 
-## Function: invariant_checker_impl (Copy Constructor)
+## invariant_checker_impl (Copy Constructor)
 
-- **Signature**: `invariant_checker_impl(invariant_checker_impl const& rhs) = delete;`
-- **Description**: Deleted copy constructor for `invariant_checker_impl`. This function prevents copying of `invariant_checker_impl` objects, ensuring that each instance maintains a unique ownership of the invariant checker.
+- **Signature**: `invariant_checker_impl(invariant_checker_impl const& rhs) = delete`
+- **Description**: Deleted copy constructor for the `invariant_checker_impl` class. This prevents copying of invariant checker instances, which could lead to double invariant checking or other issues since the checker is designed to be moved rather than copied.
 - **Parameters**:
-  - `rhs` (invariant_checker_impl const&): The object to copy from.
-- **Return Value**:
-  - `void`: This constructor does not return any value as it is a constructor.
-- **Exceptions/Errors**:
-  - This function cannot be called as it is deleted.
-- **Example**:
+  - `rhs` (invariant_checker_impl const&): The source instance to copy from (this parameter is not used since the function is deleted).
+- **Return Value**: None. This is a constructor, not a function that returns a value.
+- **Exceptions/Errors**: 
+  - Attempting to copy an `invariant_checker_impl` instance will result in a compile-time error.
+- **Example**: 
 ```cpp
-// This code will not compile
-invariant_checker_impl<MyClass> checker1(obj);
-invariant_checker_impl<MyClass> checker2(checker1); // Error: copy constructor is deleted
+// This will cause a compile error:
+invariant_checker_impl<SomeClass> checker1;
+invariant_checker_impl<SomeClass> checker2 = checker1; // Compile error
 ```
-- **Preconditions**: This function cannot be called.
-- **Postconditions**: Not applicable as the function cannot be called.
-- **Thread Safety**: Not applicable as the function cannot be called.
-- **Complexity**: Not applicable as the function cannot be called.
-- **See Also**: `invariant_checker_impl` (constructor), `invariant_checker_impl` (move constructor)
+- **Preconditions**: 
+  - None - this function is not callable.
+- **Postconditions**: 
+  - None - this function is not callable.
+- **Thread Safety**: 
+  - Not applicable - this function is not callable.
+- **Complexity**: Not applicable.
+- **See Also**: `invariant_checker_impl`, `make_invariant_checker`
 
-## Function: invariant_checker_impl (Destructor)
+## invariant_checker_impl (Destructor)
 
 - **Signature**: `~invariant_checker_impl()`
-- **Description**: Destructor for `invariant_checker_impl`. If the checker is armed (i.e., `armed` is true), it checks the invariant of the object when the `invariant_checker_impl` object is destroyed. This ensures that the invariant is checked at the end of the object's lifetime.
-- **Parameters**:
-  - None.
-- **Return Value**:
-  - `void`: This function does not return any value as it is a destructor.
-- **Exceptions/Errors**:
-  - This function may throw an exception if the `check_invariant()` method of the `T` type throws an exception.
+- **Description**: Destructor for the `invariant_checker_impl` class that checks the object's invariants when the checker is destroyed. This provides a final invariant check to ensure the object's state hasn't been corrupted during its lifetime.
+- **Parameters**: None.
+- **Return Value**: None. This is a destructor, not a function that returns a value.
+- **Exceptions/Errors**: 
+  - May throw exceptions if `check_invariant(self)` throws.
+  - This function does not handle exceptions - they will propagate to the caller.
 - **Example**:
 ```cpp
-// Assuming class MyClass has a check_invariant method
-class MyClass {
-public:
-    void check_invariant() const;
-};
-
-MyClass obj;
-invariant_checker_impl<MyClass> checker(obj);
-// The invariant is checked when checker goes out of scope
+// Example of destructor usage
+{
+    SomeClass obj;
+    invariant_checker_impl<SomeClass> checker(obj);
+    // Object is checked at construction
+    // Object is checked again at destruction
+} // Destructor called here
 ```
-- **Preconditions**: The `invariant_checker_impl` object must be valid.
-- **Postconditions**: The invariant of the object is checked if the checker is armed, and the object is properly destroyed.
-- **Thread Safety**: This function is not inherently thread-safe as it relies on the thread safety of the `check_invariant()` method.
-- **Complexity**: O(1) - assumes the invariant check itself is O(1).
-- **See Also**: `invariant_checker_impl` (constructor), `invariant_checker_impl` (move constructor)
+- **Preconditions**: 
+  - The object must be in a valid state.
+- **Postconditions**: 
+  - The object's invariants are checked upon destruction.
+  - The destructor releases any resources held by the checker.
+- **Thread Safety**: 
+  - Not thread-safe unless the `check_invariant()` method itself is thread-safe.
+- **Complexity**: O(1) - assumes the `check_invariant()` method is O(1).
+- **See Also**: `invariant_checker_impl`, `make_invariant_checker`
 
-## Function: make_invariant_checker
+## make_invariant_checker
 
 - **Signature**: `invariant_checker_impl<T> make_invariant_checker(T const& x)`
-- **Description**: Creates and returns an `invariant_checker_impl<T>` object that checks the invariant of the given object `x`. This function is a convenience function that encapsulates the creation of an invariant checker.
+- **Description**: Factory function that creates an `invariant_checker_impl` instance for the given object. This function provides a convenient way to create invariant checkers without explicitly specifying the template parameter, as the template parameter can be deduced from the argument type.
 - **Parameters**:
-  - `x` (T const&): The object whose invariant should be checked. The object must remain valid for the lifetime of the returned `invariant_checker_impl` object.
-- **Return Value**:
-  - `invariant_checker_impl<T>`: An `invariant_checker_impl` object that checks the invariant of `x`.
-- **Exceptions/Errors**:
-  - This function may throw an exception if the `check_invariant()` method of the `T` type throws an exception.
+  - `x` (T const&): The object whose invariants should be checked. The object must be compatible with the `invariant_checker_impl` template.
+- **Return Value**: 
+  - Returns an `invariant_checker_impl<T>` instance that can be used to check the object's invariants.
+  - The returned instance owns the object reference and will check invariants on construction and destruction.
+- **Exceptions/Errors**: 
+  - May throw exceptions if `check_invariant(x)` throws during construction of the `invariant_checker_impl` instance.
+  - This function does not handle exceptions - they will propagate to the caller.
 - **Example**:
 ```cpp
-// Assuming class MyClass has a check_invariant method
-class MyClass {
-public:
-    void check_invariant() const;
-};
-
-MyClass obj;
+// Example usage
+SomeClass obj;
 auto checker = make_invariant_checker(obj);
-// The invariant is checked when checker goes out of scope
+// The checker will check invariants on construction and destruction
 ```
-- **Preconditions**: The `x` object must be valid and properly constructed.
-- **Postconditions**: The returned `invariant_checker_impl` object checks the invariant of `x` when it is destroyed.
-- **Thread Safety**: This function is not inherently thread-safe as it relies on the thread safety of the `check_invariant()` method.
-- **Complexity**: O(1) - assumes the invariant check itself is O(1).
+- **Preconditions**: 
+  - The object must be in a valid state.
+  - The object must be compatible with the `invariant_checker_impl` template.
+- **Postconditions**: 
+  - An `invariant_checker_impl<T>` instance is created and ready to check invariants.
+  - The object's invariants are checked immediately.
+- **Thread Safety**: 
+  - Not thread-safe unless the `check_invariant()` method itself is thread-safe.
+- **Complexity**: O(1) - assumes the `check_invariant()` method is O(1).
 - **See Also**: `invariant_checker_impl`, `check_invariant`
 
 # Usage Examples
@@ -193,24 +223,35 @@ auto checker = make_invariant_checker(obj);
 ## Basic Usage
 
 ```cpp
-#include <iostream>
 #include "libtorrent/aux_/invariant_check.hpp"
+#include <iostream>
 
-class MyClass {
+// Example class with invariants
+class ExampleClass {
 public:
     void check_invariant() const {
-        // Add invariant checks here
-        if (some_condition) {
-            throw std::runtime_error("Invariant violated");
-        }
+        // Check that the state is valid
+        assert(m_value >= 0 && "Value cannot be negative");
     }
+
+    int getValue() const { return m_value; }
+    void setValue(int value) { m_value = value; }
+
+private:
+    int m_value = 0;
 };
 
 int main() {
-    MyClass obj;
+    ExampleClass obj;
+    obj.setValue(42);
+
     // Create an invariant checker
     auto checker = make_invariant_checker(obj);
-    // The invariant is checked when checker goes out of scope
+    
+    // The invariant is checked on construction
+    std::cout << "Value: " << obj.getValue() << std::endl;
+    
+    // The invariant is checked again on destruction
     return 0;
 }
 ```
@@ -218,172 +259,20 @@ int main() {
 ## Error Handling
 
 ```cpp
+#include "libtorrent/aux_/invariant_check.hpp"
 #include <iostream>
 #include <stdexcept>
-#include "libtorrent/aux_/invariant_check.hpp"
 
-class MyClass {
+class ErrorProneClass {
 public:
     void check_invariant() const {
-        // Simulate an invariant violation
-        throw std::runtime_error("Invalid state");
-    }
-};
-
-int main() {
-    MyClass obj;
-    try {
-        auto checker = make_invariant_checker(obj);
-        // This will not execute if the invariant is violated
-        std::cout << "Invariant passed!" << std::endl;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Invariant check failed: " << e.what() << std::endl;
-    }
-    return 0;
-}
-```
-
-## Edge Cases
-
-```cpp
-#include <iostream>
-#include "libtorrent/aux_/invariant_check.hpp"
-
-class MyClass {
-public:
-    void check_invariant() const {
-        // Simulate a complex invariant check
-        if (some_condition) {
-            throw std::runtime_error("Invalid state");
+        if (m_state == ERROR_STATE) {
+            throw std::runtime_error("Invalid state in ErrorProneClass");
         }
     }
-};
 
-int main() {
-    MyClass obj;
-    // Check invariant immediately
-    check_invariant(obj);
-    
-    // Create a checker that will check invariant on destruction
-    {
-        auto checker = make_invariant_checker(obj);
-        // Do some operations
-    } // invariant checked here
-    
-    return 0;
-}
-```
+    void setState(int state) { m_state = state; }
 
-# Best Practices
-
-1. **Use invariant checking judiciously**: Invariant checking can add overhead, so use it only where necessary.
-2. **Ensure proper exception handling**: Make sure that your invariant checking functions handle exceptions properly to avoid program crashes.
-3. **Keep invariant checks simple**: Complex invariant checks can be difficult to maintain and debug.
-4. **Use move semantics**: When possible, use move semantics to avoid unnecessary copying.
-5. **Consider performance implications**: Invariant checking can impact performance, so consider the trade-offs.
-
-# Code Review & Improvement Suggestions
-
-## Function: check_invariant (Static Version)
-
-**Issue**: The function name is misleading as it's not a typical function but a static method template. The name suggests it's a regular function.
-**Severity**: Low
-**Impact**: Can cause confusion for developers unfamiliar with the pattern.
-**Fix**: Consider renaming to `check_invariant_static` or use a different naming convention that reflects its template nature.
-
-## Function: check_invariant (Non-static Version)
-
-**Issue**: The function is incomplete; the code snippet is truncated and the error handling is not fully implemented.
-**Severity**: High
-**Impact**: Incomplete code will not compile or behave correctly.
-**Fix**: Complete the function implementation:
-```cpp
-void check_invariant(T const& x)
-{
-#ifndef BOOST_NO_EXCEPTIONS
-    try
-    {
-        invariant_access::check_invariant(x);
-    }
-    catch (std::exception const& err)
-    {
-        std::fprintf(stderr, "invariant_check failed with exception: %s\n", err.what());
-    }
-    catch (...)
-    {
-        std::fprintf(stderr, "invariant_check failed with unknown exception\n");
-    }
-#endif
-}
-```
-
-## Function: invariant_checker_impl (Constructor)
-
-**Issue**: The function name is misleading as it's a constructor, not a regular function.
-**Severity**: Low
-**Impact**: Can cause confusion for developers.
-**Fix**: Consider renaming to `invariant_checker_impl` and document it as a constructor.
-
-## Function: invariant_checker_impl (Move Constructor)
-
-**Issue**: The function name is misleading as it's a constructor, not a regular function.
-**Severity**: Low
-**Impact**: Can cause confusion for developers.
-**Fix**: Consider renaming to `invariant_checker_impl` and document it as a constructor.
-
-## Function: invariant_checker_impl (Copy Constructor)
-
-**Issue**: The function is deleted, but the name suggests it's a regular function.
-**Severity**: Low
-**Impact**: Can cause confusion for developers.
-**Fix**: Consider renaming to `invariant_checker_impl` and document it as a constructor.
-
-## Function: invariant_checker_impl (Destructor)
-
-**Issue**: The function name is misleading as it's a destructor, not a regular function.
-**Severity**: Low
-**Impact**: Can cause confusion for developers.
-**Fix**: Consider renaming to `~invariant_checker_impl` and document it as a destructor.
-
-## Function: make_invariant_checker
-
-**Issue**: The function name is misleading as it's a factory function, not a regular function.
-**Severity**: Low
-**Impact**: Can cause confusion for developers.
-**Fix**: Consider renaming to `create_invariant_checker` or use a different naming convention that reflects its purpose.
-
-# Modernization Opportunities
-
-1. **Use [[nodiscard]]**: Add `[[nodiscard]]` to functions that return important values:
-```cpp
-[[nodiscard]] invariant_checker_impl<T> make_invariant_checker(T const& x);
-```
-
-2. **Use std::span**: Replace raw arrays or pointers with `std::span` for safer and more expressive code.
-
-3. **Use constexpr**: If possible, make invariant checking functions `constexpr` to allow compile-time evaluation.
-
-4. **Use concepts (C++20)**: Add template constraints to ensure that only types with the required `check_invariant()` method can be used.
-
-5. **Use std::expected (C++23)**: Replace error handling with `std::expected` if the language standard allows it.
-
-# Refactoring Suggestions
-
-1. **Split into smaller functions**: The current functions are already well-organized, but the `check_invariant` function could be split into separate functions for static and non-static versions.
-
-2. **Combine similar functions**: The `invariant_checker_impl` constructor and move constructor could be combined into a single constructor if possible.
-
-3. **Make into class methods**: The `check_invariant` functions could be made into class methods of a `InvariantChecker` class.
-
-4. **Move to utility namespace**: The functions could be moved to a `libtorrent::util` namespace to better organize the code.
-
-# Performance Optimizations
-
-1. **Use move semantics**: The move constructor is already using move semantics, which is good.
-
-2. **Return by value for RVO**: The `make_invariant_checker` function already returns by value, which allows for Return Value Optimization.
-
-3. **Use string_view for read-only strings**: Not applicable in this context.
-
-4. **Add noexcept where applicable**: Add `noexcept` to functions that do not throw exceptions, such as the move constructor and destructor.
+private:
+    int m_state = 0;
+    static constexpr int

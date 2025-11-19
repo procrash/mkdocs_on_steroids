@@ -1,0 +1,801 @@
+{
+  "name": "RAG - Server Side Splitting",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload_data_raw",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -448,
+        -16
+      ],
+      "id": "36d7a564-a176-4260-a27f-daf2224ce564",
+      "name": "Webhook - Python Upload",
+      "webhookId": "python-upload-webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and prepare data from webhook payload\nconst body = $input.first().json.body;\n\nif (!body || !body.content) {\n  throw new Error('Invalid payload: content field required');\n}\n\nconst fileName = body.file_name || 'unknown';\nconst filePath = body.file_path || '';\nconst fileType = body.file_type || '';\nconst content = body.content;\nconst metadata = body.metadata || {};\n\n// Extract chunk config from metadata\nconst chunkSize = metadata.chunk_size || 1000;\nconst chunkOverlap = metadata.chunk_overlap || 200;\n\nreturn [{\n  json: {\n    content: content,\n    file_name: fileName,\n    file_path: filePath,\n    file_type: fileType,\n    chunk_size: chunkSize,\n    chunk_overlap: chunkOverlap,\n    metadata: {\n      ...metadata,\n      source: filePath\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -16
+      ],
+      "id": "fd8485b4-1963-49b4-ad76-7196c90cca8c",
+      "name": "Extract Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".md",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "1bb13639-3f63-4058-b35c-e9587aef1286"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "markdown"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".cpp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4fb05539-6ba5-4207-a8ed-837b60197cec"
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".cc",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "550ce621-281a-424a-8b09-a1ab7d0d6ff6"
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".cxx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "249b9649-fe50-47ee-a4fe-90c329cfffbf"
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".h",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c1d0af79-f332-4b74-a7a3-6acfc1d2d7b6"
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".hpp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "49fb3392-108d-4f56-be70-fe385771b96f"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "cpp"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".py",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5a0a5d48-856f-4883-8087-290ddf512d75"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "python"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".js",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "bd297715-0af7-4f44-954f-f4039af0c4ab"
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".jsx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8e121ca0-d5c3-44ec-8f9a-a7071a195d26"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "javascript"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".html",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3c7501c2-72f2-4b9c-b640-590bbb06cb38"
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".htm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "79bd206b-7824-4ef8-8962-10ff192877e8"
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "html"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -48,
+        -16
+      ],
+      "id": "d25c4e21-683e-421a-91f4-7836b7fb5425",
+      "name": "Switch by File Type"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        -1408
+      ],
+      "id": "17ec2447-c313-40d7-9d57-8f9f74376896",
+      "name": "Qdrant - Markdown",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        768,
+        -912
+      ],
+      "id": "e95792a1-bf94-401b-a1f0-e4d0be130d92",
+      "name": "Qdrant - C++",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        -400
+      ],
+      "id": "5fefd1d9-a84d-455d-9a83-554840ff0eaf",
+      "name": "Qdrant - Python",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        784,
+        176
+      ],
+      "id": "807393d8-3a64-464e-93b2-7c74bb8f1554",
+      "name": "Qdrant - JavaScript",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        720
+      ],
+      "id": "35a82373-f533-40fb-9c94-f221213ace9b",
+      "name": "Qdrant - HTML",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        1296
+      ],
+      "id": "7815d4f2-33d4-4db2-b964-91a75e7fcb42",
+      "name": "Qdrant - Default",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-qwen3-embedding-8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1744,
+        -272
+      ],
+      "id": "2e033b44-a407-4e3a-9b39-ac7122cae9c1",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "N5P6IkTRdnLNsMoB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        -1232
+      ],
+      "id": "0a8f94f7-0bb3-4cbc-8953-53496d3a2c6d",
+      "name": "Data Loader - Markdown"
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        -752
+      ],
+      "id": "c138c041-ef58-4a49-93c7-36b64310556b",
+      "name": "Data Loader - C++"
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        -208
+      ],
+      "id": "7513ca22-31a9-428e-a291-c76ead09d375",
+      "name": "Data Loader - Python"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        1472
+      ],
+      "id": "eaf5517f-9a26-452c-9c57-b22f421acf79",
+      "name": "Data Loader - Default"
+    },
+    {
+      "parameters": {
+        "options": {
+          "splitCode": "cpp"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -608
+      ],
+      "id": "06593c34-cf0e-4f71-8308-5901ad6ec5e1",
+      "name": "Recursive Character Text Splitter Cpp"
+    },
+    {
+      "parameters": {
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        912,
+        -1088
+      ],
+      "id": "4636d916-c106-4f22-b3c7-4fc292d9f905",
+      "name": "Recursive Character Text Splitter MD"
+    },
+    {
+      "parameters": {
+        "options": {
+          "splitCode": "python"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -48
+      ],
+      "id": "76fe1092-0e36-4a30-911a-b37495ad098b",
+      "name": "Recursive Character Text Splitter Python"
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        368
+      ],
+      "id": "8414ac80-d8ad-4318-9d51-160174ea84c8",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "options": {
+          "splitCode": "js"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        896,
+        512
+      ],
+      "id": "43c0a607-4a22-4c32-9dd9-13d98626ed9c",
+      "name": "Recursive Character Text Splitter JS"
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        896
+      ],
+      "id": "848bea0c-94a4-4e44-9a47-74644584a527",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "options": {
+          "splitCode": "html"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        880,
+        1056
+      ],
+      "id": "e8ab21c1-54cc-4e20-93f0-12b2b8ff9752",
+      "name": "Recursive Character Text Splitter HTML"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Python Upload": {
+      "main": [
+        [
+          {
+            "node": "Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [
+          {
+            "node": "Switch by File Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by File Type": {
+      "main": [
+        [
+          {
+            "node": "Qdrant - Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - C++",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - Python",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - HTML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - Default",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant - Markdown",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - C++",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - Python",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - JavaScript",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - HTML",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - Default",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - Markdown": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - Markdown",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - C++": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - C++",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - Python": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - Python",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - Default": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - Default",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter Cpp": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - C++",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter MD": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - Markdown",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter Python": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - Python",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - JavaScript",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter JS": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - HTML",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter HTML": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f030205b-9996-48f6-949f-2768dc4d0122",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5e78f8d5f9118d329fc0ba3aaf79a26f5e910c2fef84de7504ef6e85cf99f04a"
+  },
+  "id": "1QrD9kMQDwWOQypP",
+  "tags": []
+}

@@ -1,149 +1,167 @@
-# libtorrent Range Utilities API Documentation
+```markdown
+# libtorrent::aux::range API Documentation
 
-## Function: begin
+## Overview
 
-- **Signature**: `Iter begin()`
-- **Description**: Returns an iterator pointing to the beginning of the range. This is a simple accessor function that returns the internal `_begin` iterator stored by the range object.
+The `libtorrent::aux::range` namespace provides utility functions for creating iterator ranges from various data structures. These functions are primarily used to create `iterator_range` objects that represent a contiguous sequence of elements, similar to a slice of a container. The functions are designed to work with iterators, vectors, and other container types.
+
+## Function Reference
+
+### begin
+
+- **Signature**: `auto begin()`
+- **Description**: Returns an iterator pointing to the beginning of the range. This function is typically used as part of a range object to provide the starting point of a sequence.
 - **Parameters**: None
-- **Return Value**: Returns the internal `_begin` iterator. The return type is determined by the template parameter `Iter` of the range class.
-- **Exceptions/Errors**: No exceptions thrown.
+- **Return Value**: An iterator pointing to the beginning of the range. The exact type depends on the range implementation.
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-// Assuming a range object named 'r'
-auto it = r.begin();
-// Use the iterator to traverse the range
+auto range = libtorrent::aux::range(begin_iter, end_iter);
+auto it = range.begin();
+// Use it to iterate over the range
 ```
-- **Preconditions**: The range object must be valid and properly constructed.
+- **Preconditions**: The range object must be valid and initialized.
 - **Postconditions**: Returns a valid iterator pointing to the first element of the range.
 - **Thread Safety**: Thread-safe if the range object is not modified concurrently.
-- **Complexity**: O(1)
+- **Complexity**: O(1) time, O(1) space
 - **See Also**: `end()`, `range()`
 
-## Function: end
+### end
 
-- **Signature**: `Iter end()`
-- **Description**: Returns an iterator pointing to the end of the range. This is a simple accessor function that returns the internal `_end` iterator stored by the range object.
+- **Signature**: `auto end()`
+- **Description**: Returns an iterator pointing to the end of the range. This function is typically used as part of a range object to provide the ending point of a sequence.
 - **Parameters**: None
-- **Return Value**: Returns the internal `_end` iterator. The return type is determined by the template parameter `Iter` of the range class.
-- **Exceptions/Errors**: No exceptions thrown.
+- **Return Value**: An iterator pointing to the end of the range. The exact type depends on the range implementation.
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-// Assuming a range object named 'r'
-auto it = r.end();
-// Use the iterator to check the end of the range
+auto range = libtorrent::aux::range(begin_iter, end_iter);
+auto it = range.end();
+// Use it to check if iteration has completed
 ```
-- **Preconditions**: The range object must be valid and properly constructed.
+- **Preconditions**: The range object must be valid and initialized.
 - **Postconditions**: Returns a valid iterator pointing to one past the last element of the range.
 - **Thread Safety**: Thread-safe if the range object is not modified concurrently.
-- **Complexity**: O(1)
+- **Complexity**: O(1) time, O(1) space
 - **See Also**: `begin()`, `range()`
 
-## Function: range (overloaded version 1)
+### range (Iterator Version)
 
 - **Signature**: `iterator_range<Iter> range(Iter begin, Iter end)`
-- **Description**: Creates an `iterator_range` object from two iterators representing the beginning and end of a range. This function is designed to work with any iterator type that supports the standard iterator interface.
+- **Description**: Creates an iterator range from two iterators. This function is useful when you have iterators to the beginning and end of a sequence and want to create a range object that can be used with algorithms.
 - **Parameters**:
-  - `begin` (Iter): Iterator pointing to the first element of the range
-  - `end` (Iter): Iterator pointing to one past the last element of the range
-- **Return Value**: Returns an `iterator_range<Iter>` object that encapsulates the range from `begin` to `end`.
-- **Exceptions/Errors**: No exceptions thrown.
+  - `begin` (Iter): Iterator pointing to the first element of the range. Must be valid and dereferenceable.
+  - `end` (Iter): Iterator pointing one past the last element of the range. Must be reachable from `begin`.
+- **Return Value**: An `iterator_range` object representing the range from `begin` to `end`.
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 std::vector<int> vec = {1, 2, 3, 4, 5};
-auto range = range(vec.begin(), vec.end());
-// Use the range object to iterate over the vector
+auto range = libtorrent::aux::range(vec.begin(), vec.end());
+for (int val : range) {
+    std::cout << val << " ";
+}
 ```
-- **Preconditions**: The `begin` iterator must be valid and the `end` iterator must be reachable from `begin` through increment operations.
-- **Postconditions**: Returns a valid `iterator_range` object that represents the range from `begin` to `end`.
-- **Thread Safety**: Thread-safe as long as the iterators are not modified concurrently.
-- **Complexity**: O(1)
-- **See Also**: `begin()`, `end()`, `range` (overloaded version 2)
+- **Preconditions**: The iterators must form a valid range (i.e., `begin` must be reachable from `end`).
+- **Postconditions**: Returns a valid `iterator_range` object.
+- **Thread Safety**: Thread-safe if the iterators are not modified concurrently.
+- **Complexity**: O(1) time, O(1) space
+- **See Also**: `range()` (vector version), `begin()`, `end()`
 
-## Function: range (overloaded version 2)
+### range (Vector Version - Non-const)
 
 - **Signature**: `iterator_range<T*> range(vector<T, IndexType>& vec, IndexType begin, IndexType end)`
-- **Description**: Creates an `iterator_range` object from a vector and two index values. This function converts the index values to the appropriate pointer type and creates a range from the vector's data starting at the `begin` index and ending at the `end` index.
+- **Description**: Creates an iterator range from a vector and two indices. This function is useful when you want to create a range from a specific portion of a vector using index-based access.
 - **Parameters**:
-  - `vec` (vector<T, IndexType>&): Reference to the vector from which the range is created
-  - `begin` (IndexType): Starting index of the range (inclusive)
-  - `end` (IndexType): Ending index of the range (exclusive)
-- **Return Value**: Returns an `iterator_range<T*>` object that represents the range from `vec.data() + begin` to `vec.data() + end`.
-- **Exceptions/Errors**: No exceptions thrown. However, if `begin` or `end` are outside the bounds of the vector, undefined behavior may occur.
+  - `vec` (vector<T, IndexType>&): Reference to the vector from which to create the range.
+  - `begin` (IndexType): Starting index of the range. Must be ≥ 0 and < `vec.size()`.
+  - `end` (IndexType): Ending index of the range. Must be ≥ `begin` and ≤ `vec.size()`.
+- **Return Value**: An `iterator_range<T*>` object representing the range from `vec[begin]` to `vec[end]`.
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 std::vector<int> vec = {1, 2, 3, 4, 5};
-auto range = range(vec, 1, 4);
-// Use the range object to iterate over elements 1, 2, and 3
+auto range = libtorrent::aux::range(vec, 1, 4);
+for (int val : range) {
+    std::cout << val << " ";
+}
+// Output: 2 3 4
 ```
-- **Preconditions**: The vector must be valid and the indices must be within bounds of the vector.
-- **Postconditions**: Returns a valid `iterator_range` object that represents the specified range of the vector.
+- **Preconditions**: The vector must be valid and the indices must be within bounds.
+- **Postconditions**: Returns a valid `iterator_range` object.
 - **Thread Safety**: Thread-safe if the vector is not modified concurrently.
-- **Complexity**: O(1)
-- **See Also**: `begin()`, `end()`, `range` (overloaded version 3)
+- **Complexity**: O(1) time, O(1) space
+- **See Also**: `range()` (const vector version), `range()` (iterator version)
 
-## Function: range (overloaded version 3)
+### range (Vector Version - Const)
 
 - **Signature**: `iterator_range<T const*> range(vector<T, IndexType> const& vec, IndexType begin, IndexType end)`
-- **Description**: Creates an `iterator_range` object from a constant vector and two index values. This function is similar to the non-const version but works with constant vectors and returns a range of constant pointers.
+- **Description**: Creates a const iterator range from a vector and two indices. This function is useful when you want to create a read-only range from a specific portion of a vector.
 - **Parameters**:
-  - `vec` (vector<T, IndexType> const&): Constant reference to the vector from which the range is created
-  - `begin` (IndexType): Starting index of the range (inclusive)
-  - `end` (IndexType): Ending index of the range (exclusive)
-- **Return Value**: Returns an `iterator_range<T const*>` object that represents the range from `vec.data() + begin` to `vec.data() + end`.
-- **Exceptions/Errors**: No exceptions thrown. However, if `begin` or `end` are outside the bounds of the vector, undefined behavior may occur.
+  - `vec` (vector<T, IndexType> const&): Const reference to the vector from which to create the range.
+  - `begin` (IndexType): Starting index of the range. Must be ≥ 0 and < `vec.size()`.
+  - `end` (IndexType): Ending index of the range. Must be ≥ `begin` and ≤ `vec.size()`.
+- **Return Value**: An `iterator_range<T const*>` object representing the range from `vec[begin]` to `vec[end]`.
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 const std::vector<int> vec = {1, 2, 3, 4, 5};
-auto range = range(vec, 1, 4);
-// Use the range object to iterate over elements 1, 2, and 3
+auto range = libtorrent::aux::range(vec, 1, 4);
+for (int val : range) {
+    std::cout << val << " ";
+}
+// Output: 2 3 4
 ```
-- **Preconditions**: The vector must be valid and the indices must be within bounds of the vector.
-- **Postconditions**: Returns a valid `iterator_range` object that represents the specified range of the vector.
-- **Thread Safety**: Thread-safe as long as the vector is not modified concurrently.
-- **Complexity**: O(1)
-- **See Also**: `begin()`, `end()`, `range` (overloaded version 2)
+- **Preconditions**: The vector must be valid and the indices must be within bounds.
+- **Postconditions**: Returns a valid `iterator_range` object.
+- **Thread Safety**: Thread-safe if the vector is not modified concurrently.
+- **Complexity**: O(1) time, O(1) space
+- **See Also**: `range()` (non-const vector version), `range()` (iterator version)
 
-# Usage Examples
+## Usage Examples
 
-## Basic Usage
+### Basic Usage
 
 ```cpp
-#include <vector>
 #include <libtorrent/aux_/range.hpp>
+#include <vector>
+#include <iostream>
 
 int main() {
+    // Create a vector of integers
     std::vector<int> vec = {1, 2, 3, 4, 5};
     
-    // Create range using vector indices
-    auto r1 = range(vec, 1, 4);
+    // Create a range from indices 1 to 4 (exclusive)
+    auto range = libtorrent::aux::range(vec, 1, 4);
     
-    // Create range using iterators
-    auto r2 = range(vec.begin(), vec.end());
-    
-    // Use begin/end with the range
-    for (auto it = r1.begin(); it != r1.end(); ++it) {
-        // Process elements
+    // Iterate through the range
+    for (int val : range) {
+        std::cout << val << " ";
     }
+    // Output: 2 3 4
     
     return 0;
 }
 ```
 
-## Error Handling
+### Error Handling
 
 ```cpp
-#include <vector>
 #include <libtorrent/aux_/range.hpp>
+#include <vector>
 #include <iostream>
 
 int main() {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     
     // Check bounds before creating range
-    if (begin_index >= 0 && end_index <= vec.size()) {
-        auto r = range(vec, begin_index, end_index);
-        for (auto it = r.begin(); it != r.end(); ++it) {
-            std::cout << *it << " ";
+    size_t begin_idx = 1;
+    size_t end_idx = 4;
+    
+    if (begin_idx <= end_idx && end_idx <= vec.size()) {
+        auto range = libtorrent::aux::range(vec, begin_idx, end_idx);
+        for (int val : range) {
+            std::cout << val << " ";
         }
     } else {
         std::cerr << "Invalid range indices" << std::endl;
@@ -153,150 +171,119 @@ int main() {
 }
 ```
 
-## Edge Cases
+### Edge Cases
 
 ```cpp
-#include <vector>
 #include <libtorrent/aux_/range.hpp>
+#include <vector>
+#include <iostream>
 
 int main() {
     std::vector<int> vec = {1, 2, 3, 4, 5};
     
-    // Empty range
-    auto r1 = range(vec, 2, 2);  // begin == end
+    // Empty range (begin equals end)
+    auto empty_range = libtorrent::aux::range(vec, 2, 2);
+    std::cout << "Empty range size: " << std::distance(empty_range.begin(), empty_range.end()) << std::endl;
     
-    // Range with single element
-    auto r2 = range(vec, 2, 3);  // single element at index 2
+    // Range starting at end of vector
+    auto end_range = libtorrent::aux::range(vec, 5, 5);
+    std::cout << "End range size: " << std::distance(end_range.begin(), end_range.end()) << std::endl;
     
-    // Range that goes to the end
-    auto r3 = range(vec, 2, vec.size());  // from index 2 to end
-    
-    // Range that starts at beginning
-    auto r4 = range(vec, 0, 3);  // from beginning to index 3
+    // Range covering the entire vector
+    auto full_range = libtorrent::aux::range(vec, 0, vec.size());
+    std::cout << "Full range: ";
+    for (int val : full_range) {
+        std::cout << val << " ";
+    }
+    std::cout << std::endl;
     
     return 0;
 }
 ```
 
-# Best Practices
+## Best Practices
 
-## Effective Usage
+1. **Always validate indices**: Before calling the vector range functions, ensure that the indices are within valid bounds to prevent undefined behavior.
 
-1. **Use the most appropriate function**: Use the vector-based `range` function when working with vectors and indices, and use the iterator-based function when you have iterators already.
+2. **Use const versions when possible**: If you don't need to modify the vector, use the `const` version of the function to avoid accidental modifications.
 
-2. **Bounds checking**: Always ensure that the indices provided are within the bounds of the vector to avoid undefined behavior.
+3. **Prefer iterator ranges over indices**: When working with iterators, use the iterator version of the function as it's more flexible and works with any container that supports iterators.
 
-3. **Const correctness**: Use the const version of the function when working with const vectors to ensure proper const-correctness.
+4. **Avoid creating ranges from invalid vectors**: Ensure that the vector is valid and not empty when creating ranges from indices.
 
-## Common Mistakes to Avoid
+5. **Use range-based for loops**: When iterating over ranges, use range-based for loops for cleaner and more readable code.
 
-1. **Accessing out-of-bounds indices**: Never create ranges with indices that are outside the bounds of the vector.
+6. **Consider the performance implications**: The range functions are O(1) time complexity, making them efficient for creating ranges.
 
-2. **Incorrect range semantics**: Remember that the `end` parameter is exclusive, so `range(vec, 0, 3)` gives you elements at indices 0, 1, and 2, not 0, 1, and 3.
+## Code Review & Improvement Suggestions
 
-3. **Ignoring return value**: Always check the return value when using these functions, especially when dealing with potentially invalid ranges.
+### Potential Issues
 
-## Performance Tips
+**Function**: `range` (vector version - non-const and const)
+**Issue**: No bounds checking on indices
+**Severity**: Medium
+**Impact**: Could lead to undefined behavior if indices are out of bounds, potentially causing crashes or data corruption.
+**Fix**: Add bounds checking to the functions:
 
-1. **Avoid unnecessary range creation**: Only create ranges when you need to pass a range to a function or when you want to iterate over a subset of a container.
+```cpp
+// Before
+template<typename T, typename IndexType>
+iterator_range<T*> range(vector<T, IndexType>& vec, IndexType begin, IndexType end) {
+    using type = typename underlying_index_t<IndexType>::type;
+    return {vec.data() + static_cast<type>(begin), vec.data() + static_cast<type>(end)};
+}
 
-2. **Use the vector-based version when possible**: The vector-based version is often more intuitive and less error-prone than manually calculating pointers.
+// After - with bounds checking
+template<typename T, typename IndexType>
+iterator_range<T*> range(vector<T, IndexType>& vec, IndexType begin, IndexType end) {
+    using type = typename underlying_index_t<IndexType>::type;
+    
+    // Validate indices
+    if (begin < 0 || begin > end || end > static_cast<IndexType>(vec.size())) {
+        throw std::out_of_range("Invalid range indices");
+    }
+    
+    return {vec.data() + static_cast<type>(begin), vec.data() + static_cast<type>(end)};
+}
+```
 
-3. **Consider the overhead**: While these functions are O(1), they do create temporary objects. For performance-critical code, consider if you can avoid creating ranges altogether.
+### Modernization Opportunities
 
-# Code Review & Improvement Suggestions
+**Function**: All `range` functions
+**Issue**: Missing modern C++ features
+**Severity**: Medium
+**Impact**: Could miss opportunities for improved safety and expressiveness
+**Fix**: Add `[[nodiscard]]` and use `std::span` where possible:
 
-## Function: begin
+```cpp
+// Add [[nodiscard]] to indicate the return value should not be ignored
+[[nodiscard]] iterator_range<T*> range(vector<T, IndexType>& vec, IndexType begin, IndexType end);
 
-- **Potential Issues**:
-  - **Security**: No input validation needed as it's a simple accessor
-  - **Performance**: No unnecessary allocations
-  - **Correctness**: No edge case handling needed
-  - **Code Quality**: Clear and concise
+// Consider using std::span in future versions
+[[nodiscard]] std::span<T> range(vector<T, IndexType>& vec, IndexType begin, IndexType end) {
+    return {vec.data() + begin, static_cast<size_t>(end - begin)};
+}
+```
 
-- **Modernization Opportunities**:
-  - Add `[[nodiscard]]` to indicate that the return value is important
-  - Add `constexpr` if this function is called in contexts where compile-time evaluation would be beneficial
+### Refactoring Suggestions
 
-- **Refactoring Suggestions**:
-  - No refactoring needed as this is a simple accessor function
+**Function**: `range` (iterator version)
+**Issue**: Could be combined with vector versions
+**Severity**: Low
+**Impact**: Slight code duplication
+**Fix**: Consider creating a more general template that works with any container that has `data()` and `size()` methods:
 
-- **Performance Optimizations**:
-  - Add `noexcept` to indicate that this function doesn't throw exceptions
+```cpp
+template<typename Container>
+iterator_range<typename Container::value_type*> range(Container& container, size_t begin, size_t end) {
+    return {container.data() + begin, container.data() + end};
+}
+```
 
-## Function: end
+### Performance Optimizations
 
-- **Potential Issues**:
-  - **Security**: No input validation needed as it's a simple accessor
-  - **Performance**: No unnecessary allocations
-  - **Correctness**: No edge case handling needed
-  - **Code Quality**: Clear and concise
-
-- **Modernization Opportunities**:
-  - Add `[[nodiscard]]` to indicate that the return value is important
-  - Add `constexpr` if this function is called in contexts where compile-time evaluation would be beneficial
-
-- **Refactoring Suggestions**:
-  - No refactoring needed as this is a simple accessor function
-
-- **Performance Optimizations**:
-  - Add `noexcept` to indicate that this function doesn't throw exceptions
-
-## Function: range (overloaded version 1)
-
-- **Potential Issues**:
-  - **Security**: No bounds checking on the iterators, could lead to undefined behavior
-  - **Performance**: No unnecessary allocations
-  - **Correctness**: No edge case handling for invalid iterators
-  - **Code Quality**: Clear naming but could be more explicit about the return type
-
-- **Modernization Opportunities**:
-  - Add `[[nodiscard]]` to indicate that the return value is important
-  - Add `constexpr` if this function is called in contexts where compile-time evaluation would be beneficial
-  - Consider using `std::span` instead of `iterator_range` if available
-
-- **Refactoring Suggestions**:
-  - Consider combining with the vector-based versions to reduce duplication
-
-- **Performance Optimizations**:
-  - Add `noexcept` to indicate that this function doesn't throw exceptions
-
-## Function: range (overloaded version 2)
-
-- **Potential Issues**:
-  - **Security**: No bounds checking on indices, could lead to undefined behavior
-  - **Performance**: No unnecessary allocations
-  - **Correctness**: No edge case handling for invalid indices
-  - **Code Quality**: Good naming but could be more explicit about the return type
-
-- **Modernization Opportunities**:
-  - Add `[[nodiscard]]` to indicate that the return value is important
-  - Add `constexpr` if this function is called in contexts where compile-time evaluation would be beneficial
-  - Consider using `std::span` instead of `iterator_range` if available
-
-- **Refactoring Suggestions**:
-  - Consider combining with the const version to reduce duplication
-  - Add static_assert to ensure IndexType can be safely cast to the underlying index type
-
-- **Performance Optimizations**:
-  - Add `noexcept` to indicate that this function doesn't throw exceptions
-
-## Function: range (overloaded version 3)
-
-- **Potential Issues**:
-  - **Security**: No bounds checking on indices, could lead to undefined behavior
-  - **Performance**: No unnecessary allocations
-  - **Correctness**: No edge case handling for invalid indices
-  - **Code Quality**: Good naming but could be more explicit about the return type
-
-- **Modernization Opportunities**:
-  - Add `[[nodiscard]]` to indicate that the return value is important
-  - Add `constexpr` if this function is called in contexts where compile-time evaluation would be beneficial
-  - Consider using `std::span` instead of `iterator_range` if available
-
-- **Refactoring Suggestions**:
-  - Consider combining with the non-const version to reduce duplication
-  - Add static_assert to ensure IndexType can be safely cast to the underlying index type
-
-- **Performance Optimizations**:
-  - Add `noexcept` to indicate that this function doesn't throw exceptions
+**Function**: `range` (vector versions)
+**Issue**: Potential for overflow in index conversion
+**Severity**: Low
+**Impact**: Could cause incorrect results on 64-bit systems with large indices
+**Fix**:

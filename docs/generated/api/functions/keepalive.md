@@ -1,270 +1,248 @@
-# API Documentation for TCP Keepalive Configuration
+# API Documentation for TCP Keepalive Configuration Functions
 
-## Overview
-This documentation describes the TCP keepalive configuration functions in the libtorrent library. These functions provide a consistent interface for setting TCP keepalive parameters (idle time and interval) through a generic socket option interface.
+## tcp_keepalive_idle
 
-## Function Reference
-
-### tcp_keepalive_idle
-
-- **Signature**: `auto tcp_keepalive_idle(int seconds)`
-- **Description**: Constructs a TCP keepalive idle time configuration object. This parameter determines the time (in seconds) that a connection can remain idle before TCP sends keepalive probes. This is used to maintain connections that might otherwise be closed by network devices.
+- **Signature**: `explicit tcp_keepalive_idle(int seconds)`
+- **Description**: Constructor for a TCP keepalive idle configuration object that sets the time interval in seconds after which the first keepalive probe is sent.
 - **Parameters**:
-  - `seconds` (int): The number of seconds after which TCP will start sending keepalive probes. Valid values are typically positive integers, with common defaults being 7200 seconds (2 hours). The actual behavior may vary depending on the operating system.
+  - `seconds` (int): The number of seconds to wait before sending the first keepalive probe. Valid values are positive integers. A value of 0 means no keepalive is sent.
 - **Return Value**:
-  - Returns a `tcp_keepalive_idle` object that can be used with socket configuration interfaces. The return value itself is not directly used by applications.
+  - None (constructor)
 - **Exceptions/Errors**:
-  - No exceptions are thrown. The constructor validates the input parameter and will throw if the value is invalid (though the code shows no explicit validation).
+  - None
 - **Example**:
 ```cpp
-auto keepalive = tcp_keepalive_idle(7200); // Set idle time to 2 hours
-// Use the keepalive object with socket configuration
+auto keepalive = tcp_keepalive_idle(60); // Send first keepalive after 60 seconds
 ```
-- **Preconditions**: None specific to the function itself.
-- **Postconditions**: A valid `tcp_keepalive_idle` object is returned.
-- **Thread Safety**: The function is thread-safe as it only constructs an object.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `tcp_keepalive_interval`, `setsockopt`
+- **Preconditions**: None
+- **Postconditions**: The keepalive configuration object is initialized with the specified idle time.
+- **Thread Safety**: Thread-safe (constructor is called once)
+- **Complexity**: O(1)
+- **See Also**: `tcp_keepalive_interval`, `tcp_keepalive_count`
 
-### level
+## level
 
-- **Signature**: `auto level(Protocol const&) const`
-- **Description**: Returns the protocol level for the TCP keepalive option. This method is part of the generic socket option interface and returns the appropriate protocol level for the TCP keepalive setting.
+- **Signature**: `int level(Protocol const&) const`
+- **Description**: Returns the protocol level for the TCP keepalive option, which is IPPROTO_TCP.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to. This parameter is typically used to select between different protocol levels.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns `IPPROTO_TCP` (an integer constant) which is the protocol level for TCP sockets.
+  - Returns IPPROTO_TCP (an integer constant representing the TCP protocol level).
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto protocol_level = level(protocol);
-// Use protocol_level to configure socket options
+int protocol_level = level(Protocol{}); // Returns IPPROTO_TCP
 ```
-- **Preconditions**: The protocol object must be valid.
-- **Postconditions**: The function returns the correct protocol level for TCP.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: None
+- **Postconditions**: The function returns the correct protocol level for TCP keepalive.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `name`, `data`, `size`
 
-### name
+## name
 
-- **Signature**: `auto name(Protocol const&) const`
-- **Description**: Returns the socket option name for the TCP keepalive parameter. This method is part of the generic socket option interface and returns the appropriate option name for the TCP keepalive setting.
+- **Signature**: `int name(Protocol const&) const`
+- **Description**: Returns the socket option name for the TCP keepalive idle setting.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns `TCP_KEEPIDLE` (an integer constant) which is the option name for the TCP keepalive idle time setting.
+  - Returns TCP_KEEPIDLE (an integer constant representing the socket option name).
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto option_name = name(protocol);
-// Use option_name to configure socket options
+int option_name = name(Protocol{}); // Returns TCP_KEEPIDLE
 ```
-- **Preconditions**: The protocol object must be valid.
-- **Postconditions**: The function returns the correct option name for TCP keepalive idle time.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: None
+- **Postconditions**: The function returns the correct socket option name.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `level`, `data`, `size`
 
-### data
+## data
 
-- **Signature**: `auto data(Protocol const&) const`
-- **Description**: Returns a pointer to the data buffer containing the TCP keepalive idle time value. This method is part of the generic socket option interface and returns a pointer to the internal data representation.
+- **Signature**: `char const* data(Protocol const&) const`
+- **Description**: Returns a pointer to the data buffer containing the keepalive idle value.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns a pointer to the internal data representation of the keepalive idle time value. This is typically a pointer to the integer value stored in the object.
+  - Returns a pointer to the internal data buffer containing the keepalive idle value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto data_ptr = data(protocol);
-// Use data_ptr with setsockopt or similar functions
+char const* buffer = data(Protocol{}); // Returns pointer to internal data
 ```
-- **Preconditions**: The protocol object must be valid.
-- **Postconditions**: The function returns a valid pointer to the data.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: None
+- **Postconditions**: The function returns a valid pointer to the data buffer.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `level`, `name`, `size`
 
-### size
+## size
 
-- **Signature**: `auto size(Protocol const&) const`
-- **Description**: Returns the size of the data buffer for the TCP keepalive idle time parameter. This method is part of the generic socket option interface and returns the size of the data representation.
+- **Signature**: `size_t size(Protocol const&) const`
+- **Description**: Returns the size of the data buffer for the keepalive idle setting.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns the size of the data buffer in bytes, which is typically `sizeof(int)` for integer values.
+  - Returns the size of the integer value storing the keepalive idle time in bytes.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto data_size = size(protocol);
-// Use data_size to configure socket options
+size_t buffer_size = size(Protocol{}); // Returns sizeof(int)
 ```
-- **Preconditions**: The protocol object must be valid.
+- **Preconditions**: None
 - **Postconditions**: The function returns the correct size of the data buffer.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `level`, `name`, `data`
 
-### tcp_keepalive_interval
+## tcp_keepalive_interval
 
-- **Signature**: `auto tcp_keepalive_interval(int seconds)`
-- **Description**: Constructs a TCP keepalive interval configuration object. This parameter determines the interval (in seconds) between successive TCP keepalive probes. This is used to maintain connections that might otherwise be closed by network devices.
+- **Signature**: `explicit tcp_keepalive_interval(int seconds)`
+- **Description**: Constructor for a TCP keepalive interval configuration object that sets the time interval in seconds between successive keepalive probes.
 - **Parameters**:
-  - `seconds` (int): The number of seconds between successive keepalive probes. Valid values are typically positive integers, with common defaults being 75 seconds. The actual behavior may vary depending on the operating system.
+  - `seconds` (int): The number of seconds to wait between keepalive probes. Valid values are positive integers. A value of 0 means no keepalive is sent.
 - **Return Value**:
-  - Returns a `tcp_keepalive_interval` object that can be used with socket configuration interfaces. The return value itself is not directly used by applications.
+  - None (constructor)
 - **Exceptions/Errors**:
-  - No exceptions are thrown. The constructor validates the input parameter and will throw if the value is invalid (though the code shows no explicit validation).
+  - None
 - **Example**:
 ```cpp
-auto keepalive_interval = tcp_keepalive_interval(75); // Set interval to 75 seconds
-// Use the keepalive_interval object with socket configuration
+auto keepalive = tcp_keepalive_interval(30); // Send keepalive every 30 seconds
 ```
-- **Preconditions**: None specific to the function itself.
-- **Postconditions**: A valid `tcp_keepalive_interval` object is returned.
-- **Thread Safety**: The function is thread-safe as it only constructs an object.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `tcp_keepalive_idle`, `setsockopt`
+- **Preconditions**: None
+- **Postconditions**: The keepalive configuration object is initialized with the specified interval time.
+- **Thread Safety**: Thread-safe (constructor is called once)
+- **Complexity**: O(1)
+- **See Also**: `tcp_keepalive_idle`, `tcp_keepalive_count`
 
-### level
+## level
 
-- **Signature**: `auto level(Protocol const&) const`
-- **Description**: Returns the protocol level for the TCP keepalive interval option. This method is part of the generic socket option interface and returns the appropriate protocol level for the TCP keepalive interval setting.
+- **Signature**: `int level(Protocol const&) const`
+- **Description**: Returns the protocol level for the TCP keepalive option, which is IPPROTO_TCP.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to. This parameter is typically used to select between different protocol levels.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns `IPPROTO_TCP` (an integer constant) which is the protocol level for TCP sockets.
+  - Returns IPPROTO_TCP (an integer constant representing the TCP protocol level).
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto protocol_level = level(protocol);
-// Use protocol_level to configure socket options
+int protocol_level = level(Protocol{}); // Returns IPPROTO_TCP
 ```
-- **Preconditions**: The protocol object must be valid.
-- **Postconditions**: The function returns the correct protocol level for TCP.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: None
+- **Postconditions**: The function returns the correct protocol level for TCP keepalive.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `name`, `data`, `size`
 
-### name
+## name
 
-- **Signature**: `auto name(Protocol const&) const`
-- **Description**: Returns the socket option name for the TCP keepalive interval parameter. This method is part of the generic socket option interface and returns the appropriate option name for the TCP keepalive interval setting.
+- **Signature**: `int name(Protocol const&) const`
+- **Description**: Returns the socket option name for the TCP keepalive interval setting.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns `TCP_KEEPINTVL` (an integer constant) which is the option name for the TCP keepalive interval setting.
+  - Returns TCP_KEEPINTVL (an integer constant representing the socket option name).
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto option_name = name(protocol);
-// Use option_name to configure socket options
+int option_name = name(Protocol{}); // Returns TCP_KEEPINTVL
 ```
-- **Preconditions**: The protocol object must be valid.
-- **Postconditions**: The function returns the correct option name for TCP keepalive interval.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: None
+- **Postconditions**: The function returns the correct socket option name.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `level`, `data`, `size`
 
-### data
+## data
 
-- **Signature**: `auto data(Protocol const&) const`
-- **Description**: Returns a pointer to the data buffer containing the TCP keepalive interval value. This method is part of the generic socket option interface and returns a pointer to the internal data representation.
+- **Signature**: `char const* data(Protocol const&) const`
+- **Description**: Returns a pointer to the data buffer containing the keepalive interval value.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns a pointer to the internal data representation of the keepalive interval value. This is typically a pointer to the integer value stored in the object.
+  - Returns a pointer to the internal data buffer containing the keepalive interval value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto data_ptr = data(protocol);
-// Use data_ptr with setsockopt or similar functions
+char const* buffer = data(Protocol{}); // Returns pointer to internal data
 ```
-- **Preconditions**: The protocol object must be valid.
-- **Postconditions**: The function returns a valid pointer to the data.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Preconditions**: None
+- **Postconditions**: The function returns a valid pointer to the data buffer.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `level`, `name`, `size`
 
-### size
+## size
 
-- **Signature**: `auto size(Protocol const&) const`
-- **Description**: Returns the size of the data buffer for the TCP keepalive interval parameter. This method is part of the generic socket option interface and returns the size of the data representation.
+- **Signature**: `size_t size(Protocol const&) const`
+- **Description**: Returns the size of the data buffer for the keepalive interval setting.
 - **Parameters**:
-  - `Protocol` (const&): A protocol object that identifies which protocol this option applies to.
+  - `Protocol` (const&): The protocol type (not used in the function body).
 - **Return Value**:
-  - Returns the size of the data buffer in bytes, which is typically `sizeof(int)` for integer values.
+  - Returns the size of the integer value storing the keepalive interval time in bytes.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - None
 - **Example**:
 ```cpp
-auto data_size = size(protocol);
-// Use data_size to configure socket options
+size_t buffer_size = size(Protocol{}); // Returns sizeof(int)
 ```
-- **Preconditions**: The protocol object must be valid.
+- **Preconditions**: None
 - **Postconditions**: The function returns the correct size of the data buffer.
-- **Thread Safety**: The function is thread-safe.
-- **Complexity**: O(1) time and space complexity.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1)
 - **See Also**: `level`, `name`, `data`
 
-## Usage Examples
+# Usage Examples
 
-### Basic Usage
+## Basic Usage
 
 ```cpp
-#include <libtorrent/aux_/keepalive.hpp>
-#include <iostream>
+#include "libtorrent/aux_/keepalive.hpp"
 
 int main() {
-    // Configure TCP keepalive parameters
-    auto idle_time = tcp_keepalive_idle(7200); // 2 hours
-    auto interval = tcp_keepalive_interval(75); // 75 seconds
+    // Configure TCP keepalive settings
+    auto idle_config = tcp_keepalive_idle(60);   // Send first probe after 60 seconds
+    auto interval_config = tcp_keepalive_interval(30); // Send probes every 30 seconds
     
-    // Use these configurations with socket settings
-    // The actual socket configuration would depend on the system's socket API
-    std::cout << "TCP keepalive configured with idle time of "
-              << 7200 << " seconds and interval of " << 75 << " seconds." << std::endl;
+    // Use the configuration with socket options
+    // (Note: In a real implementation, these would be passed to setsockopt)
     
     return 0;
 }
 ```
 
-### Error Handling
+## Error Handling
 
 ```cpp
-#include <libtorrent/aux_/keepalive.hpp>
+#include "libtorrent/aux_/keepalive.hpp"
 #include <iostream>
-#include <stdexcept>
 
 int main() {
     try {
-        // Attempt to configure TCP keepalive with a valid value
-        auto idle_time = tcp_keepalive_idle(7200);
-        auto interval = tcp_keepalive_interval(75);
+        // Create keepalive configurations
+        auto idle_config = tcp_keepalive_idle(60);
+        auto interval_config = tcp_keepalive_interval(30);
         
-        // If the constructor throws, it would be due to an invalid parameter
-        // However, in the current implementation, there's no explicit validation
-        // so we need to ensure the values are reasonable
-        if (idle_time.data(nullptr) == nullptr) {
-            throw std::runtime_error("Failed to configure TCP keepalive idle time");
+        // Validate the configurations (in a real system, you'd check socket operations)
+        if (idle_config.size(Protocol{}) == 0 || interval_config.size(Protocol{}) == 0) {
+            std::cerr << "Failed to create keepalive configurations" << std::endl;
+            return 1;
         }
         
-        if (interval.data(nullptr) == nullptr) {
-            throw std::runtime_error("Failed to configure TCP keepalive interval");
-        }
-        
-        std::cout << "TCP keepalive configuration successful." << std::endl;
+        // Use the configurations
+        std::cout << "Keepalive idle: " << idle_config.data(Protocol{}) << std::endl;
+        std::cout << "Keepalive interval: " << interval_config.data(Protocol{}) << std::endl;
         
     } catch (const std::exception& e) {
-        std::cerr << "Error configuring TCP keepalive: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
     
@@ -272,130 +250,48 @@ int main() {
 }
 ```
 
-### Edge Cases
+## Edge Cases
 
 ```cpp
-#include <libtorrent/aux_/keepalive.hpp>
+#include "libtorrent/aux_/keepalive.hpp"
 #include <iostream>
 
 int main() {
-    // Test edge cases for TCP keepalive configuration
-    
-    // Zero value - may be valid on some systems but could be treated as "off"
+    // Edge case: zero value
     auto zero_idle = tcp_keepalive_idle(0);
     auto zero_interval = tcp_keepalive_interval(0);
     
-    // Negative value - likely invalid
-    // Note: The constructor doesn't validate negative values
-    // This could lead to undefined behavior
+    std::cout << "Zero idle config size: " << zero_idle.size(Protocol{}) << std::endl;
+    std::cout << "Zero interval config size: " << zero_interval.size(Protocol{}) << std::endl;
+    
+    // Edge case: negative value (though the constructor doesn't validate)
+    // Note: In practice, you should validate input parameters
     auto negative_idle = tcp_keepalive_idle(-1);
     auto negative_interval = tcp_keepalive_interval(-1);
     
-    // Very large values - may exceed system limits
-    auto large_idle = tcp_keepalive_idle(3600000); // 1000 hours
-    auto large_interval = tcp_keepalive_interval(3600000); // 1000 hours
-    
-    std::cout << "Edge case testing completed." << std::endl;
-    std::cout << "Zero idle time: " << (zero_idle.data(nullptr) != nullptr ? "Success" : "Failed") << std::endl;
-    std::cout << "Zero interval: " << (zero_interval.data(nullptr) != nullptr ? "Success" : "Failed") << std::endl;
-    std::cout << "Negative idle time: " << (negative_idle.data(nullptr) != nullptr ? "Success" : "Failed") << std::endl;
-    std::cout << "Negative interval: " << (negative_interval.data(nullptr) != nullptr ? "Success" : "Failed") << std::endl;
-    std::cout << "Large idle time: " << (large_idle.data(nullptr) != nullptr ? "Success" : "Failed") << std::endl;
-    std::cout << "Large interval: " << (large_interval.data(nullptr) != nullptr ? "Success" : "Failed") << std::endl;
+    std::cout << "Negative idle config size: " << negative_idle.size(Protocol{}) << std::endl;
+    std::cout << "Negative interval config size: " << negative_interval.size(Protocol{}) << std::endl;
     
     return 0;
 }
 ```
 
-## Best Practices
+# Best Practices
 
-### Effective Usage
+## How to Use These Functions Effectively
 
-1. **Use reasonable values**: Typically, TCP keepalive idle times are set to 2-4 hours, and intervals are set to 75-300 seconds.
+1. **Set appropriate values**: Choose keepalive intervals that balance network efficiency and connection reliability.
+2. **Use consistent configuration**: Apply the same keepalive settings across similar connections for predictable behavior.
+3. **Consider network conditions**: Adjust keepalive settings based on network latency and reliability.
+4. **Monitor connection health**: Use keepalive settings to detect and handle disconnected connections.
 
-2. **Consider platform differences**: Different operating systems may have different default values and behavior for TCP keepalive.
+## Common Mistakes to Avoid
 
-3. **Configure both parameters together**: Set both idle time and interval to ensure proper connection maintenance.
+1. **Using overly aggressive keepalive intervals**: This can cause unnecessary network traffic and performance degradation.
+2. **Using overly long intervals**: This can result in delayed detection of disconnected connections.
+3. **Not validating input parameters**: The constructor doesn't validate the input, so ensure the values are appropriate.
+4. **Ignoring return values**: These functions are constructors and don't return values to check, but the configuration objects should be used correctly.
 
-4. **Use with socket configuration**: These objects are meant to be used with socket configuration functions, not directly in application logic.
+## Performance Tips
 
-### Common Mistakes to Avoid
-
-1. **Using invalid values**: Avoid negative values or extremely large values that may cause undefined behavior.
-
-2. **Not checking return values**: While these functions don't return values that need checking, ensure the constructed objects are valid.
-
-3. **Ignoring platform differences**: Be aware that TCP keepalive behavior can vary significantly between different operating systems.
-
-4. **Setting too aggressive values**: Very short keepalive intervals can cause excessive network traffic.
-
-### Performance Tips
-
-1. **Use appropriate values**: Choose values that balance connection reliability with network efficiency.
-
-2. **Avoid frequent reconfiguration**: Reconfiguring TCP keepalive parameters frequently can impact performance.
-
-3. **Consider system defaults**: Understand what the system defaults are before changing them.
-
-## Code Review & Improvement Suggestions
-
-### Potential Issues
-
-**Function**: `tcp_keepalive_idle`
-**Issue**: No input validation for the seconds parameter
-**Severity**: Medium
-**Impact**: Passing negative values could lead to undefined behavior or incorrect socket configuration
-**Fix**: Add validation for negative values and throw an exception or use a default value:
-```cpp
-explicit tcp_keepalive_idle(int seconds) : m_value(seconds) {
-    if (seconds < 0) {
-        throw std::invalid_argument("Keepalive idle time cannot be negative");
-    }
-}
-```
-
-**Function**: `tcp_keepalive_interval`
-**Issue**: No input validation for the seconds parameter
-**Severity**: Medium
-**Impact**: Passing negative values could lead to undefined behavior or incorrect socket configuration
-**Fix**: Add validation for negative values and throw an exception or use a default value:
-```cpp
-explicit tcp_keepalive_interval(int seconds) : m_value(seconds) {
-    if (seconds < 0) {
-        throw std::invalid_argument("Keepalive interval cannot be negative");
-    }
-}
-```
-
-### Modernization Opportunities
-
-**Function**: All functions
-**Opportunity**: Use `[[nodiscard]]` to indicate that the return values should not be ignored
-**Benefit**: Prevents accidental ignoring of important configuration objects
-**Example**:
-```cpp
-[[nodiscard]] explicit tcp_keepalive_idle(int seconds) : m_value(seconds) {}
-[[nodiscard]] explicit tcp_keepalive_interval(int seconds) : m_value(seconds) {}
-```
-
-**Function**: All functions
-**Opportunity**: Use `std::optional` for configuration functions that might fail
-**Benefit**: Provides a clear way to indicate failure to configure
-**Example**:
-```cpp
-[[nodiscard]] std::optional<tcp_keepalive_idle> create_tcp_keepalive_idle(int seconds) {
-    if (seconds < 0) {
-        return std::nullopt;
-    }
-    return tcp_keepalive_idle(seconds);
-}
-```
-
-### Refactoring Suggestions
-
-**Function**: All functions
-**Suggestion**: Group related functions into a class or namespace
-**Benefit**: Better organization and discoverability
-**Example**:
-```cpp
-namespace libtorrent {
+1. **Reuse configuration objects**: Create configuration objects

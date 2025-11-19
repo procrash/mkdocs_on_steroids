@@ -1,0 +1,278 @@
+{
+  "name": "RAG - Server Side Splitting",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload_data_raw",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1400, 300],
+      "id": "webhook-python-upload",
+      "name": "Webhook - Python Upload",
+      "webhookId": "python-upload-webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Route to appropriate text splitter based on file type\nconst body = $input.first().json.body;\n\nif (!body || !body.content) {\n  throw new Error('Invalid payload: content field required');\n}\n\nconst fileName = body.file_name || 'unknown';\nconst filePath = body.file_path || '';\nconst fileType = body.file_type || '';\nconst content = body.content;\nconst metadata = body.metadata || {};\n\n// Extract chunk config from metadata\nconst chunkSize = metadata.chunk_size || 1000;\nconst chunkOverlap = metadata.chunk_overlap || 200;\n\n// Determine the splitter type based on file extension\nlet splitterType = 'default';\n\n// Markdown files\nif (['.md', '.markdown'].includes(fileType)) {\n  splitterType = 'markdown';\n}\n// Code files - use language-specific splitting\nelse if (['.cpp', '.cc', '.cxx', '.h', '.hpp', '.c'].includes(fileType)) {\n  splitterType = 'cpp';\n}\nelse if (['.py'].includes(fileType)) {\n  splitterType = 'python';\n}\nelse if (['.js', '.jsx'].includes(fileType)) {\n  splitterType = 'js';\n}\nelse if (['.ts', '.tsx'].includes(fileType)) {\n  splitterType = 'typescript';\n}\nelse if (['.java'].includes(fileType)) {\n  splitterType = 'java';\n}\nelse if (['.go'].includes(fileType)) {\n  splitterType = 'go';\n}\nelse if (['.rs'].includes(fileType)) {\n  splitterType = 'rust';\n}\nelse if (['.rb'].includes(fileType)) {\n  splitterType = 'ruby';\n}\nelse if (['.php'].includes(fileType)) {\n  splitterType = 'php';\n}\nelse if (['.html', '.htm'].includes(fileType)) {\n  splitterType = 'html';\n}\nelse if (['.sol'].includes(fileType)) {\n  splitterType = 'solidity';\n}\n\nreturn [{\n  json: {\n    content: content,\n    file_name: fileName,\n    file_path: filePath,\n    file_type: fileType,\n    splitter_type: splitterType,\n    chunk_size: chunkSize,\n    chunk_overlap: chunkOverlap,\n    metadata: metadata\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1180, 300],
+      "id": "route-by-filetype",
+      "name": "Route by File Type"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-600, 300],
+      "id": "qdrant-python-upload",
+      "name": "Qdrant - Python Upload",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-qwen3-embedding-8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [-400, 500],
+      "id": "embeddings-openai",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "N5P6IkTRdnLNsMoB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "json",
+        "jsonProperty": "content",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [-800, 100],
+      "id": "data-loader-json",
+      "name": "Data Loader - JSON"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 260],
+      "id": "splitter-default",
+      "name": "Splitter - Default"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 380],
+      "id": "splitter-markdown",
+      "name": "Splitter - Markdown"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "cpp"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 500],
+      "id": "splitter-cpp",
+      "name": "Splitter - C++"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "python"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 620],
+      "id": "splitter-python",
+      "name": "Splitter - Python"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "js"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 740],
+      "id": "splitter-js",
+      "name": "Splitter - JavaScript"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "html"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 860],
+      "id": "splitter-html",
+      "name": "Splitter - HTML"
+    }
+  ],
+  "connections": {
+    "Webhook - Python Upload": {
+      "main": [
+        [
+          {
+            "node": "Route by File Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by File Type": {
+      "main": [
+        [
+          {
+            "node": "Qdrant - Python Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant - Python Upload",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - JSON": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - Python Upload",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - Default": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - JSON",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - Markdown": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - JSON",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - C++": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - JSON",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - Python": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - JSON",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - JavaScript": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - JSON",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - HTML": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - JSON",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

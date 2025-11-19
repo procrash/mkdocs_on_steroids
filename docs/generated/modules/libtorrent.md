@@ -2,351 +2,206 @@
 
 ## 1. Overview
 
-The `libtorrent` module provides a comprehensive C++ library for implementing BitTorrent protocol clients and trackers. It enables applications to download, upload, and manage torrent files while handling complex networking operations such as peer discovery, piece selection, encryption, and bandwidth management. This module solves the challenge of building robust P2P file sharing functionality without requiring developers to implement low-level network protocols from scratch.
-
-The library is designed for integration into larger applications that need BitTorrent capabilities, providing a high-performance foundation for torrent clients. It fits centrally in the system architecture as the core networking component responsible for actual data transfer and peer communication, serving as the backbone for any application requiring P2P file sharing functionality.
+The `libtorrent` module provides a comprehensive C++ library for implementing BitTorrent protocol functionality. It enables applications to download, upload, and manage torrent files and magnet links, supporting both peer-to-peer file sharing and streaming capabilities. The module solves the need for a robust, cross-platform BitTorrent implementation that can be integrated into various applications, from media players to file sharing utilities. Within the overall system, `libtorrent` serves as the core networking component responsible for handling torrent operations, connecting to peers, managing file transfers, and reporting progress and errors. It offers bindings for multiple programming languages including C and Python, making it accessible to a wide range of developers and applications. The module handles complex networking tasks such as peer discovery, encryption, bandwidth management, and protocol negotiation, abstracting these details from client applications.
 
 ## 2. Main Classes and Responsibilities
 
-```mermaid
-classDiagram
-    class Session {
-        +start() void
-        +add_torrent() TorrentHandle
-        +pause() void
-        +resume() void
-        +get_peer_info() List~PeerInfo~
-        +set_settings() void
-    }
-    
-    class TorrentHandle {
-        +status() TorrentStatus
-        +pause() void
-        +resume() void
-        +add_tracker() void
-        +remove() void
-        +get_info_hash() InfoHash
-    }
-    
-    class AlertManager {
-        +wait_for_alert() Alert*
-        +pop_alerts() List~Alert~
-        +clear() void
-    }
-    
-    class PeerConnection {
-        +connect() bool
-        +send_message() void
-        +receive_message() Message
-        +is_connected() bool
-        +get_peer_id() PeerID
-    }
-    
-    class BitTorrentProtocol {
-        +handshake() Handshake
-        +parse_message() Message
-        +create_message() Message
-        +encrypt_message() EncryptedMessage
-    }
-    
-    Session --> TorrentHandle : manages
-    Session --> AlertManager : uses
-    TorrentHandle --> PeerConnection : creates
-    PeerConnection --> BitTorrentProtocol : uses
-```
-
 ### Session
-- **Brief Description**: Manages the overall torrent client state and coordinates multiple torrents.
-- **Primary Responsibilities**: 
-  - Maintains global settings and network configuration
-  - Handles peer connections and tracker communication
-  - Manages alerts and notifications
-  - Coordinates resource allocation across all active torrents
-- **Key Methods**: `start()`, `add_torrent()`, `pause()`, `resume()`, `get_peer_info()`, `set_settings()`
-- **Relationships**: 
-  - Composes `TorrentHandle` instances
-  - Uses `AlertManager` for event notification
-  - Interacts with network components
+- **Description**: Manages the overall torrent session, coordinating all torrent operations and network activity
+- **Responsibilities**: 
+  - Creates and manages torrent handles
+  - Manages network connections and port configuration
+  - Handles peer connections and communication
+  - Processes alerts and events
+- **Key Methods**: `add_torrent()`, `pause()`, `resume()`, `stop()`, `get_torrents()`, `alert_queue()`
+- **Relationships**: Composes `torrent` objects, uses `peer_connection` and `network_interface`, receives alerts from all components
 
-### TorrentHandle
-- **Brief Description**: Represents a single torrent being downloaded or uploaded.
-- **Primary Responsibilities**:
-  - Tracks download/upload progress and status
-  - Manages piece selection and file operations
-  - Handles peer connections specific to this torrent
-  - Reports statistics to the session
-- **Key Methods**: `status()`, `pause()`, `resume()`, `add_tracker()`, `remove()`, `get_info_hash()`
-- **Relationships**:
-  - Created by `Session`
-  - Manages `PeerConnection` instances
-  - Communicates with `BitTorrentProtocol`
+### Torrent
+- **Description**: Represents a single torrent download or upload, managing file operations and peer communication
+- **Responsibilities**: 
+  - Tracks download/upload progress for all files in the torrent
+  - Manages piece selection and peer connections
+  - Handles file I/O operations
+  - Reports status and progress
+- **Key Methods**: `status()`, `resume()`, `pause()`, `set_priority()`, `add_peer()`, `get_peer_info()`
+- **Relationships**: Composed by `Session`, uses `file_storage`, `piece_picker`, and `peer_connection` components
 
-### AlertManager
-- **Brief Description**: Centralized system for handling asynchronous events and notifications.
-- **Primary Responsibilities**:
-  - Collects and queues alerts from various subsystems
-  - Provides a unified interface for event processing
-  - Manages alert lifecycle and memory management
-- **Key Methods**: `wait_for_alert()`, `pop_alerts()`, `clear()`
-- **Relationships**:
-  - Used by all major components to report events
-  - Integrates with the main application loop
+### Alert
+- **Description**: Represents notifications of events within the torrent system
+- **Responsibilities**: 
+  - Provides information about system events (connections, errors, progress)
+  - Contains metadata about the event (type, timestamp, source)
+  - Acts as a communication mechanism between components
+- **Key Methods**: `type()`, `message()`, `torrent()`, `category()`, `timestamp()`
+- **Relationships**: Generated by all components, collected by `Session`, processed by application code
 
 ### PeerConnection
-- **Brief Description**: Manages individual peer connections for data transfer.
-- **Primary Responsibilities**:
-  - Establishes and maintains TCP/UDP connections
-  - Handles message exchange with peers
-  - Implements connection security features
-  - Tracks connection quality and performance
-- **Key Methods**: `connect()`, `send_message()`, `receive_message()`, `is_connected()`, `get_peer_id()`
-- **Relationships**:
-  - Created by `TorrentHandle`
-  - Uses `BitTorrentProtocol` for message formatting
+- **Description**: Manages individual peer connections and protocol communication
+- **Responsibilities**: 
+  - Establishes and maintains TCP connections to peers
+  - Implements BitTorrent protocol extensions
+  - Handles encryption and protocol negotiation
+  - Manages piece requests and responses
+- **Key Methods**: `connect()`, `send_message()`, `receive_message()`, `close()`, `get_peer_info()`
+- **Relationships**: Created by `Session`, used by `Torrent`, communicates with `NetworkInterface`
 
-### BitTorrentProtocol
-- **Brief Description**: Implements the core BitTorrent protocol specifications.
-- **Primary Responsibilities**:
-  - Handles handshake and protocol negotiation
-  - Formats and parses messages according to BitTorrent standards
-  - Manages encryption and obfuscation techniques
-  - Ensures compatibility with various clients
-- **Key Methods**: `handshake()`, `parse_message()`, `create_message()`, `encrypt_message()`
-- **Relationships**:
-  - Used by `PeerConnection` for message processing
+### CreateTorrent
+- **Description**: Generates new torrent files from directory structures
+- **Responsibilities**: 
+  - Analyzes directory structure and file metadata
+  - Creates torrent metadata with piece hashes
+  - Generates torrent file format
+  - Supports various torrent formats (v1, v2)
+- **Key Methods**: `add_files()`, `set_comment()`, `set_tracker()`, `generate()`, `add_url_seed()`
+- **Relationships**: Uses `file_storage`, `piece_picker`, and `sha1_hasher` components
 
 ## 3. Module Interactions
 
 ```mermaid
 graph TD
-    A[Application] -->|Uses| B[libtorrent]
-    B --> C[Network Stack]
-    B --> D[File System]
-    B --> E[Configuration Manager]
-    F[Tracker Service] -->|Communicates with| B
-    G[Peer Network] -->|Connects to| B
-    H[User Interface] -->|Displays Status| B
+    A[libtorrent] --> B[Network Interface]
+    A --> C[File System]
+    A --> D[User Interface]
+    B --> E[Internet]
+    C --> F[Hard Drive]
+    D --> G[User]
     
-    classDef module fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef external fill:#ccf,stroke:#666,stroke-width:1.5px;
+    A --> H[Bindings]
+    H --> I[Python]
+    H --> J[C]
+    H --> K[Other Languages]
     
-    class A,B,C,D,E,F,G,H module
+    subgraph libtorrent Components
+        A --> M[Session]
+        A --> N[Torrent]
+        A --> O[Alert]
+        A --> P[PeerConnection]
+        A --> Q[CreateTorrent]
+    end
 ```
 
-### Dependencies
+The `libtorrent` module depends on the following external components:
+- **Network Interface**: For establishing and managing network connections
+- **File System**: For reading and writing torrent files and downloaded content
+- **Crypto Library**: For implementing encryption protocols
+- **Thread Library**: For managing concurrent operations
+- **Configuration System**: For handling user settings and preferences
 
-**External Dependencies**:
-- Network Stack (for TCP/UDP communication)
-- File System (for torrent file storage and piece management)
-- Configuration Manager (for settings persistence)
-- Tracker Service (for peer discovery)
-- Peer Network (for actual data transfer)
+Modules that depend on `libtorrent` include:
+- **Media Player**: Uses libtorrent for streaming content from torrents
+- **File Manager**: Integrates torrent functionality for file sharing
+- **Download Manager**: Leverages libtorrent for peer-to-peer downloads
+- **System Monitor**: Uses alerts to track system performance and status
 
-**Internal Dependencies**:
-- `libtorrent` depends on its own internal components as shown in the class diagram
-- The module exposes a C API through `bindings/c/libtorrent.h` for external consumption
+Key interfaces exposed by this module:
+- **C API**: Provides C-compatible functions for external applications
+- **Python Bindings**: Enables Python integration
+- **Alert System**: Provides event notifications to applications
+- **Torrent Handle**: Allows application control over individual torrents
 
-### Key Interfaces Exposed
-
-1. **C API Interface**: 
-   - `libtorrent.h` provides functions like `lt_session_create()`, `lt_torrent_add()`, and `lt_alert_wait_for()`
-   - Allows integration with non-C++ applications
-   - Provides thread-safe operations for multi-threaded environments
-
-2. **Python Bindings**:
-   - Exposes high-level interfaces through the Python module
-   - Enables rapid development and prototyping
-   - Supports asynchronous event handling via callbacks
-
-3. **Alert System**:
-   - Standardized notification system for all events (download complete, peer connected, etc.)
-   - Allows applications to respond to various states without polling
-
-### Data Flow
-
-```mermaid
-sequenceDiagram
-    participant App as Application
-    participant Lib as libtorrent
-    participant Network as Network Stack
-    
-    App->>Lib: Create session
-    Lib-->>App: Session handle
-    App->>Lib: Add torrent (magnet URI)
-    Lib->>Network: Send tracker request
-    Network-->>Lib: Tracker response with peers
-    Lib->>Lib: Establish connections with peers
-    Lib->>Network: Send requests for pieces
-    Network-->>Lib: Receive data chunks
-    Lib->>App: Alert (piece downloaded)
-    App->>Lib: Request piece download
-    Lib->>Lib: Select optimal peer
-    Lib->>Network: Download request
-```
+Data flows as follows:
+1. **Outbound**: Configuration data flows from application → libtorrent
+2. **Inbound**: Network data flows from internet → libtorrent → application
+3. **Feedback**: Alerts and status updates flow from libtorrent → application
+4. **Storage**: File data flows from libtorrent → file system
 
 ## 4. Typical Usage Scenarios
 
-### Scenario 1: Basic Torrent Download
-```cpp
-#include "libtorrent.h"
+### Scenario 1: Creating and Starting a Torrent Download
 
-int main() {
-    // Create session with default settings
-    lt_session* session = lt_session_create();
-    
-    // Add torrent using magnet URI
-    lt_torrent_handle* handle = lt_add_magnet_uri(session, 
-        "magnet:?xt=urn:btih:1234567890abcdef...");
-    
-    // Start download process
-    lt_start_download(handle);
-    
-    // Wait for completion with periodic status checks
-    while (!lt_is_complete(handle)) {
-        lt_alert* alert = lt_wait_for_alert(session, 1000); // 1 second timeout
-        if (alert) {
-            printf("Alert: %s\n", lt_alert_message(alert));
-            lt_clear_alert(alert);
-        }
-    }
-    
-    // Clean up resources
-    lt_session_destroy(session);
-    return 0;
-}
-```
-
-### Scenario 2: Advanced Configuration with Custom Settings
+Applications use `libtorrent` to download files from torrents or magnet links. This is common in media players and file managers that need to access content from peer networks.
 
 ```python
 import libtorrent as lt
 
-# Create session with custom settings
-settings = {
-    'listen_port': 6881,
-    'upload_rate_limit': 500,  # KB/s
-    'download_rate_limit': 1000,
-    'max_connections': 200,
-    'enable_dht': True,
-    'enable_lsd': False
-}
+# Create a session
+ses = lt.session()
+ses.listen_on(6881, 6891)
 
-session = lt.session(settings)
-
-# Add torrent with specific options
-torrent_info = lt.torrent_info('path/to/torrent/file.torrent')
-add_torrent_params = {
-    'ti': torrent_info,
-    'save_path': '/downloads/',
-    'storage_mode': lt.storage_mode_t.storage_mode_sparse
-}
-
-handle = session.add_torrent(add_torrent_params)
+# Add a torrent file
+info = lt.torrent_info('example.torrent')
+handle = ses.add_torrent({'ti': info, 'save_path': './downloads'})
 
 # Monitor download progress
-while not handle.is_finished():
-    print(f"Progress: {handle.status().progress * 100:.2f}%")
-    
-    # Check for alerts
-    alerts = session.pop_alerts()
-    for alert in alerts:
-        if isinstance(alert, lt.torrent_finished_alert):
-            print("Download complete!")
-            
+while not handle.is_seed():
+    s = handle.status()
+    print(f"Downloading {s.progress * 100:.2f}%")
     time.sleep(1)
 
-session.pause()
+print("Download complete!")
 ```
 
-### Scenario 3: Real-time Monitoring Application
+### Scenario 2: Creating a New Torrent
+
+Applications use `libtorrent` to create torrent files for sharing their own content. This is used in file-sharing applications and content distribution systems.
 
 ```cpp
-// Initialize session with event monitoring enabled
-lt_session* session = lt_session_create();
-lt_alert_manager* alerts = lt_get_alerts(session);
+#include <libtorrent/torrent_creator.hpp>
 
-while (true) {
-    // Wait for events with timeout
-    lt_alert* alert = lt_wait_for_alert(session, 500);
-    
-    if (alert) {
-        switch (alert->type()) {
-            case LT_ALERT_TYPE_TORRENT_FINISHED:
-                printf("Torrent finished downloading\n");
-                break;
-                
-            case LT_ALERT_TYPE_PEER_CONNECTED:
-                printf("Peer connected: %s\n", 
-                       lt_get_peer_address(alert));
-                break;
-                
-            case LT_ALERT_TYPE_DOWNLOAD_PROGRESS:
-                printf("Download progress: %.2f%%\n",
-                      alert->progress() * 100);
-                break;
-        }
-        
-        lt_clear_alert(alert);
-    }
-    
-    // Periodic status update
-    if (lt_is_time_to_update()) {
-        lt_update_status(session);
-    }
-}
+// Create a new torrent with file metadata
+lt::create_torrent t;
+t.add_files("/path/to/files/", lt::create_torrent::no_progress_callback);
+
+// Set torrent metadata
+t.set_comment("My shared files");
+t.set_priv(true); // private torrent
+t.set_tracker("http://tracker.example.com");
+
+// Generate torrent file
+lt::entry e = t.generate();
+std::ofstream out("my_torrent.torrent");
+e.encode(out);
+```
+
+### Scenario 3: Building a BitTorrent Client
+
+Applications integrate `libtorrent` to build complete BitTorrent clients with advanced features like bandwidth management, peer filtering, and encryption.
+
+```cpp
+// Initialize session with custom settings
+lt::session ses(lt::session_params());
+
+// Configure bandwidth limits
+ses.set_settings({
+    {"max_download_speed", 1000000},  // 1MB/s
+    {"max_upload_speed", 500000},     // 500KB/s
+    {"enable_dht", true}
+});
+
+// Add torrent with custom priorities
+lt::torrent_handle handle = ses.add_torrent({
+    .ti = std::make_shared<lt::torrent_info>("example.torrent"),
+    .save_path = "./downloads/"
+});
+
+// Set file priorities for selective downloading
+std::vector<int> priorities = {1, 0, 1}; // download only selected files
+handle.set_file_priority(0, priorities);
 ```
 
 ## 5. Design Patterns and Principles
 
-### Key Design Patterns Used
+The `libtorrent` module implements several key design patterns and architectural principles:
 
-1. **Observer Pattern**:
-   - Implemented through the alert system where components register for specific events
-   - Allows decoupled communication between subsystems
-   - Enables asynchronous event handling without tight coupling
+**Observer Pattern**: Implemented through the alert system, where components emit notifications about events, and interested parties (application code) receive these alerts.
 
-2. **Factory Pattern**:
-   - `lt_session_create()` and similar functions create instances with proper initialization
-   - Ensures consistent object construction across different platforms
-   - Provides a clean interface for creating complex objects
+**Factory Pattern**: Used in creating torrent handles, peer connections, and other components through centralized creation methods.
 
-3. **Singleton Pattern** (for session):
-   - The session acts as a central coordinator that manages all torrent operations
-   - Ensures global access to the torrent client state
-   - Simplifies resource management and configuration
+**State Pattern**: Applied in torrent and peer connection states, allowing different behaviors based on the current state (downloading, seeding, paused, etc.).
 
-4. **Bridge Pattern**:
-   - Separates protocol implementation from network transport
-   - Allows different networking backends while maintaining consistent API
-   - Facilitates future extensions with new protocols or transports
+**Strategy Pattern**: Implemented through pluggable components for encryption, peer discovery, and protocol extensions.
 
-### Key Architectural Decisions
+**Key Architectural Decisions**:
+1. **Event-Driven Architecture**: The module uses an alert system for notifications, decoupling components and enabling efficient event processing.
+2. **Component-Based Design**: Complex functionality is broken down into specialized components that can be tested and maintained independently.
+3. **Thread Safety**: The architecture is designed to handle concurrent operations safely across multiple threads.
+4. **Extensibility**: Components are designed with pluggable interfaces for adding new features like encryption protocols or tracker types.
 
-1. **Layered Architecture**: 
-   - Clear separation between application logic, core protocol, and network layers
-   - Each layer has well-defined responsibilities and interfaces
-   - Enables independent development and testing of components
+This approach was chosen because:
+- It provides a clear separation of concerns, making the codebase more maintainable
+- The event-driven model allows for efficient handling of numerous concurrent connections
+- The component-based design enables easy integration with different applications
+- The architecture supports future extensions and protocol updates
+- The design ensures thread safety for multi-threaded applications
 
-2. **Event-Driven Design**:
-   - All state changes are communicated through alerts rather than direct callbacks
-   - Reduces complexity in the main loop by decoupling event processing from application logic
-   - Supports asynchronous operations without blocking execution
-
-3. **Resource Pooling**:
-   - Connection and memory pools for efficient resource management
-   - Prevents performance degradation under high load conditions
-   - Optimizes system resources through reuse of allocated components
-
-### Why This Approach Was Chosen
-
-The architecture was designed to balance performance, maintainability, and extensibility:
-
-1. **Performance**: The layered approach with connection pooling ensures optimal network utilization while minimizing overhead.
-
-2. **Maintainability**: Clear separation of concerns makes the codebase easier to understand, test, and modify.
-
-3. **Extensibility**: The modular design allows for easy addition of new features like protocol extensions or alternative transport mechanisms.
-
-4. **Cross-platform Compatibility**: By abstracting network operations and using standardized interfaces, the library can run on various operating systems with minimal changes.
-
-5. **Security**: The separation between protocol implementation and networking provides a foundation for implementing security measures at different levels of the stack.
+The module follows the principle of **"separation of concerns"**, with distinct components for networking, file operations, protocol handling, and user interface communication. This modular approach allows developers to use only the parts they need while maintaining a consistent interface across different applications.

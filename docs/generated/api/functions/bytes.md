@@ -1,131 +1,140 @@
-# `bytes` Class API Documentation
+# bytes.hpp API Documentation
 
-## Overview
-The `bytes` class is a wrapper around a string-like data structure that provides efficient storage and manipulation of binary data. It is designed for use in the libtorrent Python bindings, enabling seamless conversion between Python bytes objects and C++ string data.
-
-## `bytes` (Constructor: char const*, std::size_t)
+## Function: bytes (char const*, std::size_t)
 
 - **Signature**: `bytes(char const* s, std::size_t len)`
-- **Description**: Constructs a `bytes` object from a raw character pointer and length. This constructor is used when you have a pointer to binary data and want to create a `bytes` object that owns this data.
+- **Description**: Constructs a bytes object from a character array and length. This constructor creates a copy of the provided character data.
 - **Parameters**:
-  - `s` (char const*): Pointer to the beginning of the binary data. Must not be null. The data should remain valid for the lifetime of the `bytes` object.
-  - `len` (std::size_t): The number of bytes to copy from the source. Must be non-negative and not exceed the actual available data.
-- **Return Value**: A new `bytes` object containing a copy of the specified binary data.
+  - `s` (char const*): Pointer to the character array to copy. Must be valid for the duration of the copy operation. Cannot be null.
+  - `len` (std::size_t): Length of the character array in bytes. Must be non-negative and represent a valid memory range.
+- **Return Value**:
+  - Returns a newly constructed bytes object containing a copy of the provided character data.
 - **Exceptions/Errors**:
-  - `std::bad_alloc`: Thrown if memory allocation fails when creating the internal string representation.
+  - Throws `std::bad_alloc` if memory allocation fails.
+  - No other exceptions are expected under normal circumstances.
 - **Example**:
 ```cpp
-// Create bytes from raw binary data
-char data[] = {0x12, 0x34, 0x56, 0x78};
-auto b = bytes(data, sizeof(data));
+// Create bytes from a C-style string
+const char* data = "Hello, World!";
+std::size_t length = 13;
+bytes b(data, length);
 ```
-- **Preconditions**: The pointer `s` must point to valid memory for at least `len` bytes.
-- **Postconditions**: The `bytes` object will contain a copy of the first `len` bytes from `s`.
-- **Thread Safety**: Thread-safe if the memory pointed to by `s` is not modified during the construction.
+- **Preconditions**: `s` must point to valid memory for `len` bytes.
+- **Postconditions**: The returned bytes object contains a copy of the character data from `s` with length `len`.
+- **Thread Safety**: Thread-safe.
 - **Complexity**: O(len) time, O(len) space.
-- **See Also**: `bytes(std::string const&)`, `bytes(std::string&&)`
+- **See Also**: `bytes(const std::string&)`, `bytes(std::string&&)`
 
-## `bytes` (Constructor: std::string const&)
+## Function: bytes (const std::string&)
 
 - **Signature**: `bytes(std::string const& s)`
-- **Description**: Constructs a `bytes` object by copying a `std::string`. This constructor provides a convenient way to create a `bytes` object from an existing C++ string.
+- **Description**: Constructs a bytes object from a string reference. This constructor creates a copy of the string's data.
 - **Parameters**:
-  - `s` (std::string const&): The string to copy. This parameter is passed by const reference to avoid unnecessary copying.
-- **Return Value**: A new `bytes` object containing a copy of the input string.
+  - `s` (std::string const&): Reference to the string to copy. The string must remain valid for the duration of the copy operation.
+- **Return Value**:
+  - Returns a newly constructed bytes object containing a copy of the string's data.
 - **Exceptions/Errors**:
-  - `std::bad_alloc`: Thrown if memory allocation fails during the copy.
+  - Throws `std::bad_alloc` if memory allocation fails.
+  - No other exceptions are expected under normal circumstances.
 - **Example**:
 ```cpp
 // Create bytes from a std::string
 std::string str = "Hello, World!";
-auto b = bytes(str);
+bytes b(str);
 ```
-- **Preconditions**: The input string must be valid (not corrupted).
-- **Postconditions**: The `bytes` object will contain a copy of the input string.
-- **Thread Safety**: Thread-safe as long as the input string is not modified during construction.
-- **Complexity**: O(n) time, O(n) space where n is the length of the string.
+- **Preconditions**: The string must be valid and not modified during the copy operation.
+- **Postconditions**: The returned bytes object contains a copy of the string's data.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time, O(n) space, where n is the length of the string.
 - **See Also**: `bytes(char const*, std::size_t)`, `bytes(std::string&&)`
 
-## `bytes` (Constructor: std::string&&)
+## Function: bytes (std::string&&)
 
 - **Signature**: `bytes(std::string&& s)`
-- **Description**: Constructs a `bytes` object by moving from an rvalue `std::string`. This constructor is more efficient than the copy constructor when the input string is temporary or no longer needed.
+- **Description**: Constructs a bytes object from an rvalue string. This constructor moves the string's data instead of copying it.
 - **Parameters**:
-  - `s` (std::string&&): The string to move from. This parameter is an rvalue reference, indicating that the string's data can be transferred without copying.
-- **Return Value**: A new `bytes` object containing the moved data from the input string.
-- **Exceptions/Errors**: 
-  - No exceptions are thrown by this constructor.
+  - `s` (std::string&&): Rvalue reference to the string whose data will be moved. The string will be in a valid but unspecified state after the move.
+- **Return Value**:
+  - Returns a newly constructed bytes object containing the moved string data.
+- **Exceptions/Errors**:
+  - Throws `std::bad_alloc` if memory allocation fails.
+  - No other exceptions are expected under normal circumstances.
 - **Example**:
 ```cpp
 // Create bytes by moving from a temporary string
-auto b = bytes(std::string("Hello, World!"));
+bytes b(std::string("Hello, World!"));
 ```
-- **Preconditions**: The input string must be valid and not corrupted.
-- **Postconditions**: The `bytes` object will contain the data from the input string, and the input string will be in a valid but unspecified state.
-- **Thread Safety**: Thread-safe as long as the input string is not modified during construction.
-- **Complexity**: O(1) time, O(1) space (the move operation is constant time).
-- **See Also**: `bytes(std::string const&)`, `bytes(char const*, std::size_t)`
+- **Preconditions**: The string must be valid and not modified during the move operation.
+- **Postconditions**: The returned bytes object contains the moved data from the source string. The source string is left in a valid but unspecified state.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(1) time, O(1) space (no copying of the string data).
+- **See Also**: `bytes(const std::string&)`, `bytes(char const*, std::size_t)`
 
-## `bytes` (Copy Constructor)
+## Function: bytes (const bytes&)
 
 - **Signature**: `bytes(bytes const&) = default`
-- **Description**: Copy constructor for the `bytes` class. Creates a new `bytes` object that is a copy of the given `bytes` object. The `= default` specification indicates that the compiler will generate a default copy constructor.
+- **Description**: Copy constructor for bytes objects. Creates a copy of the provided bytes object.
 - **Parameters**:
-  - `other` (bytes const&): The `bytes` object to copy.
-- **Return Value**: A new `bytes` object that is a copy of the input object.
-- **Exceptions/Errors**: 
-  - No exceptions are thrown by this constructor.
+  - `other` (bytes const&): Reference to the bytes object to copy.
+- **Return Value**:
+  - Returns a newly constructed bytes object that is a copy of the input.
+- **Exceptions/Errors**:
+  - Throws `std::bad_alloc` if memory allocation fails.
+  - No other exceptions are expected under normal circumstances.
 - **Example**:
 ```cpp
-// Copy a bytes object
-bytes b1 = bytes("test", 4);
-bytes b2 = b1; // Copy construction
+// Copy construction
+bytes b1("Hello, World!");
+bytes b2(b1); // Uses default copy constructor
 ```
-- **Preconditions**: The input `bytes` object must be valid.
-- **Postconditions**: The new `bytes` object will be an independent copy of the input object's data.
-- **Thread Safety**: Thread-safe as long as the input object is not modified during the copy.
-- **Complexity**: O(n) time, O(n) space where n is the length of the data being copied.
-- **See Also**: `bytes(bytes&&)`, `bytes(std::string const&)`
+- **Preconditions**: The source bytes object must be valid.
+- **Postconditions**: The returned bytes object is a copy of the source object.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(n) time, O(n) space, where n is the length of the copied data.
+- **See Also**: `bytes(bytes&&)`, `bytes(const std::string&)`
 
-## `bytes` (Move Constructor)
+## Function: bytes (bytes&&)
 
 - **Signature**: `bytes(bytes&&) noexcept = default`
-- **Description**: Move constructor for the `bytes` class. Transfers ownership of the data from a temporary `bytes` object to a new object. The `noexcept` specification indicates that this operation will not throw exceptions.
+- **Description**: Move constructor for bytes objects. Transfers ownership of the data from the source bytes object.
 - **Parameters**:
-  - `other` (bytes&&): The temporary `bytes` object to move from.
-- **Return Value**: A new `bytes` object that takes ownership of the data from the input object.
-- **Exceptions/Errors**: 
-  - No exceptions are thrown by this constructor.
+  - `other` (bytes&&): Rvalue reference to the bytes object whose data will be moved.
+- **Return Value**:
+  - Returns a newly constructed bytes object that takes ownership of the source's data.
+- **Exceptions/Errors**:
+  - Never throws exceptions (marked noexcept).
 - **Example**:
 ```cpp
-// Move from a temporary bytes object
-auto b1 = bytes("test", 4);
-auto b2 = std::move(b1); // Move construction
+// Move construction
+bytes b1("Hello, World!");
+bytes b2(std::move(b1)); // Moves data from b1 to b2
 ```
-- **Preconditions**: The input `bytes` object must be valid.
-- **Postconditions**: The new `bytes` object will have the data from the input object, and the input object will be in a valid but unspecified state.
-- **Thread Safety**: Thread-safe as long as the input object is not modified during the move.
-- **Complexity**: O(1) time, O(1) space (the move operation is constant time).
-- **See Also**: `bytes(bytes const&)`, `bytes(std::string&&)`
+- **Preconditions**: The source bytes object must be valid.
+- **Postconditions**: The returned bytes object contains the data from the source, and the source object is left in a valid but unspecified state.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(1) time, O(1) space (no copying of the data).
+- **See Also**: `bytes(bytes const&)`, `bytes(const std::string&&)`
 
-## `bytes` (Default Constructor)
+## Function: bytes ()
 
 - **Signature**: `bytes()`
-- **Description**: Default constructor that creates an empty `bytes` object. Initializes the internal string to an empty state.
+- **Description**: Default constructor for bytes objects. Creates an empty bytes object.
 - **Parameters**: None
-- **Return Value**: A new `bytes` object that contains no data.
-- **Exceptions/Errors**: 
-  - No exceptions are thrown by this constructor.
+- **Return Value**:
+  - Returns a newly constructed empty bytes object.
+- **Exceptions/Errors**:
+  - Throws `std::bad_alloc` if memory allocation fails.
+  - No other exceptions are expected under normal circumstances.
 - **Example**:
 ```cpp
 // Create an empty bytes object
 bytes b;
 ```
-- **Preconditions**: None
-- **Postconditions**: The `bytes` object will be in a valid state with no data.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1) time, O(1) space
-- **See Also**: All other constructors
+- **Preconditions**: None.
+- **Postconditions**: The returned bytes object is empty and contains no data.
+- **Thread Safety**: Thread-safe.
+- **Complexity**: O(1) time, O(1) space.
+- **See Also**: `bytes(const char*, std::size_t)`, `bytes(const std::string&)`
 
 # Usage Examples
 
@@ -137,27 +146,26 @@ bytes b;
 #include <string>
 
 int main() {
-    // Create bytes from raw data
-    char data[] = {0x12, 0x34, 0x56, 0x78};
-    bytes b1(data, sizeof(data));
+    // Create bytes from a C-style string
+    bytes b1("Hello, World!", 13);
     
-    // Create bytes from string
+    // Create bytes from a std::string
     std::string str = "Hello, World!";
     bytes b2(str);
     
-    // Create bytes by moving
-    bytes b3 = std::move(b2);
-    
-    // Copy constructor
-    bytes b4 = b1;
+    // Create bytes by moving from a temporary string
+    bytes b3(std::string("Hello, World!"));
     
     // Create empty bytes
-    bytes b5;
+    bytes b4;
     
-    // Check if bytes are empty
-    std::cout << "b1 is empty: " << (b1.empty() ? "true" : "false") << std::endl;
-    std::cout << "b5 is empty: " << (b5.empty() ? "true" : "false") << std::endl;
+    // Copy bytes
+    bytes b5(b1);
     
+    // Move bytes
+    bytes b6(std::move(b2));
+    
+    std::cout << "Bytes content: " << b1.arr.c_str() << std::endl;
     return 0;
 }
 ```
@@ -167,30 +175,29 @@ int main() {
 ```cpp
 #include "bytes.hpp"
 #include <iostream>
-#include <stdexcept>
+#include <memory>
 
 int main() {
+    // Handle potential memory allocation failures
     try {
-        // This should work fine
-        char data[] = {0x12, 0x34, 0x56, 0x78};
-        bytes b1(data, sizeof(data));
-        
-        // This might throw if memory is exhausted
-        std::string very_large_string(1000000, 'x');
-        bytes b2(very_large_string);
-        
-        // Move construction (no exceptions)
-        bytes b3 = std::move(b2);
-        
-        // Copy constructor (no exceptions)
-        bytes b4 = b1;
-        
+        // This might throw std::bad_alloc
+        bytes b("Large string", 1000000);
+        std::cout << "Successfully created bytes object" << std::endl;
     } catch (const std::bad_alloc& e) {
         std::cerr << "Memory allocation failed: " << e.what() << std::endl;
         return 1;
-    } catch (const std::exception& e) {
-        std::cerr << "Unexpected error: " << e.what() << std::endl;
-        return 1;
+    }
+    
+    // For large allocations, consider using smart pointers
+    std::unique_ptr<bytes> b;
+    try {
+        b = std::make_unique<bytes>("Very large string", 5000000);
+    } catch (const std::bad_alloc& e) {
+        std::cerr << "Failed to allocate bytes: " << e.what() << std::endl;
+    }
+    
+    if (b) {
+        std::cout << "Successfully allocated bytes" << std::endl;
     }
     
     return 0;
@@ -202,27 +209,29 @@ int main() {
 ```cpp
 #include "bytes.hpp"
 #include <iostream>
+#include <string>
 
 int main() {
     // Empty string
-    bytes b1;
-    std::cout << "Empty bytes size: " << b1.size() << std::endl;
+    bytes b1("", 0);
+    std::cout << "Empty bytes size: " << b1.arr.size() << std::endl;
     
-    // Zero-length array
-    char empty_data[] = {};
-    bytes b2(empty_data, 0);
-    std::cout << "Zero-length bytes size: " << b2.size() << std::endl;
+    // Null pointer with zero length
+    bytes b2(nullptr, 0);
+    std::cout << "Null pointer with zero length: " << b2.arr.size() << std::endl;
     
-    // Large number of bytes
-    const size_t large_size = 1000000;
-    std::string large_string(large_size, 'a');
-    bytes b3(large_string);
-    std::cout << "Large bytes size: " << b3.size() << std::endl;
+    // Move from temporary object
+    bytes b3(std::string("temporary"));
+    std::cout << "Moved string: " << b3.arr.c_str() << std::endl;
     
-    // Move from empty bytes
-    bytes b4;
-    bytes b5 = std::move(b4);
-    std::cout << "Moved empty bytes size: " << b5.size() << std::endl;
+    // Move from lvalue
+    std::string temp = "move from lvalue";
+    bytes b4(std::move(temp));
+    std::cout << "Moved from lvalue: " << b4.arr.c_str() << std::endl;
+    
+    // Default construction
+    bytes b5;
+    std::cout << "Empty bytes size: " << b5.arr.size() << std::endl;
     
     return 0;
 }
@@ -230,251 +239,90 @@ int main() {
 
 # Best Practices
 
-## How to Use These Functions Effectively
+## Effective Usage
 
-1. **Choose the right constructor**:
-   - Use `bytes(char const*, std::size_t)` when working with raw binary data
-   - Use `bytes(std::string const&)` when copying from a string
-   - Use `bytes(std::string&&)` when moving from a temporary string
-   - Use the default constructor when you need an empty bytes object
-   - Use the copy constructor when you need to duplicate a bytes object
+1. **Use move semantics when possible**: When moving from temporary strings or rvalues, prefer the move constructor to avoid unnecessary copying.
 
-2. **Prefer move semantics**:
-   - Use `std::move()` when transferring ownership of temporary objects
-   - This avoids unnecessary copying and improves performance
+2. **Prefer std::string over char* when possible**: Use `bytes(const std::string&)` instead of `bytes(char const*, std::size_t)` when working with std::string objects.
 
-3. **Handle memory allocation appropriately**:
-   - Be aware that constructors may throw `std::bad_alloc`
-   - Consider using smart pointers or RAII patterns for complex memory management
+3. **Use the default constructor for empty bytes**: When you need an empty bytes object, use the default constructor instead of creating a zero-length string.
+
+4. **Consider memory usage**: For large strings, be aware that copying can be expensive. Use move semantics to avoid copying.
 
 ## Common Mistakes to Avoid
 
-1. **Accessing invalid memory**:
-   ```cpp
-   // WRONG: Using pointer after it goes out of scope
-   char* data = get_binary_data();
-   bytes b(data, 100);
-   // data is now invalid, but b still holds the data
-   ```
+1. **Copying large strings unnecessarily**: Avoid using `bytes(const std::string&)` for large strings when move semantics would be more efficient.
 
-2. **Using the wrong constructor**:
-   ```cpp
-   // WRONG: Using copy constructor for temporary data
-   std::string s = "temporary";
-   bytes b(s); // Creates unnecessary copy
-   ```
+2. **Forgetting about memory allocation**: Be aware that construction can throw `std::bad_alloc` when dealing with large data.
 
-3. **Forgetting about move semantics**:
-   ```cpp
-   // LESS EFFICIENT: Copying instead of moving
-   bytes b = get_bytes(); // This copies
-   ```
+3. **Using invalid pointers**: Ensure that `char const*` parameters point to valid memory and are not null when length > 0.
+
+4. **Incorrect string length**: Ensure that the length parameter matches the actual length of the string data.
 
 ## Performance Tips
 
-1. **Use move semantics for temporary objects**:
-   ```cpp
-   // Efficient - moves the data
-   bytes b = std::move(get_bytes());
-   ```
+1. **Use move semantics for temporary strings**: When creating bytes from temporary string objects, use the move constructor to avoid copying.
 
-2. **Avoid unnecessary copies**:
-   ```cpp
-   // Inefficient - creates a copy
-   void process_bytes(bytes b) { /* ... */ }
-   
-   // Efficient - passes by reference
-   void process_bytes(const bytes& b) { /* ... */ }
-   ```
+2. **Prefer string_view for read-only operations**: If you only need to read from a string without modifying it, consider using std::string_view.
 
-3. **Use the most appropriate constructor**:
-   - For raw data: use `bytes(char const*, std::size_t)`
-   - For string data: use `bytes(std::string&&)` when moving
+3. **Avoid unnecessary copies**: Use the move constructor when transferring ownership of string data.
+
+4. **Consider the cost of copying**: For large strings, the copy constructor can be expensive. Use move semantics when possible.
 
 # Code Review & Improvement Suggestions
 
-## `bytes` (Constructor: char const*, std::size_t)
+## Potential Issues
 
-**Function**: `bytes(char const* s, std::size_t len)`
-**Issue**: No input validation for null pointer
+### **Function**: `bytes(char const* s, std::size_t len)`
+**Issue**: No validation for null pointer when length > 0
 **Severity**: Medium
-**Impact**: Could cause segmentation fault if pointer is null
-**Fix**: Add null pointer check and handle gracefully
-
+**Impact**: Could lead to undefined behavior if s is null and len > 0
+**Fix**: Add null pointer check and handle appropriately:
 ```cpp
-// Before
-bytes(char const* s, std::size_t len): arr(s, len) {}
-
-// After
 bytes(char const* s, std::size_t len) {
-    if (s == nullptr) {
-        throw std::invalid_argument("Null pointer provided");
+    if (len > 0 && s == nullptr) {
+        throw std::invalid_argument("Null pointer with non-zero length");
     }
-    arr = std::string(s, len);
+    arr.assign(s, len);
 }
 ```
 
-## `bytes` (Constructor: std::string const&)
-
-**Function**: `bytes(std::string const& s)`
-**Issue**: No validation for string length
+### **Function**: `bytes(std::string const& s)`
+**Issue**: No validation for string length before copying
 **Severity**: Low
-**Impact**: Could cause memory issues if string is extremely large
-**Fix**: Consider adding a reasonable limit or documentation
-
+**Impact**: No direct impact, but could be improved for robustness
+**Fix**: Add a check for potentially excessive string lengths:
 ```cpp
-// After (documentation only)
-// Note: The string length should be reasonable for your application's memory constraints
+bytes(std::string const& s) {
+    if (s.size() > MAX_STRING_LENGTH) {
+        throw std::length_error("String too long for bytes construction");
+    }
+    arr = s;
+}
 ```
 
-## `bytes` (Constructor: std::string&&)
-
-**Function**: `bytes(std::string&& s)`
-**Issue**: No validation of move operation
+### **Function**: `bytes(std::string&& s)`
+**Issue**: No validation for string length before moving
 **Severity**: Low
-**Impact**: Could cause undefined behavior if string is in invalid state
-**Fix**: Add documentation about requirements for the moved string
-
+**Impact**: No direct impact, but could be improved for robustness
+**Fix**: Add a check for potentially excessive string lengths:
 ```cpp
-// After (documentation only)
-// The input string must be in a valid state and not corrupted
+bytes(std::string&& s) {
+    if (s.size() > MAX_STRING_LENGTH) {
+        throw std::length_error("String too long for bytes construction");
+    }
+    arr = std::move(s);
+}
 ```
 
-## `bytes` (Copy Constructor)
-
-**Function**: `bytes(bytes const&) = default`
-**Issue**: No validation of copied object
+### **Function**: `bytes(bytes const&)`
+**Issue**: No validation of source bytes object
 **Severity**: Low
-**Impact**: Could cause undefined behavior if copied object is in invalid state
-**Fix**: Add documentation about requirements
-
+**Impact**: No direct impact, but could be improved for robustness
+**Fix**: Add a check for potentially excessive string lengths:
 ```cpp
-// After (documentation only)
-// The input bytes object must be in a valid state
-```
-
-## `bytes` (Move Constructor)
-
-**Function**: `bytes(bytes&&) noexcept = default`
-**Issue**: No validation of moved object
-**Severity**: Low
-**Impact**: Could cause undefined behavior if moved object is in invalid state
-**Fix**: Add documentation about requirements
-
-```cpp
-// After (documentation only)
-// The input bytes object must be in a valid state
-```
-
-## `bytes` (Default Constructor)
-
-**Function**: `bytes()`
-**Issue**: No validation of class state
-**Severity**: Low
-**Impact**: Could cause undefined behavior if class invariants are violated
-**Fix**: Add documentation about class invariants
-
-```cpp
-// After (documentation only)
-// The bytes object is in a valid state with no data
-```
-
-# Modernization Opportunities
-
-## Use [[nodiscard]] for functions that return important values
-
-```cpp
-// Before
-bytes bytes(char const* s, std::size_t len);
-
-// After
-[[nodiscard]] bytes bytes(char const* s, std::size_t len);
-```
-
-## Use std::string_view for read-only string parameters
-
-```cpp
-// Before
-bytes bytes(std::string const& s);
-
-// After
-bytes bytes(std::string_view s);
-```
-
-## Use constexpr for compile-time evaluation
-
-```cpp
-// Before
-bytes bytes(char const* s, std::size_t len);
-
-// After
-constexpr bytes bytes(char const* s, std::size_t len);
-```
-
-# Refactoring Suggestions
-
-## Combine constructors where possible
-
-The `bytes` class could benefit from a unified constructor that handles all cases:
-
-```cpp
-// Refactored version
-class bytes {
-public:
-    // Unified constructor
-    bytes(std::string_view s) : arr(s) {}
-    
-    // For raw data
-    bytes(char const* s, std::size_t len) : arr(s, len) {}
-    
-    // Other constructors...
-};
-```
-
-## Move to utility namespace
-
-The `bytes` class could be moved to a more appropriate namespace:
-
-```cpp
-namespace libtorrent {
-namespace python {
-namespace bindings {
-    
-// bytes class definition here
-    
-} // namespace bindings
-} // namespace python
-} // namespace libtorrent
-```
-
-# Performance Optimizations
-
-## Use string_view for read-only access
-
-```cpp
-// Before
-void process_bytes(const bytes& b);
-
-// After
-void process_bytes(std::string_view b);
-```
-
-## Add noexcept specifications
-
-```cpp
-// Before
-bytes bytes(std::string&& s);
-
-// After
-bytes bytes(std::string&& s) noexcept;
-```
-
-## Consider rvalue references for move construction
-
-```cpp
-// Before
-bytes bytes(bytes&& other);
-
-// After
-bytes bytes(bytes&& other) noexcept;
-```
+bytes(bytes const& other) {
+    if (other.arr.size() > MAX_STRING_LENGTH) {
+        throw std::length_error("Source bytes too long");
+    }
+    arr

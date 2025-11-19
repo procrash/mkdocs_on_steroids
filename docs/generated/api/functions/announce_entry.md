@@ -1,130 +1,123 @@
-# API Documentation for `announce_entry.hpp`
+# API Documentation for libtorrent announce_entry.hpp
 
-## Function: `announce_infohash`
+## announce_infohash
 
 - **Signature**: `auto announce_infohash()`
-- **Description**: This function returns an instance of the `announce_infohash` struct, which encapsulates information about a tracker's response to an announcement request. The struct contains details about any error or warning messages from the tracker, as well as the error code if the tracker failed to respond.
-- **Parameters**: None
-- **Return Value**: Returns an instance of the `announce_infohash` struct. The returned object contains:
-  - `message`: A string containing any error or warning message from the tracker.
-  - `fails`: An integer representing the number of failures the tracker has experienced. The function `is_working()` returns `true` if `fails == 0`.
-- **Exceptions/Errors**: No exceptions are thrown.
+- **Description**: This function is not a standalone function but rather the declaration of a struct that represents information about a tracker's response. The struct contains data about the tracker's status, including error messages and failure counts. This struct is used internally within the libtorrent library to store and manage information about tracker announcements.
+- **Parameters**: N/A
+- **Return Value**: This is not a function but a struct definition. The struct itself does not return a value but contains data members that can be accessed.
+- **Exceptions/Errors**: N/A
 - **Example**:
 ```cpp
-auto infohash = announce_infohash();
-if (!infohash.message.empty()) {
-    // Handle warning or error message
-    std::cerr << "Tracker message: " << infohash.message << std::endl;
-}
+// This is not a function call but a struct definition
+struct announce_infohash {
+    announce_infohash();
+    std::string message;
+    int fails;
+};
 ```
-- **Preconditions**: None.
-- **Postconditions**: The returned `announce_infohash` object is initialized and ready for use.
-- **Thread Safety**: The function is thread-safe as it constructs a new instance.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `is_working()`, `announce_endpoint()`
+- **Preconditions**: N/A
+- **Postconditions**: N/A
+- **Thread Safety**: N/A
+- **Complexity**: N/A
+- **See Also**: `announce_endpoint`, `announce_entry`
 
-## Function: `is_working`
+## is_working
 
-- **Signature**: `bool is_working() const`
-- **Description**: This function checks whether a tracker is currently working by examining the `fails` member variable in the `announce_infohash` struct. It returns `true` if the tracker has no failures (i.e., `fails == 0`).
-- **Parameters**: None
+- **Signature**: `auto is_working()`
+- **Description**: This function checks whether the associated tracker endpoint is currently working by examining the failure count. It returns true if no failures have occurred (i.e., the tracker is working), and false otherwise.
+- **Parameters**: N/A
 - **Return Value**: 
-  - `true`: The tracker is working.
-  - `false`: The tracker has failed at least once.
-- **Exceptions/Errors**: No exceptions are thrown.
+  - `true`: The tracker endpoint is working (fails == 0)
+  - `false`: The tracker endpoint has failed at least once (fails > 0)
+- **Exceptions/Errors**: N/A
 - **Example**:
 ```cpp
-auto infohash = announce_infohash();
-if (infohash.is_working()) {
-    // Tracker is operational
-    std::cout << "Tracker is working." << std::endl;
+announce_infohash tracker_info;
+// Assume tracker_info has been populated with data
+if (tracker_info.is_working()) {
+    std::cout << "Tracker is working normally." << std::endl;
 } else {
-    // Tracker has failed
-    std::cout << "Tracker has failed." << std::endl;
+    std::cout << "Tracker has failed at least once." << std::endl;
 }
 ```
-- **Preconditions**: The `announce_infohash` object must be valid and initialized.
-- **Postconditions**: The function returns a boolean value indicating the tracker's status.
-- **Thread Safety**: The function is thread-safe as it only reads from the `fails` member.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `announce_infohash()`, `announce_endpoint()`
+- **Preconditions**: The `announce_infohash` struct must be properly initialized and populated with data.
+- **Postconditions**: The function returns a boolean indicating the working status of the tracker.
+- **Thread Safety**: The function is thread-safe as it only reads from the `fails` member variable, which is typically accessed in a thread-safe manner in the libtorrent library.
+- **Complexity**: O(1) - Constant time complexity.
+- **See Also**: `announce_infohash`, `announce_entry`
 
-## Function: `announce_endpoint`
+## announce_endpoint
 
 - **Signature**: `auto announce_endpoint()`
-- **Description**: This function constructs an instance of the `announce_endpoint` struct, which represents an endpoint used for announcing torrents to a tracker. The endpoint includes the local TCP endpoint associated with the listen interface and information about the info hashes used for announcements.
-- **Parameters**: 
-  - `s` (`aux::listen_socket_handle const&`): The listen socket handle associated with the endpoint.
-  - `completed` (`bool`): A flag indicating whether the endpoint is complete.
-- **Return Value**: Returns an instance of the `announce_endpoint` struct.
-- **Exceptions/Errors**: No exceptions are thrown.
+- **Description**: This function is not a standalone function but rather the declaration of a struct that represents an endpoint for tracker announcements. The struct contains information about a TCP endpoint and whether a tracker announcement has been completed. It is used internally by the libtorrent library to manage tracker communication.
+- **Parameters**: N/A
+- **Return Value**: This is not a function but a struct definition. The struct itself does not return a value but contains data members that can be accessed.
+- **Exceptions/Errors**: N/A
 - **Example**:
 ```cpp
-auto socket_handle = aux::listen_socket_handle();
-auto endpoint = announce_endpoint(socket_handle, true);
-std::cout << "Local endpoint: " << endpoint.local_endpoint << std::endl;
+// This is not a function call but a struct definition
+struct announce_endpoint {
+    announce_endpoint(aux::listen_socket_handle const& s, bool completed);
+    tcp::endpoint local_endpoint;
+    bool completed;
+};
 ```
-- **Preconditions**: The `socket_handle` must be valid.
-- **Postconditions**: The returned `announce_endpoint` object is initialized with the provided parameters.
-- **Thread Safety**: The function is thread-safe as it constructs a new instance.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `announce_infohash()`, `announce_entry()`
+- **Preconditions**: N/A
+- **Postconditions**: N/A
+- **Thread Safety**: N/A
+- **Complexity**: N/A
+- **See Also**: `announce_infohash`, `announce_entry`
 
-## Function: `announce_entry`
+## announce_entry
 
 - **Signature**: `auto announce_entry()`
-- **Description**: This function constructs an instance of the `announce_entry` struct, which represents a tracker announce entry. The function provides three constructors: one for initializing with a URL string, one for converting from a user-facing `lt::announce_entry` object, and a default constructor.
-- **Parameters**: 
-  - `u` (`string_view`): The URL of the tracker.
-  - `other` (`lt::announce_entry const&`): An existing `lt::announce_entry` object to convert from.
-  - None: Default constructor.
-- **Return Value**: Returns an instance of the `announce_entry` struct.
-- **Exceptions/Errors**: No exceptions are thrown.
+- **Description**: This function is not a standalone function but rather the declaration of a struct that represents a tracker announcement entry. The struct is used to store information about a tracker announcement, including the URL, the type of tracker, and other relevant data. It provides multiple constructors to create instances of the struct in different ways.
+- **Parameters**: N/A
+- **Return Value**: This is not a function but a struct definition. The struct itself does not return a value but contains data members that can be accessed.
+- **Exceptions/Errors**: N/A
 - **Example**:
 ```cpp
-// Using the string_view constructor
-auto entry1 = announce_entry("http://tracker.example.com/announce");
-
-// Using the lt::announce_entry constructor
-lt::announce_entry user_entry("http://tracker.example.com/announce");
-auto entry2 = announce_entry(user_entry);
-
-// Using the default constructor
-auto entry3 = announce_entry();
+// This is not a function call but a struct definition
+struct announce_entry {
+    explicit announce_entry(string_view u);
+    explicit announce_entry(lt::announce_entry const&);
+    announce_entry();
+    ~announce_entry();
+};
 ```
-- **Preconditions**: The `string_view` must be valid if used in the constructor.
-- **Postconditions**: The returned `announce_entry` object is initialized with the provided parameters.
-- **Thread Safety**: The function is thread-safe as it constructs a new instance.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `announce_infohash()`, `announce_endpoint()`
+- **Preconditions**: N/A
+- **Postconditions**: N/A
+- **Thread Safety**: N/A
+- **Complexity**: N/A
+- **See Also**: `announce_infohash`, `announce_endpoint`
 
 # Usage Examples
 
 ## Basic Usage
 
 ```cpp
-#include "libtorrent/aux_/announce_entry.hpp"
+#include <libtorrent/aux_/announce_entry.hpp>
 #include <iostream>
 
 int main() {
     // Create an announce entry with a URL
-    auto entry = announce_entry("http://tracker.example.com/announce");
-
+    lt::announce_entry entry("http://example.com/announce");
+    
     // Create an announce endpoint
-    auto socket_handle = aux::listen_socket_handle();
-    auto endpoint = announce_endpoint(socket_handle, true);
-
+    aux::listen_socket_handle socket_handle;
+    lt::announce_endpoint endpoint(socket_handle, true);
+    
     // Create an announce infohash
-    auto infohash = announce_infohash();
-    infohash.message = "Tracker returned a warning";
-
+    lt::announce_infohash infohash;
+    
     // Check if the tracker is working
     if (infohash.is_working()) {
-        std::cout << "Tracker is working." << std::endl;
+        std::cout << "Tracker is working normally." << std::endl;
     } else {
-        std::cout << "Tracker has failed." << std::endl;
+        std::cout << "Tracker has failed at least once." << std::endl;
     }
-
+    
     return 0;
 }
 ```
@@ -132,22 +125,24 @@ int main() {
 ## Error Handling
 
 ```cpp
-#include "libtorrent/aux_/announce_entry.hpp"
+#include <libtorrent/aux_/announce_entry.hpp>
 #include <iostream>
 
 int main() {
-    try {
-        // Attempt to create an announce entry
-        auto entry = announce_entry("http://invalid-tracker.com/announce");
-
-        // Check for errors
-        if (entry.is_working() == false) {
-            std::cerr << "Tracker failed to respond." << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Exception caught: " << e.what() << std::endl;
+    lt::announce_entry entry("http://example.com/announce");
+    
+    // Check for errors in the tracker response
+    if (entry.infohash.message.empty()) {
+        std::cout << "No error messages from tracker." << std::endl;
+    } else {
+        std::cout << "Tracker returned error: " << entry.infohash.message << std::endl;
     }
-
+    
+    // Handle the case where the tracker has failed
+    if (!entry.infohash.is_working()) {
+        std::cout << "Tracker is not working. Fails: " << entry.infohash.fails << std::endl;
+    }
+    
     return 0;
 }
 ```
@@ -155,130 +150,181 @@ int main() {
 ## Edge Cases
 
 ```cpp
-#include "libtorrent/aux_/announce_entry.hpp"
+#include <libtorrent/aux_/announce_entry.hpp>
 #include <iostream>
 
 int main() {
-    // Test with empty string
-    auto entry1 = announce_entry("");
-
-    // Test with default constructor
-    auto entry2 = announce_entry();
-
-    // Test with a large string
-    std::string large_url(10000, 'a');
-    auto entry3 = announce_entry(large_url);
-
-    // Check if the tracker is working
-    auto infohash = announce_infohash();
-    if (infohash.is_working()) {
-        std::cout << "Tracker is working." << std::endl;
-    } else {
-        std::cout << "Tracker has failed." << std::endl;
+    // Empty URL - this should be handled gracefully
+    lt::announce_entry empty_entry("");
+    
+    // Invalid URL - this should be handled gracefully
+    lt::announce_entry invalid_entry("http://invalid-url");
+    
+    // Check the state of the entries
+    if (empty_entry.infohash.message.empty()) {
+        std::cout << "Empty entry has no error message." << std::endl;
     }
-
+    
+    if (invalid_entry.infohash.message.empty()) {
+        std::cout << "Invalid entry has no error message." << std::endl;
+    } else {
+        std::cout << "Invalid entry has error: " << invalid_entry.infohash.message << std::endl;
+    }
+    
+    // Check if the entries are working
+    if (empty_entry.infohash.is_working()) {
+        std::cout << "Empty entry is working." << std::endl;
+    } else {
+        std::cout << "Empty entry is not working." << std::endl;
+    }
+    
     return 0;
 }
 ```
 
 # Best Practices
 
-- **Use `string_view` for read-only strings**: When passing URLs to `announce_entry`, use `string_view` to avoid unnecessary string copying.
-- **Check `is_working()` before using the tracker**: Always verify the tracker's status before making announcements.
-- **Handle potential errors**: Wrap calls to constructors in try-catch blocks to handle any exceptions that might be thrown.
-- **Avoid unnecessary allocations**: Use move semantics when possible to avoid copying large objects.
+1. **Always check the error message**: Before assuming a tracker is working, check the `message` field in the `announce_infohash` struct to see if there are any warning or error messages.
+
+2. **Use is_working() for status checks**: Instead of directly checking the `fails` member, use the `is_working()` function for clarity and consistency.
+
+3. **Handle invalid URLs gracefully**: When creating `announce_entry` instances with URLs, ensure the URLs are valid and handle any potential errors that might occur during initialization.
+
+4. **Use string_view for read-only strings**: When passing URLs to the `announce_entry` constructor, use `string_view` for better performance and to avoid unnecessary string copies.
+
+5. **Consider the lifecycle of objects**: Be aware that the `announce_entry` struct may manage resources, and ensure proper cleanup when the object goes out of scope.
 
 # Code Review & Improvement Suggestions
 
-## Function: `announce_infohash`
+## Potential Issues
 
-- **Potential Issues**:
-  - **Security**: No input validation needed since this is a constructor.
-  - **Performance**: No unnecessary allocations or inefficient algorithms.
-  - **Correctness**: No edge cases need special handling.
-  - **Code Quality**: Naming is clear and consistent.
+**Function**: `announce_infohash`
+**Issue**: Missing proper documentation for the `fails` member variable
+**Severity**: Medium
+**Impact**: Developers may not understand the purpose and significance of the `fails` member variable
+**Fix**: Add detailed documentation for the `fails` member variable
 
-## Function: `is_working`
+```markdown
+// Add documentation for the fails member variable
+// The number of consecutive failures that have occurred for this tracker
+int fails;
+```
 
-- **Potential Issues**:
-  - **Security**: No input validation needed since this is a member function.
-  - **Performance**: No unnecessary allocations or inefficient algorithms.
-  - **Correctness**: No edge cases need special handling.
-  - **Code Quality**: Naming is clear and consistent.
+**Function**: `is_working`
+**Issue**: No const qualification on the return type
+**Severity**: Low
+**Impact**: Could lead to confusion about whether the function modifies the object
+**Fix**: Add const qualification to the return type
 
-## Function: `announce_endpoint`
+```cpp
+// Before
+bool is_working() const { return fails == 0; }
 
-- **Potential Issues**:
-  - **Security**: No input validation needed since this is a constructor.
-  - **Performance**: No unnecessary allocations or inefficient algorithms.
-  - **Correctness**: No edge cases need special handling.
-  - **Code Quality**: Naming is clear and consistent.
+// After
+bool is_working() const { return fails == 0; }
+```
 
-## Function: `announce_entry`
+**Function**: `announce_entry`
+**Issue**: Missing documentation for the constructors and destructor
+**Severity**: Medium
+**Impact**: Developers may not understand how to properly use the `announce_entry` struct
+**Fix**: Add detailed documentation for the constructors and destructor
 
-- **Potential Issues**:
-  - **Security**: No input validation needed since this is a constructor.
-  - **Performance**: No unnecessary allocations or inefficient algorithms.
-  - **Correctness**: No edge cases need special handling.
-  - **Code Quality**: Naming is clear and consistent.
+```cpp
+// Add documentation for the constructors and destructor
+struct TORRENT_EXTRA_EXPORT announce_entry
+{
+    // Constructs a tracker announce entry with ``u`` as the URL.
+    explicit announce_entry(string_view u);
+    
+    // Constructs the internal announce entry from the user facing one
+    explicit announce_entry(lt::announce_entry const&);
+    
+    // Default constructor
+    announce_entry();
+    
+    // Destructor
+    ~announce_entry();
+};
+```
 
 ## Modernization Opportunities
 
-- **Use `[[nodiscard]]`**: Add `[[nodiscard]]` to functions that return important values.
-  ```cpp
-  [[nodiscard]] auto announce_infohash();
-  [[nodiscard]] bool is_working() const;
-  [[nodiscard]] auto announce_endpoint();
-  [[nodiscard]] auto announce_entry();
-  ```
+**Function**: `announce_entry`
+**Opportunity**: Use `[[nodiscard]]` for functions that return important values
+**Benefit**: Prevents the misuse of functions by ensuring that return values are not ignored
+**Implementation**:
 
-- **Use `std::span`**: Consider using `std::span` for array parameters if needed.
-  ```cpp
-  [[nodiscard]] bool processData(std::span<const char> data);
-  ```
+```cpp
+// Add [[nodiscard]] to the constructor that returns a new instance
+[[nodiscard]] explicit announce_entry(string_view u);
+```
 
-- **Use `constexpr`**: Use `constexpr` for functions that can be evaluated at compile time.
-  ```cpp
-  constexpr bool is_working() const { return fails == 0; }
-  ```
+**Function**: `announce_entry`
+**Opportunity**: Use `std::string_view` for read-only string parameters
+**Benefit**: Improves performance by avoiding unnecessary string copies
+**Implementation**:
 
-- **Use concepts (C++20)**: Use concepts for template constraints if applicable.
-  ```cpp
-  template <typename T>
-  requires std::is_same_v<T, string_view>
-  auto announce_entry(T u);
-  ```
+```cpp
+// Replace string parameters with string_view
+explicit announce_entry(string_view u);
+```
 
-- **Use `std::expected` (C++23)**: Use `std::expected` for error handling if available.
-  ```cpp
-  std::expected<announce_entry, std::string> create_announce_entry(string_view u);
-  ```
+**Function**: `announce_infohash`
+**Opportunity**: Use `std::optional` for error messages
+**Benefit**: Provides a clear way to indicate whether an error message exists
+**Implementation**:
+
+```cpp
+// Replace std::string with std::optional<std::string> for the message
+std::optional<std::string> message;
+```
 
 ## Refactoring Suggestions
 
-- **Split into smaller functions**: The `announce_entry` struct could be split into smaller, more focused structs.
-- **Combine with similar functions**: The `announce_endpoint` and `announce_infohash` structs could be combined if they share common functionality.
-- **Make into class methods**: The `announce_infohash` and `announce_endpoint` structs could be made into class methods of a `Tracker` class.
-- **Move to utility namespace**: The `announce_entry` struct could be moved to a utility namespace for better organization.
+**Function**: `announce_entry`
+**Suggestion**: Split the struct into smaller, more focused components
+**Reason**: The `announce_entry` struct may be doing too much by combining tracker URL, info hash, and other related data
+**Implementation**: Consider creating separate structs for tracker URL, info hash, and other related data, and then use composition to combine them.
+
+```cpp
+// Create a separate struct for tracker URL
+struct tracker_url {
+    std::string url;
+};
+
+// Create a separate struct for info hash
+struct info_hash {
+    std::string hash;
+};
+
+// Create a separate struct for announce entry
+struct announce_entry {
+    tracker_url url;
+    info_hash hash;
+    // Other members...
+};
+```
 
 ## Performance Optimizations
 
-- **Use move semantics**: Use move semantics when returning objects to avoid unnecessary copying.
-  ```cpp
-  announce_entry(announce_entry&& other) noexcept = default;
-  ```
+**Function**: `announce_entry`
+**Opportunity**: Use move semantics for large objects
+**Benefit**: Improves performance by avoiding unnecessary copies of large objects
+**Implementation**:
 
-- **Return by value for RVO**: Return by value for functions that can benefit from Return Value Optimization (RVO).
-  ```cpp
-  announce_entry announce_entry(string_view u);
-  ```
+```cpp
+// Add move constructors and move assignment operators
+announce_entry(announce_entry&& other) noexcept;
+announce_entry& operator=(announce_entry&& other) noexcept;
+```
 
-- **Use `string_view` for read-only strings**: Use `string_view` for read-only strings to avoid unnecessary string copying.
-  ```cpp
-  announce_entry(string_view u);
-  ```
+**Function**: `announce_entry`
+**Opportunity**: Return by value for small objects
+**Benefit**: Allows for Return Value Optimization (RVO) and move semantics
+**Implementation**:
 
-- **Add `noexcept` where applicable**: Add `noexcept` to functions that do not throw exceptions.
-  ```cpp
-  bool is_working() const noexcept;
-  ```
+```cpp
+// Consider returning small objects by value
+announce_entry create_entry(string_view url);
+```

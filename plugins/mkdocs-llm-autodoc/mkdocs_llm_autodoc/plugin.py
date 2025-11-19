@@ -57,6 +57,7 @@ from .parsers.cpp_parser import CppParser
 from .utils.cache_manager import CacheManager
 from .utils.cross_reference import CrossReferenceManager
 from .utils.llm_provider import LLMProviderFactory
+from .utils.rag_uploader import RAGUploader
 
 logger = logging.getLogger('mkdocs.plugins.llm-autodoc')
 
@@ -96,8 +97,8 @@ class LLMAutoDocPluginConfig(config_options.Config):
     enable_code_review = config_options.Type(bool, default=True)
 
     # File patterns
-    include_patterns = config_options.Type(list, default=['**/*.h', '**/*.hpp', '**/*.cpp'])
-    exclude_patterns = config_options.Type(list, default=['**/build/**', '**/third_party/**', '**/external/**'])
+    include_patterns = config_options.Type(list, default=['**/*'])  # Default: all files
+    exclude_patterns = config_options.Type(list, default=['**/build/**', '**/third_party/**', '**/external/**', '**/.git/**', '**/__pycache__/**', '**/*.pyc', '**/.cache/**', '**/node_modules/**'])
 
     # Advanced
     max_concurrent_llm_calls = config_options.Type(int, default=3)
@@ -108,15 +109,28 @@ class LLMAutoDocPluginConfig(config_options.Config):
     background_generation = config_options.Type(bool, default=True)
     show_generation_progress = config_options.Type(bool, default=True)
 
+    # RAG Integration
+    enable_rag_upload = config_options.Type(bool, default=False)
+    rag_webhook_url = config_options.Type(str, default=None)
+    rag_upload_source_files = config_options.Type(bool, default=True)  # Upload processed source files during generation
+    rag_upload_generated_docs = config_options.Type(bool, default=True)  # Upload generated documentation
+    rag_upload_all_source = config_options.Type(bool, default=True)  # Upload ALL files in project (Python, Markdown, C++, etc.)
+
 
 class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
     """
-    MkDocs plugin that generates intelligent multi-level C++ documentation using LLMs.
+    MkDocs plugin that generates intelligent multi-level C++ documentation using LLMs
+    and optionally uploads all project files to RAG systems.
 
     This plugin provides three levels of documentation:
     1. High-Level: Project overview, architecture, entry points
     2. Mid-Level: Module documentation with classes and dependencies
     3. Detailed-Level: Complete API documentation with examples
+
+    RAG Integration:
+    - Uploads ALL source files (Python, C++, Markdown, etc.) to RAG when enabled
+    - Uploads generated documentation files
+    - Lets the RAG service decide how to handle each file type
     """
 
     def __init__(self):
@@ -125,6 +139,7 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
         self.cpp_parser = None
         self.cross_ref_manager = None
         self.llm_provider = None
+        self.rag_uploader = None
 
         self.high_level_agent = None
         self.mid_level_agent = None
@@ -134,6 +149,9 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
         self.generation_thread = None
         self.generation_complete = threading.Event()
         self.files_lock = threading.Lock()
+
+        # RAG upload statistics
+        self.rag_upload_stats = {'source_files': 0, 'doc_files': 0, 'failed': 0}
 
     def on_config(self, config: MkDocsConfig) -> MkDocsConfig:
         """
@@ -196,9 +214,48 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
             cross_ref_manager=self.cross_ref_manager
         )
 
+        # Initialize RAG uploader
+        if self.config.enable_rag_upload:
+            self.rag_uploader = RAGUploader(
+                webhook_url=self.config.rag_webhook_url,
+                enabled=True
+            )
+            if self.rag_uploader.enabled:
+                logger.info(f"✓ RAG upload enabled (webhook: {self.rag_uploader.webhook_url})")
+            else:
+                logger.warning("✗ RAG upload configured but webhook URL not available")
+        else:
+            logger.info("RAG upload disabled")
+
         logger.info(f"LLM AutoDoc plugin initialized with {self.config.llm_provider}/{self.config.llm_model}")
 
         return config
+
+    def _upload_to_rag(self, source_file: str = None, doc_files: List[str] = None):
+        """
+        Helper method to upload files to RAG system.
+
+        Args:
+            source_file: Source code file to upload
+            doc_files: List of generated documentation files to upload
+        """
+        if not self.rag_uploader or not self.rag_uploader.enabled:
+            return
+
+        # Upload source file
+        if source_file and self.config.rag_upload_source_files:
+            if self.rag_uploader.upload_source_file(source_file):
+                self.rag_upload_stats['source_files'] += 1
+            else:
+                self.rag_upload_stats['failed'] += 1
+
+        # Upload documentation files
+        if doc_files and self.config.rag_upload_generated_docs:
+            for doc_file in doc_files:
+                if self.rag_uploader.upload_documentation(doc_file, source_file=source_file):
+                    self.rag_upload_stats['doc_files'] += 1
+                else:
+                    self.rag_upload_stats['failed'] += 1
 
     def _generate_documentation_sync(self, config: MkDocsConfig):
         """
@@ -259,6 +316,11 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                     self.generated_files.extend(high_level_files)
                 logger.info(f"✓ Generated {len(high_level_files)} high-level documentation files")
 
+                # Upload to RAG
+                if self.rag_uploader and self.rag_uploader.enabled:
+                    logger.info("📤 Uploading high-level documentation to RAG...")
+                    self._upload_to_rag(doc_files=high_level_files)
+
             # Generate Mid-Level Documentation
             if self.config.generate_mid_level and project_structure['modules']:
                 logger.info("Generating mid-level module documentation...")
@@ -288,6 +350,11 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                         # Mark module files as successfully processed
                         successfully_processed_files.extend(module['files'])
                         logger.info(f"   ✓ Module {module_name} completed ({len(files)} files generated)")
+
+                        # Upload module files and docs to RAG
+                        if self.rag_uploader and self.rag_uploader.enabled:
+                            for source_file in module['files']:
+                                self._upload_to_rag(source_file=source_file, doc_files=files)
                     except Exception as e:
                         logger.error(f"   ✗ Failed to generate docs for module {module_name}: {e}")
 
@@ -326,6 +393,9 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                                 project_structure=project_structure,
                                 output_dir=str(output_dir)
                             )
+                            # Upload to RAG immediately after generation
+                            if self.rag_uploader and self.rag_uploader.enabled:
+                                self._upload_to_rag(source_file=file_path, doc_files=files)
                             return files, None, file_path
                         except Exception as e:
                             if self.config.retry_failed:
@@ -335,6 +405,9 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                                         project_structure=project_structure,
                                         output_dir=str(output_dir)
                                     )
+                                    # Upload to RAG on retry success
+                                    if self.rag_uploader and self.rag_uploader.enabled:
+                                        self._upload_to_rag(source_file=file_path, doc_files=files)
                                     return files, None, file_path
                                 except Exception as retry_error:
                                     return None, retry_error, file_path
@@ -389,6 +462,29 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                 with self.files_lock:
                     self.cross_ref_manager.update_references(str(docs_dir), self.generated_files.copy())
 
+            # Upload ALL source files to RAG if enabled
+            if self.rag_uploader and self.rag_uploader.enabled and self.config.rag_upload_all_source:
+                logger.info("=" * 70)
+                logger.info("📤 Uploading ALL source files to RAG...")
+                all_source_files = self.cpp_parser.find_all_source_files(project_path)
+                logger.info(f"   Found {len(all_source_files)} total source files")
+
+                uploaded = 0
+                failed = 0
+                for source_file in all_source_files:
+                    if self.rag_uploader.upload_source_file(source_file):
+                        uploaded += 1
+                    else:
+                        failed += 1
+
+                # Update statistics
+                self.rag_upload_stats['source_files'] += uploaded
+                self.rag_upload_stats['failed'] += failed
+                logger.info(f"✅ Uploaded {uploaded} source files to RAG")
+                if failed > 0:
+                    logger.info(f"⚠️  Failed to upload {failed} files")
+                logger.info("=" * 70)
+
             # Update cache - ONLY for successfully processed files
             # This prevents failed files from being marked as "processed" in the cache
             unique_processed_files = []
@@ -412,6 +508,17 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
             logger.info(f"   Total documentation files generated: {total_files}")
             logger.info(f"   Successfully processed source files: {len(unique_processed_files)}")
             logger.info(f"   Cache updated: {'Yes' if unique_processed_files else 'No'}")
+
+            # RAG upload summary
+            if self.rag_uploader and self.rag_uploader.enabled:
+                logger.info(f"")
+                logger.info(f"📤 RAG UPLOAD SUMMARY:")
+                logger.info(f"   Source files uploaded: {self.rag_upload_stats['source_files']}")
+                logger.info(f"   Documentation files uploaded: {self.rag_upload_stats['doc_files']}")
+                if self.rag_upload_stats['failed'] > 0:
+                    logger.info(f"   Failed uploads: {self.rag_upload_stats['failed']}")
+                logger.info(f"   Total uploaded: {self.rag_upload_stats['source_files'] + self.rag_upload_stats['doc_files']}")
+
             logger.info("=" * 70)
 
         except Exception as e:

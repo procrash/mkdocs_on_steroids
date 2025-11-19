@@ -1,269 +1,212 @@
 # disk_job_fence API Documentation
 
-## disk_job_fence
+## Function: disk_job_fence
 
-- **Signature**: `auto disk_job_fence()`
-- **Description**: This function returns an instance of the `disk_job_fence` class, which is a synchronization mechanism used to coordinate disk I/O operations in libtorrent. The fence ensures that disk jobs are executed in a controlled manner, preventing race conditions and ensuring proper ordering of operations. It's typically used as a RAII (Resource Acquisition Is Initialization) object that manages the lifecycle of disk operations.
+- **Signature**: `disk_job_fence()`
+- **Description**: Default constructor for the `disk_job_fence` class. This constructor initializes a new disk job fence object with no outstanding jobs and an empty list of blocked jobs. The `disk_job_fence` is used to track and manage disk I/O operations in the libtorrent library, ensuring that certain operations can be safely blocked until all pending disk jobs are completed.
 - **Parameters**: None
-- **Return Value**: Returns a `disk_job_fence` object. The returned object can be used to manage disk job execution and ensure proper synchronization.
-- **Exceptions/Errors**: This function does not throw exceptions.
+- **Return Value**: None (constructor)
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-// Create a disk job fence to coordinate disk I/O operations
-auto fence = disk_job_fence();
-```
-- **Preconditions**: None
-- **Postconditions**: A valid `disk_job_fence` object is returned.
-- **Thread Safety**: The returned object can be used across threads, but the object itself must not be accessed concurrently by multiple threads without proper synchronization.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `num_outstanding_jobs()`, `~disk_job_fence()`
-
-## disk_job_fence (Constructor)
-
-- **Signature**: `disk_job_fence() = default;`
-- **Description**: Default constructor for the `disk_job_fence` class. Initializes a new disk job fence object with no outstanding jobs. This constructor is marked as `= default` to allow the compiler to generate the most efficient implementation.
-- **Parameters**: None
-- **Return Value**: None (constructor does not return a value)
-- **Exceptions/Errors**: This function does not throw exceptions.
-- **Example**:
-```cpp
-// Create a disk job fence with default construction
 disk_job_fence fence;
+// The fence is now ready to track disk jobs
 ```
 - **Preconditions**: None
-- **Postconditions**: A valid `disk_job_fence` object is created and ready for use.
-- **Thread Safety**: Thread-safe for construction.
-- **Complexity**: O(1) time and space complexity.
+- **Postconditions**: A valid `disk_job_fence` object is created with `m_outstanding_jobs` set to 0 and `m_blocked_jobs` empty.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1) time and space complexity
 - **See Also**: `~disk_job_fence()`, `num_outstanding_jobs()`
 
-## ~disk_job_fence
+## Function: ~disk_job_fence
 
 - **Signature**: `~disk_job_fence()`
-- **Description**: Destructor for the `disk_job_fence` class. This function checks that there are no outstanding jobs and no blocked jobs when the fence is being destroyed. It's primarily used for debugging purposes to detect improper usage of the fence. The assertion checks are only enabled when `TORRENT_USE_ASSERTS` is defined.
+- **Description**: Destructor for the `disk_job_fence` class. This destructor performs assertions to ensure that there are no outstanding disk jobs and no blocked jobs when the fence is being destroyed. This helps catch programming errors where disk jobs are not properly cleaned up. The assertions are only enabled when `TORRENT_USE_ASSERTS` is defined.
 - **Parameters**: None
-- **Return Value**: None (destructor does not return a value)
-- **Exceptions/Errors**: This function can throw an assertion failure if `TORRENT_USE_ASSERTS` is enabled and there are outstanding or blocked jobs.
+- **Return Value**: None (destructor)
+- **Exceptions/Errors**: None (assertions may trigger if the condition is violated)
 - **Example**:
 ```cpp
-// The destructor is called automatically when the object goes out of scope
 {
     disk_job_fence fence;
     // ... use the fence ...
-} // fence is destroyed here, with assertions if needed
+} // fence is destroyed here, assertions will be checked
 ```
-- **Preconditions**: The object must be properly constructed and no other thread should be accessing it concurrently.
-- **Postconditions**: All outstanding jobs have been completed and all blocked jobs have been released. The object is safely destroyed.
-- **Thread Safety**: Not thread-safe for concurrent access to the same object.
-- **Complexity**: O(n) time complexity where n is the number of blocked jobs, O(1) space complexity.
+- **Preconditions**: The `disk_job_fence` object must be in a valid state.
+- **Postconditions**: The object is destroyed, and assertions are checked to ensure no outstanding or blocked jobs exist.
+- **Thread Safety**: Thread-safe
+- **Complexity**: O(1) time and space complexity
 - **See Also**: `disk_job_fence()`, `num_outstanding_jobs()`
 
-## num_outstanding_jobs
+## Function: num_outstanding_jobs
 
 - **Signature**: `int num_outstanding_jobs() const`
-- **Description**: Returns the number of currently outstanding disk jobs that are in progress. This function provides a way to query the state of the disk job fence to determine how many operations are still pending.
+- **Description**: Returns the number of currently outstanding disk jobs tracked by this `disk_job_fence`. This function provides a way to check how many disk I/O operations are still in progress and have not been completed.
 - **Parameters**: None
-- **Return Value**: Returns an integer representing the number of outstanding disk jobs. A value of 0 indicates that there are no jobs currently in progress.
-- **Exceptions/Errors**: This function does not throw exceptions.
+- **Return Value**: 
+  - Returns the number of outstanding disk jobs as an integer.
+  - The value is guaranteed to be non-negative.
+  - A return value of 0 indicates that there are no outstanding disk jobs.
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-auto fence = disk_job_fence();
-// ... perform disk operations ...
-int jobs = fence.num_outstanding_jobs();
-if (jobs > 0) {
-    std::cout << "There are " << jobs << " outstanding jobs." << std::endl;
+disk_job_fence fence;
+int num_jobs = fence.num_outstanding_jobs();
+if (num_jobs == 0) {
+    std::cout << "No disk jobs are currently outstanding." << std::endl;
 }
 ```
 - **Preconditions**: The `disk_job_fence` object must be valid and not destroyed.
-- **Postconditions**: The function returns the current count of outstanding jobs.
-- **Thread Safety**: Thread-safe for concurrent read access.
-- **Complexity**: O(1) time and space complexity.
+- **Postconditions**: The function returns the current count of outstanding disk jobs without modifying the state of the object.
+- **Thread Safety**: Thread-safe (read-only access)
+- **Complexity**: O(1) time complexity, O(1) space complexity
 - **See Also**: `disk_job_fence()`, `~disk_job_fence()`
 
-# Usage Examples
+## Usage Examples
 
-## Basic Usage
-
-```cpp
-#include "libtorrent/aux_/disk_job_fence.hpp"
-
-void example_usage() {
-    // Create a disk job fence
-    auto fence = disk_job_fence();
-    
-    // Perform disk operations that need coordination
-    // The fence will ensure proper ordering and synchronization
-    
-    // Check the number of outstanding jobs
-    int outstanding = fence.num_outstanding_jobs();
-    if (outstanding == 0) {
-        std::cout << "All disk jobs have completed." << std::endl;
-    }
-}
-```
-
-## Error Handling
-
+### Basic Usage
 ```cpp
 #include "libtorrent/aux_/disk_job_fence.hpp"
 #include <iostream>
 
-void error_handling_example() {
-    try {
-        auto fence = disk_job_fence();
-        
-        // Simulate some disk operations
-        // If there are any issues with the disk operations,
-        // the fence will ensure they are properly cleaned up
-        
-        // Check for any potential issues
-        if (fence.num_outstanding_jobs() > 0) {
-            std::cerr << "Warning: There are still " 
-                      << fence.num_outstanding_jobs() 
-                      << " outstanding jobs." << std::endl;
-        }
-        
-        // The destructor will automatically check assertions
-        // if TORRENT_USE_ASSERTS is enabled
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
+int main() {
+    // Create a disk job fence
+    disk_job_fence fence;
+    
+    // Check the number of outstanding jobs
+    std::cout << "Outstanding jobs: " << fence.num_outstanding_jobs() << std::endl;
+    
+    // The fence will automatically check for outstanding jobs when destroyed
+    return 0;
 }
 ```
 
-## Edge Cases
-
+### Error Handling
 ```cpp
 #include "libtorrent/aux_/disk_job_fence.hpp"
-#include <thread>
-#include <chrono>
+#include <iostream>
 
-void edge_case_example() {
-    // Edge case 1: Multiple fence objects in the same scope
-    {
-        auto fence1 = disk_job_fence();
-        auto fence2 = disk_job_fence();
-        
-        // Both fences can be used concurrently
-        // The destructor of each will check their own state
+int main() {
+    disk_job_fence fence;
+    
+    // Simulate some disk jobs
+    // In a real scenario, these would be actual disk operations
+    fence.m_outstanding_jobs = 1; // This would typically be managed by the library
+    
+    // Check the number of outstanding jobs
+    int num_jobs = fence.num_outstanding_jobs();
+    if (num_jobs > 0) {
+        std::cerr << "Warning: " << num_jobs << " disk jobs are still outstanding!" << std::endl;
     }
     
-    // Edge case 2: Thread-safe usage
-    std::thread t1([]() {
-        auto fence = disk_job_fence();
-        // Perform operations
-        // The fence will be destroyed when the thread exits
-    });
-    
-    std::thread t2([]() {
-        auto fence = disk_job_fence();
-        // Perform operations
-        // The fence will be destroyed when the thread exits
-    });
-    
-    t1.join();
-    t2.join();
-    
-    // Edge case 3: Exception safety
-    try {
-        auto fence = disk_job_fence();
-        // If an exception occurs here,
-        // the fence will be properly destroyed in the destructor
-    }
-    catch (...) {
-        // Exception handling
-        // The fence is already destroyed
-    }
+    // The destructor will assert if there are still outstanding jobs
+    return 0;
 }
 ```
 
-# Best Practices
+### Edge Cases
+```cpp
+#include "libtorrent/aux_/disk_job_fence.hpp"
+#include <iostream>
 
-## How to Use These Functions Effectively
+int main() {
+    // Test with zero outstanding jobs
+    disk_job_fence fence1;
+    std::cout << "Zero jobs: " << fence1.num_outstanding_jobs() << std::endl;
+    
+    // Test with maximum possible jobs
+    // Note: In reality, this would be limited by the system's capabilities
+    disk_job_fence fence2;
+    fence2.m_outstanding_jobs = 1000000; // This is just for demonstration
+    std::cout << "Large number of jobs: " << fence2.num_outstanding_jobs() << std::endl;
+    
+    return 0;
+}
+```
 
-1. **Use RAII pattern**: Always use `disk_job_fence` as a local variable to ensure proper cleanup. The destructor will automatically handle cleanup and assertions.
+## Best Practices
 
-2. **Check job counts**: Use `num_outstanding_jobs()` to monitor the state of your disk operations and ensure all jobs have completed.
+1. **Use the fence to track disk operations**: Always use `disk_job_fence` to track disk I/O operations to ensure proper cleanup and avoid race conditions.
 
-3. **Enable assertions in debug builds**: When debugging, enable `TORRENT_USE_ASSERTS` to catch improper usage of the fence.
+2. **Check for outstanding jobs before destruction**: Although the destructor performs assertions, it's good practice to check `num_outstanding_jobs()` before destroying the fence if you need to handle the case where jobs are still outstanding.
 
-4. **Use in coordination with disk operations**: The fence is most useful when coordinating multiple disk operations that need to be executed in a specific order or when ensuring that certain operations complete before others.
+3. **Avoid manual manipulation of internal state**: The `m_outstanding_jobs` and `m_blocked_jobs` members should not be directly manipulated by client code. Use the provided interface functions instead.
 
-## Common Mistakes to Avoid
+4. **Ensure proper cleanup**: Make sure that all disk jobs are properly completed before the `disk_job_fence` object is destroyed.
 
-1. **Not checking job counts**: Failing to check `num_outstanding_jobs()` can lead to race conditions or incorrect assumptions about the state of disk operations.
+5. **Use in multithreaded environments**: Since the class is thread-safe, it can be safely used across multiple threads, but ensure that all threads that access the fence do so in a coordinated manner.
 
-2. **Using the fence after destruction**: Accessing a `disk_job_fence` object after it has been destroyed can lead to undefined behavior.
+## Code Review & Improvement Suggestions
 
-3. **Not enabling assertions**: In debug builds, not enabling `TORRENT_USE_ASSERTS` means you won't get the benefits of the assertion checks in the destructor.
+### Potential Issues
 
-4. **Using the fence across threads without synchronization**: While the object can be used across threads, you need to ensure proper synchronization if multiple threads are accessing it.
+**Function**: `disk_job_fence()`
+**Issue**: The comment is incomplete and contains a typo ("outstan" instead of "outstanding")
+**Severity**: Low
+**Impact**: Minor documentation issue that might confuse users
+**Fix**: Complete and correct the comment
+```cpp
+// returns one of the fence_* enums.
+// if there are no outstanding jobs, it returns a specific value
+```
 
-## Performance Tips
+**Function**: `~disk_job_fence()`
+**Issue**: The destructor performs assertions but doesn't provide any cleanup for the blocked jobs
+**Severity**: Medium
+**Impact**: Could lead to resource leaks if blocked jobs are not properly managed
+**Fix**: Ensure that any blocked jobs are properly cleaned up
+```cpp
+~disk_job_fence()
+{
+    TORRENT_ASSERT(int(m_outstanding_jobs) == 0);
+    TORRENT_ASSERT(m_blocked_jobs.size() == 0);
+    // Add any necessary cleanup for blocked jobs here
+}
+```
 
-1. **Use default construction**: The default constructor is highly efficient and should be used whenever possible.
+**Function**: `num_outstanding_jobs()`
+**Issue**: The function is const but the member variable is not marked as mutable
+**Severity**: Low
+**Impact**: Could limit usage in certain const contexts
+**Fix**: Mark the member variable as mutable if necessary
+```cpp
+int num_outstanding_jobs() const { return m_outstanding_jobs; }
+```
 
-2. **Minimize object creation**: Create the `disk_job_fence` object only when needed and destroy it as soon as possible to minimize overhead.
+### Modernization Opportunities
 
-3. **Avoid repeated calls**: If you need to check the job count multiple times, store the result in a local variable rather than calling the function repeatedly.
+**Function**: `disk_job_fence()`
+**Opportunity**: Use `[[nodiscard]]` to indicate that the return value should not be ignored
+**Suggestion**: Add `[[nodiscard]]` to the constructor if it's part of a larger API design that requires this
+```cpp
+[[nodiscard]] disk_job_fence() = default;
+```
 
-4. **Use in critical sections**: The `disk_job_fence` is designed for use in critical sections where proper synchronization of disk operations is essential.
+**Function**: `~disk_job_fence()`
+**Opportunity**: Use `noexcept` to indicate that the destructor does not throw exceptions
+**Suggestion**: Add `noexcept` to the destructor
+```cpp
+~disk_job_fence() noexcept
+{
+    TORRENT_ASSERT(int(m_outstanding_jobs) == 0);
+    TORRENT_ASSERT(m_blocked_jobs.size() == 0);
+}
+```
 
-# Code Review & Improvement Suggestions
+### Refactoring Suggestions
 
-## Potential Issues
+1. **Split the class**: The `disk_job_fence` class could be split into two parts: one for managing the fence state and another for the assertions. This would make the code more modular and easier to test.
 
-### disk_job_fence (Constructor)
+2. **Move to a utility namespace**: Consider moving the `disk_job_fence` class to a more general utility namespace if it's used in other parts of the library.
 
-- **Function**: `disk_job_fence()`
-- **Issue**: The constructor is marked as `= default`, but the class has a non-trivial destructor (with assertions). This could lead to confusion about the object's lifecycle and behavior.
-- **Severity**: Medium
-- **Impact**: Developers might assume the class is completely trivial and not understand the implications of the destructor.
-- **Fix**: Consider adding a comment explaining the purpose of the default constructor and the non-trivial destructor.
+3. **Add more documentation**: The class documentation should be expanded to include a more comprehensive description of its purpose and usage patterns.
 
-### disk_job_fence
+### Performance Optimizations
 
-- **Function**: `~disk_job_fence()`
-- **Issue**: The destructor contains assertions that will trigger only when `TORRENT_USE_ASSERTS` is defined. This means the behavior differs between debug and release builds.
-- **Severity**: Medium
-- **Impact**: This can lead to subtle bugs that only appear in debug builds, making it harder to identify issues in production.
-- **Fix**: Consider adding a comment explaining the behavior difference between debug and release builds.
+1. **Use move semantics**: While not directly applicable to this class, consider adding move constructors and move assignment operators if the class is copied frequently.
 
-### num_outstanding_jobs
+2. **Return by value for RVO**: The `num_outstanding_jobs()` function returns by value, which is appropriate for small types like `int` and benefits from Return Value Optimization (RVO).
 
-- **Function**: `num_outstanding_jobs()`
-- **Issue**: The function returns an `int` which could potentially overflow in extreme cases where there are thousands of outstanding jobs.
-- **Severity**: Low
-- **Impact**: This is unlikely to be an issue in practice, but could become a problem in very large systems.
-- **Fix**: Consider changing the return type to `std::size_t` or `std::uint32_t` for better scalability.
+3. **Use string_view for read-only strings**: Not applicable here as this class doesn't handle strings.
 
-## Modernization Opportunities
-
-### disk_job_fence
-
-- **Opportunity**: The class could benefit from being made into a template or using more modern C++ features for better type safety and flexibility.
-- **Suggestion**: Consider using a more modern approach like `std::atomic` or `std::shared_ptr` if the fence needs to be shared across threads.
-
-### num_outstanding_jobs
-
-- **Opportunity**: The function could be enhanced to provide more detailed information about the outstanding jobs.
-- **Suggestion**: Consider adding a function that returns a summary of the outstanding jobs (e.g., their types, priorities, etc.).
-
-## Refactoring Suggestions
-
-### disk_job_fence
-
-- **Suggestion**: The class could be split into two separate classes: one for job management and another for fence coordination.
-- **Benefit**: This would make the code more modular and easier to test and maintain.
-
-## Performance Optimizations
-
-### disk_job_fence
-
-- **Opportunity**: The class could be optimized for high-concurrency environments.
-- **Suggestion**: Consider adding thread-local storage or using more efficient synchronization primitives if the class is frequently accessed across threads.
-
-### num_outstanding_jobs
-
-- **Opportunity**: The function could be optimized for performance by caching the count.
-- **Suggestion**: Consider adding a mechanism to update the count incrementally rather than computing it every time.
+4. **Add noexcept where applicable**: The destructor should be marked as `noexcept` to indicate it doesn't throw exceptions.

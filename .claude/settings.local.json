@@ -31,7 +31,16 @@
       "Bash(else echo \"No cache directory found\")",
       "Bash(lsof:*)",
       "Bash(netstat:*)",
-      "Bash(mkdocs serve:*)"
+      "Bash(mkdocs serve:*)",
+      "Bash(if [ -d \"venvWindows\" ])",
+      "Bash(then echo \"venvWindows exists\")",
+      "Bash(else echo \"venvWindows does not exist\")",
+      "Bash(python -m venv:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(nul)",
+      "Bash(venvWindows\\Scripts\\python.exe -m pip:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python -m unittest:*)"
     ],
     "deny": [],
     "ask": []

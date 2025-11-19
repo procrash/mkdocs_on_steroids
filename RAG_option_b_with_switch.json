@@ -1,0 +1,748 @@
+{
+  "name": "RAG - Server Side Splitting",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload_data_raw",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1600, 400],
+      "id": "webhook-python-upload",
+      "name": "Webhook - Python Upload",
+      "webhookId": "python-upload-webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and prepare data from webhook payload\nconst body = $input.first().json.body;\n\nif (!body || !body.content) {\n  throw new Error('Invalid payload: content field required');\n}\n\nconst fileName = body.file_name || 'unknown';\nconst filePath = body.file_path || '';\nconst fileType = body.file_type || '';\nconst content = body.content;\nconst metadata = body.metadata || {};\n\n// Extract chunk config from metadata\nconst chunkSize = metadata.chunk_size || 1000;\nconst chunkOverlap = metadata.chunk_overlap || 200;\n\nreturn [{\n  json: {\n    content: content,\n    file_name: fileName,\n    file_path: filePath,\n    file_type: fileType,\n    chunk_size: chunkSize,\n    chunk_overlap: chunkOverlap,\n    metadata: {\n      ...metadata,\n      source: filePath\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1400, 400],
+      "id": "extract-data",
+      "name": "Extract Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".md",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "markdown"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".cpp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".cc",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".cxx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".h",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".hpp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "cpp"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".py",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "python"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".js",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".jsx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "javascript"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".html",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ $json.file_type }}",
+                    "rightValue": ".htm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "html"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-1200, 400],
+      "id": "switch-by-filetype",
+      "name": "Switch by File Type"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-400, 400],
+      "id": "qdrant-markdown",
+      "name": "Qdrant - Markdown",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-400, 600],
+      "id": "qdrant-cpp",
+      "name": "Qdrant - C++",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-400, 800],
+      "id": "qdrant-python",
+      "name": "Qdrant - Python",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-400, 1000],
+      "id": "qdrant-js",
+      "name": "Qdrant - JavaScript",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-400, 1200],
+      "id": "qdrant-html",
+      "name": "Qdrant - HTML",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-400, 1400],
+      "id": "qdrant-default",
+      "name": "Qdrant - Default",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-qwen3-embedding-8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [-200, 200],
+      "id": "embeddings-openai",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "N5P6IkTRdnLNsMoB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "json",
+        "jsonProperty": "content",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [-600, 300],
+      "id": "data-loader-markdown",
+      "name": "Data Loader - Markdown"
+    },
+    {
+      "parameters": {
+        "dataType": "json",
+        "jsonProperty": "content",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [-600, 500],
+      "id": "data-loader-cpp",
+      "name": "Data Loader - C++"
+    },
+    {
+      "parameters": {
+        "dataType": "json",
+        "jsonProperty": "content",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [-600, 700],
+      "id": "data-loader-python",
+      "name": "Data Loader - Python"
+    },
+    {
+      "parameters": {
+        "dataType": "json",
+        "jsonProperty": "content",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [-600, 900],
+      "id": "data-loader-js",
+      "name": "Data Loader - JavaScript"
+    },
+    {
+      "parameters": {
+        "dataType": "json",
+        "jsonProperty": "content",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [-600, 1100],
+      "id": "data-loader-html",
+      "name": "Data Loader - HTML"
+    },
+    {
+      "parameters": {
+        "dataType": "json",
+        "jsonProperty": "content",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [-600, 1300],
+      "id": "data-loader-default",
+      "name": "Data Loader - Default"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 300],
+      "id": "splitter-markdown",
+      "name": "Splitter - Markdown"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "cpp"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 500],
+      "id": "splitter-cpp",
+      "name": "Splitter - C++"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "python"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 700],
+      "id": "splitter-python",
+      "name": "Splitter - Python"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "js"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 900],
+      "id": "splitter-js",
+      "name": "Splitter - JavaScript"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {
+          "splitCode": "html"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 1100],
+      "id": "splitter-html",
+      "name": "Splitter - HTML"
+    },
+    {
+      "parameters": {
+        "chunkSize": "={{ $json.chunk_size }}",
+        "chunkOverlap": "={{ $json.chunk_overlap }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [-800, 1300],
+      "id": "splitter-default",
+      "name": "Splitter - Default"
+    }
+  ],
+  "connections": {
+    "Webhook - Python Upload": {
+      "main": [
+        [
+          {
+            "node": "Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [
+          {
+            "node": "Switch by File Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by File Type": {
+      "main": [
+        [
+          {
+            "node": "Qdrant - Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - C++",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - Python",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - HTML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant - Default",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant - Markdown",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - C++",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - Python",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - JavaScript",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - HTML",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant - Default",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - Markdown": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - Markdown",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - C++": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - C++",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - Python": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - Python",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - JavaScript": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - JavaScript",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - HTML": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - HTML",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader - Default": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant - Default",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - Markdown": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - Markdown",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - C++": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - C++",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - Python": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - Python",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - JavaScript": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - JavaScript",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - HTML": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - HTML",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Splitter - Default": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader - Default",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

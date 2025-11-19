@@ -1,0 +1,348 @@
+{
+  "name": "RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "text-embedding-qwen3-embedding-8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        800
+      ],
+      "id": "1eb961ac-3bbc-49f2-a0ad-fb2fc3f0b9ca",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "N5P6IkTRdnLNsMoB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        80,
+        256
+      ],
+      "id": "0faf8b06-9f7f-404d-8e27-6fbf8eb83046",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "qwen/qwen3-vl-4b",
+          "mode": "list",
+          "cachedResultName": "qwen/qwen3-vl-4b"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        480
+      ],
+      "id": "f3e8940f-9818-45f2-a6a7-2c44e9421391",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "N5P6IkTRdnLNsMoB",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list",
+          "cachedResultName": "test-collection"
+        },
+        "embeddingBatchSize": 1024,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -848,
+        -112
+      ],
+      "id": "8a182d7c-eac4-4751-857b-a8a15414e567",
+      "name": "Qdrant Vector Store2",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        96,
+        496
+      ],
+      "id": "5f0530b8-c7de-4120-a1db-ebf2ab91dad8",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "use these documents to answer the questions",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "test-collection",
+          "mode": "list",
+          "cachedResultName": "test-collection"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        656
+      ],
+      "id": "f38834dd-633e-4c58-a989-9089a078a5ba",
+      "name": "Qdrant Vector Store3",
+      "credentials": {
+        "qdrantApi": {
+          "id": "FUtWU07L5Mmet6dS",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openai/chat/completions",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -400,
+        -160
+      ],
+      "id": "2a5bd871-10f6-430c-ad18-34e107dd2043",
+      "name": "Webhook1",
+      "webhookId": "c0d7f7d7-aa32-452a-b71e-3b42afb1fd3f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\nconst messages = $input.first().json.body.messages || [];\nconst lastUserMessage = [...messages].reverse().find(m=>m.role == 'user')?.content || '';\n\nconst sessionId = body.sessionId || items[0].sessionId || items[0].json?.sessionId || \"default-session\";\n\nreturn [{json: { model: body.mode,\n               stream: body.stream || false,\n               userMessage: lastUserMessage,\n               rawMessages: messages,\n               sessionId : sessionId,\n               chatInput: lastUserMessage}}];\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "17c0f68d-7409-483a-814f-3b45e3c8cc39",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upload_data_raw",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1248,
+        -32
+      ],
+      "id": "182e5cd7-c614-4cd6-995a-eef6e15062e4",
+      "name": "Webhook - Python Upload1",
+      "webhookId": "new-python-upload-webhook-id"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract chunks from Python uploader payload\nconst body = $input.first().json.body;\n\nif (!body || !body.chunks || !Array.isArray(body.chunks)) {\n  throw new Error('Invalid payload: chunks array required');\n}\n\nconst chunks = body.chunks;\nconst fileName = body.file_name || 'unknown';\nconst filePath = body.file_path || '';\nconst fileType = body.file_type || '';\nconst totalChunks = body.total_chunks || chunks.length;\nconst metadata = body.metadata || {};\n\n// Create one output item per chunk\nconst outputItems = chunks.map((chunkText, index) => ({\n  json: {\n    pageContent: chunkText,  // LangChain expects 'pageContent' field\n    metadata: {\n      file_name: fileName,\n      file_path: filePath,\n      file_type: fileType,\n      chunk_index: index,\n      total_chunks: totalChunks,\n      source: filePath,\n      ...metadata\n    }\n  }\n}));\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        -32
+      ],
+      "id": "391d790b-d63b-4ff7-919c-52b18409b238",
+      "name": "Extract Chunks from Python1"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "loader": "textLoader",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -464,
+        112
+      ],
+      "id": "e97a5dac-bb86-4da5-979a-8028c36b9506",
+      "name": "Data Loader for Python Chunks1"
+    },
+    {
+      "parameters": {
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        288
+      ],
+      "id": "759a7d4d-f534-4e6e-9e96-f1049c313deb",
+      "name": "Recursive Character Text Splitter"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Qdrant Vector Store3",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store3": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Python Upload1": {
+      "main": [
+        [
+          {
+            "node": "Extract Chunks from Python1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Loader for Python Chunks1": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store2",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Chunks from Python1": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Data Loader for Python Chunks1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5dd0fb36-43b3-4266-9422-074922c7b69d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5e78f8d5f9118d329fc0ba3aaf79a26f5e910c2fef84de7504ef6e85cf99f04a"
+  },
+  "id": "1QrD9kMQDwWOQypP",
+  "tags": []
+}

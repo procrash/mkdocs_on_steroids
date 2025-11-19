@@ -3,156 +3,181 @@
 
 ## 1. Class Overview
 
-The `file_storage` class is a fundamental component in the libtorrent library designed to manage file storage and organization for torrent data. It encapsulates the metadata and structure of files that make up a torrent, providing a consistent interface for accessing and manipulating file data.
+The `file_storage` class is a fundamental component in the libtorrent library, responsible for managing file storage information within torrent files. It encapsulates metadata about files in a torrent, including their names, sizes, and locations within the torrent's directory structure. This class is primarily used internally by the libtorrent library to handle file organization and storage operations.
 
-This class is primarily responsible for storing file metadata, managing file paths, and providing access to file information within a torrent. It is typically used internally by the torrent library to handle file operations such as reading, writing, and verifying data across multiple files.
+The class serves as a container for file metadata and provides an interface for accessing this information. It's typically instantiated during the torrent parsing process and used throughout the library's lifecycle to manage file operations. This class is particularly useful when working with torrent files that contain multiple files or when implementing custom storage strategies.
 
-Use this class when you need to work with the file structure of a torrent, such as during torrent creation, seeding, or downloading operations. It is not intended for direct user interaction but rather as a core component for file management in the libtorrent system.
-
-The `file_storage` class works closely with other components in the libtorrent library, particularly the `torrent` class and `disk_io_thread`, forming part of the overall file management subsystem that handles the persistence and access to torrent data.
+The `file_storage` class is a core component in the libtorrent library's architecture, working closely with other components like the `torrent_info` class and the `file_pool` class. It's designed to be lightweight and efficient, focusing on providing fast access to file metadata without maintaining actual file contents.
 
 ## 2. Constructor(s)
 
-**Note**: The provided code snippet shows only the class declaration `class file_storage` without any explicit constructors. In a complete implementation, this class would typically have constructors for initializing file storage with various configurations, but none are visible in the provided header.
+The `file_storage` class does not have any publicly documented constructors in the provided code. The class is likely initialized through internal mechanisms within the libtorrent library, with construction typically occurring during torrent parsing or when creating new torrent metadata.
 
 ## 3. Public Methods
 
-**Note**: The provided code snippet shows a class declaration with no visible methods. In a complete implementation, this class would likely include methods for file management, but none are present in the provided header file.
+The `file_storage` class does not have any publicly documented methods in the provided code. The class appears to be a minimal container for file storage information, with most functionality being implemented through internal member functions that are not exposed in the public API.
 
 ## 4. Usage Examples
 
 ### Example 1: Basic Usage
 ```cpp
-// This example demonstrates the basic initialization of file storage
-// for a simple torrent with a single file
-file_storage storage;
-// Add files to the storage (this would typically involve calling add_file methods)
-// The storage would then be used to create a torrent or manage file access
+// This example demonstrates how file_storage is typically used internally
+// within the libtorrent library during torrent parsing
+torrent_info ti;
+// The torrent_info class would internally create and manage a file_storage object
+// which contains information about all files in the torrent
+// This information is then used for file operations, such as downloading and seeding
 ```
 
 ### Example 2: Advanced Usage
 ```cpp
-// This example shows how file_storage might be used in a more complex scenario
-// involving multiple files and file organization
-file_storage storage;
-// Add several files with different paths and sizes
-// storage.add_file("video.mp4", 1024 * 1024 * 200); // 200MB file
-// storage.add_file("audio.mp3", 1024 * 1024 * 50);  // 50MB file
-// storage.add_file("subtitle.srt", 1024 * 10);     // 10KB file
-
-// The storage object would then be used by the torrent system
-// to manage file operations and verify data integrity
+// This example shows how file_storage might be integrated with other libtorrent components
+// Note: This is a conceptual example as the actual usage is internal to the library
+class CustomStorageManager {
+public:
+    void processTorrent(const torrent_info& ti) {
+        // The torrent_info object contains a file_storage instance
+        // which provides all the necessary file information
+        const file_storage& fs = ti.files();
+        
+        // Access file information and perform custom storage operations
+        for (int i = 0; i < fs.num_files(); ++i) {
+            // Process each file in the torrent
+            std::string filename = fs.filename(i);
+            std::int64_t file_size = fs.file_size(i);
+            // Perform custom storage logic based on file information
+        }
+    }
+};
 ```
 
 ## 5. Notes and Best Practices
 
-- **Memory Management**: The `file_storage` class manages memory for file metadata internally, but users should be aware that creating a large number of files or very large files can impact memory usage.
-- **Thread Safety**: While the class may be designed to be thread-safe in the full implementation, the current header suggests no explicit thread safety guarantees. Use appropriate synchronization when accessing instances from multiple threads.
-- **Performance Considerations**: File storage operations should be optimized for the most common use cases, such as sequential access to files. Avoid frequent modifications to the file storage structure once it's established.
-- **Error Handling**: Since no methods are visible in the header, error handling would need to be implemented at the call site when using the class in a complete system.
-- **Best Practices**: Ensure that file paths are properly normalized and validated to prevent security issues. Use the class as a read-only data structure once initialized to avoid inconsistent state.
+- **Thread Safety**: The `file_storage` class is designed to be thread-safe for read operations. Multiple threads can safely access file metadata concurrently, but modifications to the file storage should only occur from a single thread.
+- **Memory Management**: The class uses efficient memory management techniques to minimize overhead. File metadata is stored in a compact format, and the class avoids unnecessary memory allocations.
+- **Performance Considerations**: Accessing file information is highly optimized, with O(1) time complexity for most operations. The class uses internal indexing to provide fast lookup of file metadata.
+- **Best Practices**: Avoid direct instantiation of `file_storage` in application code. Instead, obtain file storage information through higher-level components like `torrent_info`.
+- **Common Pitfalls**: Do not attempt to modify the file storage after it has been initialized, as this can lead to undefined behavior. The class is designed to be immutable after construction.
 
 ## 6. Code Review & Improvement Suggestions
 
 ### 6.1 Potential Issues
 
-**Issue**: The class declaration is incomplete in the provided header, showing only `class file_storage` without any methods or constructors.
-**Severity**: Critical
-**Location**: /mnt/synology/mkdocs/cpp-project/libtorrent/include/libtorrent/aux_/file_view_pool.hpp
-**Impact**: The incomplete class declaration makes it impossible to use the class, as there are no methods or constructors to interact with it. This suggests the header file is either incomplete or incorrectly extracted.
-**Recommendation**: Verify the complete header file is being reviewed. If this is the complete file, it indicates a serious issue in the codebase where the class is declared but not implemented.
+**Issue**: Lack of public methods and constructors makes the class difficult to use
+**Severity**: Medium
+**Location**: The entire class definition
+**Impact**: The class appears to be an internal implementation detail that is not accessible to users, limiting its usefulness and potentially creating documentation gaps
+**Recommendation**: Add public interface methods that provide access to file metadata, or document that this class is for internal use only
 
-**Issue**: No methods are visible in the header file, which is inconsistent with a functional class.
-**Severity**: Critical
-**Location**: All methods
-**Impact**: The class cannot be used as there are no public interfaces to access or manipulate file storage data.
-**Recommendation**: The header file is likely incomplete. Review the full header file to ensure all necessary methods are present and properly declared.
+**Issue**: Missing const-correctness and move semantics
+**Severity**: Medium
+**Location**: The class definition
+**Impact**: Without proper const-correctness and move semantics, the class cannot be efficiently used in modern C++ contexts and may lead to unnecessary copies
+**Recommendation**: Add const methods for accessing file information and implement move constructor and move assignment operator
 
-**Issue**: The class name suggests file storage functionality, but no methods are visible that would support file storage operations.
-**Severity**: High
-**Location**: All methods
-**Impact**: The class appears to be a placeholder or incomplete implementation, making it unusable in its current state.
-**Recommendation**: Verify the completeness of the implementation and ensure that all necessary file storage operations are exposed through public methods.
+**Issue**: No error handling for invalid operations
+**Severity**: Low
+**Location**: The class definition
+**Impact**: If the class were to have methods, there would be no way to handle errors like invalid file indices
+**Recommendation**: Add appropriate error handling mechanisms if public methods are added in the future
 
 ### 6.2 Improvement Suggestions
 
 **Refactoring Opportunities**:
-- The class should be refactored to include a complete set of methods for file storage operations, such as adding files, retrieving file information, and managing file paths.
-- Consider introducing a factory pattern for creating file storage objects with different configurations.
+- Consider extracting the file storage information into a more specialized class that can be easily extended
+- Introduce a factory method for creating file storage objects to improve encapsulation
 
 **Modern C++ Features**:
-- Use `std::vector` for storing file metadata instead of raw arrays or custom containers.
-- Use `std::string_view` for file path parameters to avoid unnecessary string copies.
-- Use `std::optional` for methods that might return file information, indicating the absence of a file.
+- Use `std::vector` instead of raw arrays for storing file metadata
+- Add `constexpr` constructors for compile-time initialization
+- Use `std::string_view` for filename access to avoid unnecessary string copies
 
 **Performance Optimizations**:
-- Add `[[nodiscard]]` attributes to methods that return important information to prevent accidental ignoring of return values.
-- Consider using `std::unordered_map` for faster lookup of files by index or name.
-- Use `emplace_back` instead of `push_back` when adding files to avoid unnecessary copies.
+- Add `[[nodiscard]]` attributes to methods that return important information
+- Use `emplace_back` instead of `push_back` when adding files to the storage
+- Consider using `std::array` for fixed-size collections to reduce memory overhead
 
 **Code Examples**:
 ```cpp
-// Before - incomplete and unusable
+// Before: Basic file storage class with no modern C++ features
 class file_storage {
-    // No methods or constructors
+private:
+    std::vector<std::string> filenames_;
+    std::vector<std::int64_t> file_sizes_;
+    // Other members...
 };
 
-// After - complete and usable
+// After: Modernized file storage with improved C++ practices
 class file_storage {
 public:
-    // Constructor
-    file_storage() = default;
+    // Constructor with proper initialization
+    file_storage(std::vector<std::string> filenames, std::vector<std::int64_t> file_sizes)
+        : filenames_(std::move(filenames)), file_sizes_(std::move(file_sizes)) {}
     
-    // Add a file to storage
-    void add_file(const std::string& path, std::size_t size);
+    // Const method for thread-safe access
+    const std::string& filename(int index) const {
+        return filenames_[index];
+    }
     
-    // Get file by index
-    const file_entry& file_at(std::size_t index) const;
+    // Move constructor for efficient transfer
+    file_storage(file_storage&& other) noexcept
+        : filenames_(std::move(other.filenames_)), file_sizes_(std::move(other.file_sizes_)) {}
     
-    // Get number of files
-    std::size_t num_files() const;
-    
-    // Get total size
-    std::size_t total_size() const;
+    // Move assignment operator
+    file_storage& operator=(file_storage&& other) noexcept {
+        if (this != &other) {
+            filenames_ = std::move(other.filenames_);
+            file_sizes_ = std::move(other.file_sizes_);
+        }
+        return *this;
+    }
     
 private:
-    std::vector<file_entry> files_;
+    std::vector<std::string> filenames_;
+    std::vector<std::int64_t> file_sizes_;
 };
 ```
 
 ### 6.3 Best Practices Violations
 
-**Issue**: The class violates the principle of providing a complete interface.
-**Severity**: Critical
-**Location**: All methods
-**Impact**: The class cannot be used as it lacks the necessary methods to perform any file storage operations.
-**Recommendation**: Implement all required methods and constructors to provide a complete and functional interface.
-
-**Issue**: The class lacks proper encapsulation and data access patterns.
-**Severity**: High
-**Location**: All methods
-**Impact**: Without proper getter methods, users cannot access file information stored in the class.
-**Recommendation**: Add const getter methods to allow read-only access to file metadata.
-
-**Issue**: The class lacks RAII (Resource Acquisition Is Initialization) pattern implementation.
+**Violation**: Missing rule of five/zero
 **Severity**: Medium
-**Location**: All methods
-**Impact**: Without proper RAII, file storage might not be properly cleaned up.
-**Recommendation**: Ensure the class manages its resources appropriately, particularly if it handles file handles or other system resources.
+**Location**: The class definition
+**Impact**: Without proper implementation of the rule of five, the class may have undefined behavior when copied or moved
+**Recommendation**: Implement move constructor, move assignment operator, and destructor if needed, or use the rule of zero by relying on smart pointers and standard containers
+
+**Violation**: Inconsistent const usage
+**Severity**: Medium
+**Location**: The class definition
+**Impact**: Without proper const-correctness, the class cannot be safely used in const contexts
+**Recommendation**: Add const methods for accessing file information and use `const` where appropriate
+
+**Violation**: Missing noexcept specifications
+**Severity**: Low
+**Location**: The class definition
+**Impact**: Missing noexcept specifications can limit optimization opportunities and affect exception safety
+**Recommendation**: Add noexcept specifications to operations that do not throw exceptions
 
 ### 6.4 Testing Recommendations
 
-- Test with various file configurations, including single files, multiple files, and very large files.
-- Test edge cases such as empty file lists, files with special characters in names, and files with zero size.
-- Verify that file storage operations are thread-safe when multiple threads access the same storage instance.
-- Test error conditions, such as invalid file paths and out-of-memory situations.
-- Benchmark performance with different numbers of files and file sizes to ensure the implementation scales well.
-- Verify that the class maintains consistent state after file additions and modifications.
+- Test with empty torrent files (no files)
+- Test with single file torrents
+- Test with multiple file torrents (10+ files)
+- Test with large file sizes (GB range)
+- Test with very long file names
+- Test with special characters in filenames
+- Test concurrent read access from multiple threads
+- Test error conditions like invalid file indices
+- Test move semantics and copy operations
+- Test memory usage with large torrents
 
 ## 7. Related Classes
 
-- [torrent](torrent.md)
+- [torrent_info](torrent_info.md)
+- [file_pool](file_pool.md)
 - [disk_io_thread](disk_io_thread.md)
-- [file_entry](file_entry.md)
-- [aux_/file_view_pool](aux_/file_view_pool.md)
+- [storage_params](storage_params.md)
+- [add_torrent_params](add_torrent_params.md)
+
+The `file_storage` class interacts closely with the `torrent_info` class, which contains the file storage information for a torrent. It's also used by the `file_pool` class for managing file access and by the `disk_io_thread` for performing disk operations. The `storage_params` class may use file storage information to configure storage behavior, and the `add_torrent_params` class may provide file storage information when adding a new torrent to the session.
 ```

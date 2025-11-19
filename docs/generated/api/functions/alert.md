@@ -1,423 +1,228 @@
-# C++ API Documentation
+```markdown
+# libtorrent Alert API Documentation
 
-## get_buffer
+## alert
 
-- **Signature**: `bytes get_buffer(read_piece_alert const& rpa)`
-- **Description**: Retrieves the buffer data from a read_piece_alert. Returns a bytes object containing the data from the alert's buffer if it exists, otherwise returns an empty bytes object.
+- **Signature**: `alert(alert&& rhs) noexcept = default;`
+- **Description**: Move constructor for the `alert` class. This function enables efficient transfer of ownership of an `alert` object from one instance to another. The move constructor is explicitly defaulted, which means the compiler will generate a move constructor that efficiently transfers the resources from the rvalue parameter to the new object. This is essential for performance in scenarios where alerts are frequently moved between containers or temporary objects.
 - **Parameters**:
-  - `rpa` (read_piece_alert const&): The alert from which to extract the buffer data. This must be a valid read_piece_alert object.
+  - `rhs` (`alert&&`): The rvalue reference to the alert object being moved. This parameter is guaranteed to be in a valid but unspecified state after the move operation.
 - **Return Value**:
-  - `bytes`: A bytes object containing the buffer data. If the alert has no buffer (buffer is null), an empty bytes object is returned.
+  - None. This is a constructor, so it does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions are thrown. The function is marked `noexcept`, indicating it will not throw any exceptions.
 - **Example**:
 ```cpp
-// Example usage of get_buffer
-auto buffer = get_buffer(alert);
-if (buffer.size() > 0) {
-    // Process the buffer data
+// The move constructor is automatically used when moving alert objects
+std::unique_ptr<alert> create_alert() {
+    auto alert_ptr = std::make_unique<alert>();
+    return alert_ptr; // Move constructor called here
 }
 ```
-- **Preconditions**: The `rpa` parameter must be a valid read_piece_alert object.
-- **Postconditions**: The returned bytes object contains the buffer data or is empty if no buffer exists.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `read_piece_alert`, `bytes`
+- **Preconditions**: The `rhs` parameter must be a valid `alert` object (not in a destroyed state).
+- **Postconditions**: The moved-from object (`rhs`) is left in a valid but unspecified state. The new object contains the resources from the moved object.
+- **Thread Safety**: This function is thread-safe as it does not access shared data and does not perform any synchronization.
+- **Complexity**: O(1) - Constant time complexity, as it only involves transferring pointers or other lightweight resources.
+- **See Also**: `alert(alert const&)`, `operator=(alert const&)`
 
-## stats_alert_transferred
+## alert_cast
 
-- **Signature**: `list stats_alert_transferred(stats_alert const& alert)`
-- **Description**: Extracts the transferred data from a stats_alert and returns it as a list.
+- **Signature**: `T* alert_cast(alert* a)`
+- **Description**: Attempts to cast a generic `alert` pointer to a specific alert type `T`. This function performs a type-safe cast by checking if the alert's actual type matches the expected type `T`. It leverages the `alert_type` static member of the target type to perform the comparison. The function is designed to be used with alert types derived from `alert` and provides a safer alternative to `static_cast` when dealing with polymorphic alert objects.
 - **Parameters**:
-  - `alert` (stats_alert const&): The stats_alert object containing the transferred data.
+  - `a` (`alert*`): A pointer to the alert object to be cast. If `nullptr`, the function returns `nullptr` immediately.
 - **Return Value**:
-  - `list`: A list containing the transferred data from each channel.
+  - Returns a pointer of type `T*` if the alert's type matches `T::alert_type`.
+  - Returns `nullptr` if the alert type does not match or if the input pointer is `nullptr`.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions are thrown. The function is implemented with a simple conditional check and does not involve dynamic allocation or complex operations.
 - **Example**:
 ```cpp
-// Example usage of stats_alert_transferred
-auto transferred = stats_alert_transferred(alert);
-for (auto item : transferred) {
-    // Process each transferred value
+// Example usage of alert_cast to safely downcast an alert
+alert* raw_alert = get_next_alert(); // Assume this returns an alert pointer
+peer_disconnected_alert* peer_alert = alert_cast<peer_disconnected_alert>(raw_alert);
+if (peer_alert != nullptr) {
+    // Successfully cast to peer_disconnected_alert
+    std::cout << "Peer disconnected: " << peer_alert->peer_id << std::endl;
 }
 ```
-- **Preconditions**: The `alert` parameter must be a valid stats_alert object.
-- **Postconditions**: The returned list contains all transferred data from the alert.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of channels.
-- **See Also**: `stats_alert`, `list`
+- **Preconditions**: The function template parameter `T` must be a type derived from `alert`. The `alert` pointer `a` must be valid (not a dangling pointer).
+- **Postconditions**: The function returns a valid `T*` pointer if the type matches, or `nullptr` otherwise.
+- **Thread Safety**: This function is thread-safe as it only performs a simple type check and pointer conversion.
+- **Complexity**: O(1) - Constant time complexity, as it involves a single comparison and pointer cast.
+- **See Also**: `alert_cast<T const*>(alert const*)`, `alert::type()`
 
-## get_status_from_update_alert
+## alert_cast
 
-- **Signature**: `list get_status_from_update_alert(state_update_alert const& alert)`
-- **Description**: Retrieves the torrent status updates from a state_update_alert and returns them as a list.
+- **Signature**: `T const* alert_cast(alert const* a)`
+- **Description**: Const version of `alert_cast` that safely casts a const `alert` pointer to a specific const alert type `T`. This function is identical to the non-const version but is designed for use with const alert objects, ensuring that the original object cannot be modified through the cast pointer. It provides the same type-safe downcasting behavior as the non-const version.
 - **Parameters**:
-  - `alert` (state_update_alert const&): The state_update_alert object containing the status updates.
+  - `a` (`alert const*`): A const pointer to the alert object to be cast. If `nullptr`, the function returns `nullptr` immediately.
 - **Return Value**:
-  - `list`: A list of torrent_status objects representing the current status of torrents.
+  - Returns a pointer of type `T const*` if the alert's type matches `T::alert_type`.
+  - Returns `nullptr` if the alert type does not match or if the input pointer is `nullptr`.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - No exceptions are thrown. The function is implemented with a simple conditional check and does not involve dynamic allocation or complex operations.
 - **Example**:
 ```cpp
-// Example usage of get_status_from_update_alert
-auto statuses = get_status_from_update_alert(alert);
-for (auto status : statuses) {
-    // Process each torrent status
+// Example usage with const alerts
+alert const* const_alert = get_next_alert_const(); // Assume this returns const alert
+torrent_alert* torrent_alert_ptr = alert_cast<torrent_alert const*>(const_alert);
+if (torrent_alert_ptr != nullptr) {
+    // Successfully cast to torrent_alert
+    std::cout << "Torrent name: " << torrent_alert_ptr->name << std::endl;
 }
 ```
-- **Preconditions**: The `alert` parameter must be a valid state_update_alert object.
-- **Postconditions**: The returned list contains all torrent status updates.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of torrents.
-- **See Also**: `state_update_alert`, `list`, `torrent_status`
+- **Preconditions**: The function template parameter `T` must be a type derived from `alert`. The `alert` pointer `a` must be valid (not a dangling pointer) and must not be modified.
+- **Postconditions**: The function returns a valid `T const*` pointer if the type matches, or `nullptr` otherwise.
+- **Thread Safety**: This function is thread-safe as it only performs a simple type check and pointer conversion.
+- **Complexity**: O(1) - Constant time complexity, as it involves a single comparison and pointer cast.
+- **See Also**: `alert_cast<T*>(alert*)`, `alert::type()`
 
-## dht_stats_active_requests
+## alert
 
-- **Signature**: `list dht_stats_active_requests(dht_stats_alert const& a)`
-- **Description**: Extracts active DHT requests from a dht_stats_alert and returns them as a list of dictionaries.
-- **Parameters**:
-  - `a` (dht_stats_alert const&): The dht_stats_alert object containing DHT statistics.
-- **Return Value**:
-  - `list`: A list of dictionaries, each containing information about an active DHT request.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
+- **Signature**: `auto alert()`
+- **Description**: The `alert` class is the base class for all alert types in libtorrent. This is a polymorphic base class that represents a notification or event from the libtorrent library. It provides a common interface for all alerts, allowing them to be stored in a container and processed polymorphically. The class is marked with `TORRENT_EXPORT`, indicating it's part of the public API and exported from the library. The class is designed to be lightweight and efficiently handled by the library's alert system.
+- **Parameters**: N/A - This is a class definition, not a function.
+- **Return Value**: N/A - This is a class definition, not a function.
+- **Exceptions/Errors**: N/A - This is a class definition, not a function.
 - **Example**:
 ```cpp
-// Example usage of dht_stats_active_requests
-auto active_requests = dht_stats_active_requests(alert);
-for (auto request : active_requests) {
-    // Process each active DHT request
-}
+// Example of defining a custom alert type
+class my_custom_alert : public alert {
+public:
+    static const int alert_type = 1234; // Unique alert type identifier
+    // ... other members and methods
+};
+
+// Usage of the alert base class
+alert* alert_ptr = new my_custom_alert();
+// Process the alert through the base class interface
 ```
-- **Preconditions**: The `a` parameter must be a valid dht_stats_alert object.
-- **Postconditions**: The returned list contains all active DHT requests.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of active requests.
-- **See Also**: `dht_stats_alert`, `list`, `dht_lookup`
-
-## dht_stats_routing_table
-
-- **Signature**: `list dht_stats_routing_table(dht_stats_alert const& a)`
-- **Description**: Extracts DHT routing table information from a dht_stats_alert and returns it as a list of dictionaries.
-- **Parameters**:
-  - `a` (dht_stats_alert const&): The dht_stats_alert object containing DHT statistics.
-- **Return Value**:
-  - `list`: A list of dictionaries, each containing routing table information.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of dht_stats_routing_table
-auto routing_table = dht_stats_routing_table(alert);
-for (auto entry : routing_table) {
-    // Process each routing table entry
-}
-```
-- **Preconditions**: The `a` parameter must be a valid dht_stats_alert object.
-- **Postconditions**: The returned list contains all routing table entries.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of routing table entries.
-- **See Also**: `dht_stats_alert`, `list`, `dht_routing_bucket`
-
-## dht_immutable_item
-
-- **Signature**: `dict dht_immutable_item(dht_immutable_item_alert const& alert)`
-- **Description**: Extracts immutable DHT item data from a dht_immutable_item_alert and returns it as a dictionary.
-- **Parameters**:
-  - `alert` (dht_immutable_item_alert const&): The dht_immutable_item_alert object containing the item data.
-- **Return Value**:
-  - `dict`: A dictionary containing the key and value of the immutable item.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of dht_immutable_item
-auto item = dht_immutable_item(alert);
-auto key = item["key"];
-auto value = item["value"];
-// Process the key and value
-```
-- **Preconditions**: The `alert` parameter must be a valid dht_immutable_item_alert object.
-- **Postconditions**: The returned dictionary contains the key and value of the immutable item.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `dht_immutable_item_alert`, `dict`
-
-## dht_mutable_item
-
-- **Signature**: `dict dht_mutable_item(dht_mutable_item_alert const& alert)`
-- **Description**: Extracts mutable DHT item data from a dht_mutable_item_alert and returns it as a dictionary.
-- **Parameters**:
-  - `alert` (dht_mutable_item_alert const&): The dht_mutable_item_alert object containing the item data.
-- **Return Value**:
-  - `dict`: A dictionary containing the key, value, signature, sequence number, and salt of the mutable item.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of dht_mutable_item
-auto item = dht_mutable_item(alert);
-auto key = item["key"];
-auto value = item["value"];
-auto signature = item["signature"];
-auto seq = item["seq"];
-auto salt = item["salt"];
-// Process the key, value, signature, sequence number, and salt
-```
-- **Preconditions**: The `alert` parameter must be a valid dht_mutable_item_alert object.
-- **Postconditions**: The returned dictionary contains all fields of the mutable item.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `dht_mutable_item_alert`, `dict`
-
-## dht_put_item
-
-- **Signature**: `dict dht_put_item(dht_put_alert const& alert)`
-- **Description**: Extracts DHT put item data from a dht_put_alert and returns it as a dictionary.
-- **Parameters**:
-  - `alert` (dht_put_alert const&): The dht_put_alert object containing the put item data.
-- **Return Value**:
-  - `dict`: A dictionary containing the public key, signature, and sequence number if the target is not all zeros.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of dht_put_item
-auto put_item = dht_put_item(alert);
-auto publicKey = put_item["public_key"];
-auto signature = put_item["signature"];
-auto seq = put_item["seq"];
-// Process the public key, signature, and sequence number
-```
-- **Preconditions**: The `alert` parameter must be a valid dht_put_alert object.
-- **Postconditions**: The returned dictionary contains the relevant fields of the put item.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `dht_put_alert`, `dict`
-
-## session_stats_values
-
-- **Signature**: `dict session_stats_values(session_stats_alert const& alert)`
-- **Description**: Extracts session statistics values from a session_stats_alert and returns them as a dictionary.
-- **Parameters**:
-  - `alert` (session_stats_alert const&): The session_stats_alert object containing the statistics.
-- **Return Value**:
-  - `dict`: A dictionary containing the session statistics values.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of session_stats_values
-auto stats = session_stats_values(alert);
-for (auto& [key, value] : stats) {
-    // Process each statistic
-}
-```
-- **Preconditions**: The `alert` parameter must be a valid session_stats_alert object.
-- **Postconditions**: The returned dictionary contains all session statistics values.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of statistics metrics.
-- **See Also**: `session_stats_alert`, `dict`
-
-## dht_live_nodes_nodes
-
-- **Signature**: `list dht_live_nodes_nodes(dht_live_nodes_alert const& alert)`
-- **Description**: Extracts live DHT nodes from a dht_live_nodes_alert and returns them as a list of dictionaries.
-- **Parameters**:
-  - `alert` (dht_live_nodes_alert const&): The dht_live_nodes_alert object containing the nodes.
-- **Return Value**:
-  - `list`: A list of dictionaries, each containing information about a live DHT node.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of dht_live_nodes_nodes
-auto nodes = dht_live_nodes_nodes(alert);
-for (auto node : nodes) {
-    auto nid = node["nid"];
-    auto endpoint = node["endpoint"];
-    // Process each live DHT node
-}
-```
-- **Preconditions**: The `alert` parameter must be a valid dht_live_nodes_alert object.
-- **Postconditions**: The returned list contains all live DHT nodes.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of live nodes.
-- **See Also**: `dht_live_nodes_alert`, `list`, `dict`
-
-## dht_sample_infohashes_nodes
-
-- **Signature**: `list dht_sample_infohashes_nodes(dht_sample_infohashes_alert const& alert)`
-- **Description**: Extracts sample infohashes nodes from a dht_sample_infohashes_alert and returns them as a list of dictionaries.
-- **Parameters**:
-  - `alert` (dht_sample_infohashes_alert const&): The dht_sample_infohashes_alert object containing the nodes.
-- **Return Value**:
-  - `list`: A list of dictionaries, each containing information about a sample infohashes node.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of dht_sample_infohashes_nodes
-auto nodes = dht_sample_infohashes_nodes(alert);
-for (auto node : nodes) {
-    auto nid = node["nid"];
-    auto endpoint = node["endpoint"];
-    // Process each sample infohashes node
-}
-```
-- **Preconditions**: The `alert` parameter must be a valid dht_sample_infohashes_alert object.
-- **Postconditions**: The returned list contains all sample infohashes nodes.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of sample infohashes nodes.
-- **See Also**: `dht_sample_infohashes_alert`, `list`, `dict`
-
-## get_resume_data_entry
-
-- **Signature**: `entry const& get_resume_data_entry(save_resume_data_alert const& self)`
-- **Description**: Retrieves the resume data entry from a save_resume_data_alert. This function is deprecated and should not be used.
-- **Parameters**:
-  - `self` (save_resume_data_alert const&): The save_resume_data_alert object containing the resume data.
-- **Return Value**:
-  - `entry const&`: A reference to the resume data entry.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of get_resume_data_entry (deprecated)
-auto resumeData = get_resume_data_entry(alert);
-// Note: This function is deprecated and should not be used
-```
-- **Preconditions**: The `self` parameter must be a valid save_resume_data_alert object.
-- **Postconditions**: The returned reference points to the resume data entry.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `save_resume_data_alert`, `entry`
-
-## get_pkt_buf
-
-- **Signature**: `bytes get_pkt_buf(dht_pkt_alert const& alert)`
-- **Description**: Extracts the packet buffer from a dht_pkt_alert and returns it as a bytes object.
-- **Parameters**:
-  - `alert` (dht_pkt_alert const&): The dht_pkt_alert object containing the packet buffer.
-- **Return Value**:
-  - `bytes`: A bytes object containing the packet buffer data.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of get_pkt_buf
-auto pktBuf = get_pkt_buf(alert);
-// Process the packet buffer data
-```
-- **Preconditions**: The `alert` parameter must be a valid dht_pkt_alert object.
-- **Postconditions**: The returned bytes object contains the packet buffer data.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(1) time and space complexity.
-- **See Also**: `dht_pkt_alert`, `bytes`
-
-## get_dropped_alerts
-
-- **Signature**: `list get_dropped_alerts(alerts_dropped_alert const& alert)`
-- **Description**: Extracts information about dropped alerts from an alerts_dropped_alert and returns it as a list of boolean values.
-- **Parameters**:
-  - `alert` (alerts_dropped_alert const&): The alerts_dropped_alert object containing information about dropped alerts.
-- **Return Value**:
-  - `list`: A list of boolean values indicating whether each alert was dropped.
-- **Exceptions/Errors**:
-  - No exceptions are thrown.
-- **Example**:
-```cpp
-// Example usage of get_dropped_alerts
-auto droppedAlerts = get_dropped_alerts(alert);
-for (auto dropped : droppedAlerts) {
-    if (dropped) {
-        // Handle dropped alert
-    }
-}
-```
-- **Preconditions**: The `alert` parameter must be a valid alerts_dropped_alert object.
-- **Postconditions**: The returned list contains the drop status for each alert.
-- **Thread Safety**: Thread-safe.
-- **Complexity**: O(n) time complexity where n is the number of dropped alerts.
-- **See Also**: `alerts_dropped_alert`, `list`
+- **Preconditions**: N/A - This is a class definition, not a function.
+- **Postconditions**: N/A - This is a class definition, not a function.
+- **Thread Safety**: This class is designed to be thread-safe for use in the libtorrent library, but specific thread safety depends on the implementation details of derived classes.
+- **Complexity**: N/A - This is a class definition, not a function.
+- **See Also**: `alert_cast<T>()`, `alert::type()`
 
 # Usage Examples
 
 ## Basic Usage
 
 ```cpp
-// Example: Extracting and processing various alert data
-#include <iostream>
-#include <vector>
+#include "libtorrent/alert.hpp"
+#include "libtorrent/peer_disconnected_alert.hpp"
+#include "libtorrent/torrent_alert.hpp"
 
-// Assume we have various alert objects
-// auto alert = ...; // Initialize alert object
+// Get an alert from the alert queue
+alert* alert_ptr = get_next_alert(); // Assume this returns a valid alert pointer
 
-// Extracting buffer data
-auto buffer = get_buffer(read_piece_alert);
-std::cout << "Buffer size: " << buffer.size() << std::endl;
-
-// Extracting transferred data
-auto transferred = stats_alert_transferred(stats_alert);
-for (auto value : transferred) {
-    std::cout << "Transferred: " << value << std::endl;
+// Use alert_cast to safely downcast to the expected type
+peer_disconnected_alert* peer_alert = alert_cast<peer_disconnected_alert>(alert_ptr);
+if (peer_alert != nullptr) {
+    // Handle peer disconnected alert
+    std::cout << "Peer disconnected: " << peer_alert->peer_id << std::endl;
 }
 
-// Extracting torrent status
-auto statuses = get_status_from_update_alert(state_update_alert);
-for (auto status : statuses) {
-    std::cout << "Torrent status: " << status << std::endl;
+// Use const version for read-only access
+alert const* const_alert = get_next_alert_const();
+torrent_alert* torrent_alert_ptr = alert_cast<torrent_alert const*>(const_alert);
+if (torrent_alert_ptr != nullptr) {
+    // Handle torrent alert
+    std::cout << "Torrent name: " << torrent_alert_ptr->name << std::endl;
 }
 ```
 
 ## Error Handling
 
 ```cpp
-// Example: Safe usage with error handling
-#include <iostream>
-#include <stdexcept>
-
-// Function to safely extract data from alerts
-template<typename Alert>
-std::optional<typename Alert::result_type> extractData(const Alert& alert) {
-    try {
-        return Alert::func(alert);
-    } catch (const std::exception& e) {
-        std::cerr << "Error extracting data: " << e.what() << std::endl;
-        return std::nullopt;
-    }
+// Safe handling of potential null returns from alert_cast
+alert* raw_alert = get_next_alert();
+if (raw_alert == nullptr) {
+    // Handle case where no alert is available
+    std::cerr << "No alert available" << std::endl;
+    return;
 }
 
-// Example usage
-auto buffer = extractData<get_buffer>(read_piece_alert);
-if (buffer) {
-    std::cout << "Buffer size: " << buffer->size() << std::endl;
+// Check the type before casting
+if (raw_alert->type() == peer_disconnected_alert::alert_type) {
+    peer_disconnected_alert* peer_alert = static_cast<peer_disconnected_alert*>(raw_alert);
+    if (peer_alert != nullptr) {
+        // Process the alert
+        std::cout << "Peer disconnected: " << peer_alert->peer_id << std::endl;
+    }
+} else if (raw_alert->type() == torrent_alert::alert_type) {
+    torrent_alert* torrent_alert = static_cast<torrent_alert*>(raw_alert);
+    if (torrent_alert != nullptr) {
+        // Process the torrent alert
+        std::cout << "Torrent name: " << torrent_alert->name << std::endl;
+    }
 } else {
-    std::cout << "Failed to extract buffer data" << std::endl;
+    // Handle unknown alert type
+    std::cerr << "Unknown alert type: " << raw_alert->type() << std::endl;
 }
 ```
 
 ## Edge Cases
 
 ```cpp
-// Example: Handling edge cases
-#include <iostream>
-
-// Example with null buffer
-auto buffer = get_buffer(read_piece_alert);
-if (buffer.size() == 0) {
-    std::cout << "No buffer data available" << std::endl;
-} else {
-    std::cout << "Buffer size: " << buffer.size() << std::endl;
+// Handling null pointers and invalid alerts
+alert* raw_alert = nullptr;
+peer_disconnected_alert* peer_alert = alert_cast<peer_disconnected_alert>(raw_alert);
+if (peer_alert == nullptr) {
+    // This will always be true for null input
+    std::cout << "No alert to cast" << std::endl;
 }
 
-// Example with empty stats
-auto transferred = stats_alert_transferred(stats_alert);
-if (transferred.empty()) {
-    std::cout << "No transferred data available" << std::endl;
-} else {
-    for (auto value : transferred) {
-        std::cout << "Transferred: " << value << std::endl;
+// Invalid alert types
+alert* invalid_alert = create_invalid_alert(); // This creates an alert of unknown type
+if (invalid_alert->type() != peer_disconnected_alert::alert_type) {
+    peer_disconnected_alert* peer_alert = alert_cast<peer_disconnected_alert>(invalid_alert);
+    if (peer_alert == nullptr) {
+        // This will be true since the types don't match
+        std::cout << "Type mismatch" << std::endl;
     }
 }
+
+// Multiple alert types in a queue
+std::vector<alert*> alerts = get_all_alerts();
+for (alert* alert_ptr : alerts) {
+    if (alert_ptr == nullptr) continue; // Skip null alerts
+    
+    // Use alert_cast for safe downcasting
+    if (auto* piece_finished = alert_cast<piece_finished_alert>(alert_ptr)) {
+        std::cout << "Piece finished: " << piece_finished->piece_index << std::endl;
+    } else if (auto* peer_disconnected = alert_cast<peer_disconnected_alert>(alert_ptr)) {
+        std::cout << "Peer disconnected: " << peer_disconnected->peer_id << std::endl;
+    }
+}
+```
+
+# Best Practices
+
+## Effective Usage
+
+1. **Always use alert_cast for downcasting**: Instead of using `static_cast` directly, use `alert_cast` to safely check the type before casting.
+2. **Check return values**: Always check if `alert_cast` returns `nullptr` before using the casted pointer.
+3. **Use const versions for read-only access**: When you don't need to modify the alert data, use the const version of `alert_cast`.
+4. **Handle all possible alert types**: In alert processing loops, consider all possible alert types that might be generated by libtorrent.
+
+## Common Mistakes to Avoid
+
+1. **Using static_cast without type checking**: This can lead to undefined behavior if the alert type doesn't match.
+   ```cpp
+   // ❌ BAD: No type checking
+   peer_disconnected_alert* peer_alert = static_cast<peer_disconnected_alert*>(raw_alert);
+   
+   // ✅ GOOD: Safe type checking
+   peer_disconnected_alert* peer_alert = alert_cast<peer_disconnected_alert>(raw_alert);
+   ```
+
+2. **Assuming all alerts are valid**: Always check for `nullptr` inputs and ensure alert objects are valid before processing.
+3. **Ignoring the return value**: Never assume that `alert_cast` will always succeed; always check the return value.
+
+## Performance Tips
+
+1. **Use move semantics**: When moving alert objects between containers or temporary objects, rely on the move constructor for efficient transfers.
+2. **Avoid unnecessary casts**: Only cast when you need the specific alert type's members; otherwise, process through the base `alert` interface.
+3. **Batch processing**: When processing multiple alerts, consider processing them in batches to minimize

@@ -1,358 +1,217 @@
-# API Documentation: bind_to_device
+# API Documentation for bind_to_device Functions
 
-## bind_to_device (Constructor)
+## bind_to_device (string constructor)
 
 - **Signature**: `explicit bind_to_device(char const* device)`
-- **Description**: Constructs a `bind_to_device` option object that can be used to bind a socket to a specific network interface by its name. This option is typically used with `boost::asio::socket` or similar socket types.
+- **Description**: Constructs a bind_to_device option that binds a socket to a specific network interface using its name (e.g., "eth0", "wlan0"). This is used to set the SO_BINDTODEVICE socket option on Unix-like systems.
 - **Parameters**:
-  - `device` (char const*): A null-terminated string representing the name of the network interface (e.g., "eth0", "wlan0"). The string must remain valid for the lifetime of the option object. Must not be null.
-- **Return Value**: None (constructor)
-- **Exceptions/Errors**: None
+  - `device` (char const*): The name of the network interface to bind to. This must be a null-terminated string containing the interface name. Valid values include interface names like "eth0", "wlan0", "lo", etc.
+- **Return Value**:
+  - This is a constructor, so it doesn't return a value in the traditional sense. It initializes a bind_to_device object.
+- **Exceptions/Errors**:
+  - No exceptions are thrown from this constructor.
 - **Example**:
 ```cpp
-bind_to_device device_option("eth0");
-// Use device_option with a socket
+// Create a bind_to_device option for the "eth0" interface
+bind_to_device binding("eth0");
 ```
-- **Preconditions**: `device` must be a valid null-terminated string.
-- **Postconditions**: The option object is initialized with the specified device name.
-- **Thread Safety**: Thread-safe as it's a constructor.
-- **Complexity**: O(1)
-- **See Also**: `bind_device`, `bind_to_device` (overload with unsigned int)
+- **Preconditions**: The `device` parameter must be a valid, null-terminated string. The interface name must exist on the system.
+- **Postconditions**: The bind_to_device object is initialized with the specified device name.
+- **Thread Safety**: This function is thread-safe as it's a constructor.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `bind_device`, `bind_to_device(unsigned int)`
 
 ## level
 
 - **Signature**: `int level(Protocol const&) const`
-- **Description**: Returns the socket level at which the option should be applied. This is typically `SOL_SOCKET` for socket-level options or `IPPROTO_IP` for IP-level options.
+- **Description**: Returns the socket level at which the bind_to_device option should be set. This function is part of the socket option interface and returns SOL_SOCKET for string-based interface binding.
 - **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns the socket level (either `SOL_SOCKET` or `IPPROTO_IP` depending on the specific overload).
-- **Exceptions/Errors**: None
+  - `Protocol` (Protocol const&): The protocol parameter is ignored as this is a standard socket option.
+- **Return Value**:
+  - Returns `SOL_SOCKET`, which is the socket level for standard socket options.
+- **Exceptions/Errors**:
+  - None.
 - **Example**:
 ```cpp
-bind_to_device option("eth0");
-int level_value = option.level(Protocol());
+bind_to_device binding("eth0");
+int socket_level = binding.level(Protocol());
+// socket_level will be SOL_SOCKET
 ```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct socket level for the option.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
+- **Preconditions**: None.
+- **Postconditions**: The function returns the appropriate socket level.
+- **Thread Safety**: This function is thread-safe.
+- **Complexity**: O(1) time and space complexity.
 - **See Also**: `name`, `data`, `size`
 
 ## name
 
 - **Signature**: `int name(Protocol const&) const`
-- **Description**: Returns the option name (SO_BINDTODEVICE or IP_BOUND_IF) that should be used with the socket's `set_option` method.
+- **Description**: Returns the socket option name for the bind_to_device option. This function is part of the socket option interface and returns SO_BINDTODEVICE for string-based interface binding.
 - **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns the option name (SO_BINDTODEVICE or IP_BOUND_IF) depending on the specific overload.
-- **Exceptions/Errors**: None
+  - `Protocol` (Protocol const&): The protocol parameter is ignored as this is a standard socket option.
+- **Return Value**:
+  - Returns `SO_BINDTODEVICE`, which is the option name for binding a socket to a specific network interface.
+- **Exceptions/Errors**:
+  - None.
 - **Example**:
 ```cpp
-bind_to_device option("eth0");
-int option_name = option.name(Protocol());
+bind_to_device binding("eth0");
+int option_name = binding.name(Protocol());
+// option_name will be SO_BINDTODEVICE
 ```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct option name for the option.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
+- **Preconditions**: None.
+- **Postconditions**: The function returns the appropriate socket option name.
+- **Thread Safety**: This function is thread-safe.
+- **Complexity**: O(1) time and space complexity.
 - **See Also**: `level`, `data`, `size`
 
 ## data
 
 - **Signature**: `char const* data(Protocol const&) const`
-- **Description**: Returns a pointer to the data associated with the option. For string-based options, this returns the device name string.
+- **Description**: Returns a pointer to the data that should be passed to the socket option. For string-based interface binding, this returns a pointer to the device name string.
 - **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns a pointer to the device name string.
-- **Exceptions/Errors**: None
+  - `Protocol` (Protocol const&): The protocol parameter is ignored as this is a standard socket option.
+- **Return Value**:
+  - Returns a pointer to the null-terminated string containing the interface name.
+- **Exceptions/Errors**:
+  - None.
 - **Example**:
 ```cpp
-bind_to_device option("eth0");
-char const* device_name = option.data(Protocol());
+bind_to_device binding("eth0");
+char const* device_data = binding.data(Protocol());
+// device_data points to "eth0\0"
 ```
-- **Preconditions**: None
-- **Postconditions**: Returns a pointer to the device name string.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
+- **Preconditions**: None.
+- **Postconditions**: The function returns a valid pointer to the device name string.
+- **Thread Safety**: This function is thread-safe.
+- **Complexity**: O(1) time and space complexity.
 - **See Also**: `level`, `name`, `size`
 
 ## size
 
 - **Signature**: `size_t size(Protocol const&) const`
-- **Description**: Returns the size of the data associated with the option in bytes. This is used by the socket system to know how much data to pass to the underlying system call.
+- **Description**: Returns the size of the data that should be passed to the socket option. For string-based interface binding, this returns the length of the device name plus one for the null terminator.
 - **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns the size of the device name string in bytes, including the null terminator.
-- **Exceptions/Errors**: None
+  - `Protocol` (Protocol const&): The protocol parameter is ignored as this is a standard socket option.
+- **Return Value**:
+  - Returns the size in bytes of the device name string, including the null terminator.
+- **Exceptions/Errors**:
+  - None.
 - **Example**:
 ```cpp
-bind_to_device option("eth0");
-size_t data_size = option.size(Protocol());
+bind_to_device binding("eth0");
+size_t data_size = binding.size(Protocol());
+// data_size will be 5 (for "eth0\0")
 ```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct size of the device name string.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
+- **Preconditions**: None.
+- **Postconditions**: The function returns the correct size of the data.
+- **Thread Safety**: This function is thread-safe.
+- **Complexity**: O(1) time and space complexity.
 - **See Also**: `level`, `name`, `data`
 
 ## bind_device
 
 - **Signature**: `void bind_device(T& sock, char const* device, error_code& ec)`
-- **Description**: Binds a socket to a specific network interface by its name using the `bind_to_device` option.
+- **Description**: Binds a socket to a specific network interface using its name. This function uses the bind_to_device option to set the SO_BINDTODEVICE socket option on the socket.
 - **Parameters**:
-  - `sock` (T&): A reference to the socket object (e.g., `boost::asio::ip::tcp::socket`) that should be bound to the specified device.
-  - `device` (char const*): A null-terminated string representing the name of the network interface (e.g., "eth0", "wlan0"). Must not be null.
-  - `ec` (error_code&): An error code object that will be set to indicate any errors that occur during the operation.
-- **Return Value**: None
-- **Exceptions/Errors**: 
-  - If the device name is invalid or not found, `ec` will be set to the corresponding error code (typically `ENOENT` or similar).
-  - If the socket operation fails, `ec` will be set to the appropriate error code.
+  - `sock` (T&): The socket object to bind to the interface. This must be a socket object that supports the set_option method.
+  - `device` (char const*): The name of the network interface to bind to (e.g., "eth0", "wlan0").
+  - `ec` (error_code&): The error code to set if an error occurs during binding.
+- **Return Value**:
+  - This function returns void.
+- **Exceptions/Errors**:
+  - The error code `ec` will be set if an error occurs, such as when the interface name is invalid or the system cannot bind to the specified interface.
 - **Example**:
 ```cpp
 boost::asio::ip::tcp::socket socket(io_context);
 error_code ec;
 bind_device(socket, "eth0", ec);
 if (ec) {
-    std::cerr << "Failed to bind to device: " << ec.message() << std::endl;
+    std::cerr << "Failed to bind to interface: " << ec.message() << std::endl;
 }
 ```
-- **Preconditions**: 
-  - `sock` must be a valid socket object.
-  - `device` must be a valid null-terminated string.
-  - `ec` must be a valid error_code object.
-- **Postconditions**: 
-  - If successful, the socket is bound to the specified device.
-  - If failed, `ec` contains the error code describing the failure.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `bind_to_device` (constructor), `bind_to_device` (overload with unsigned int)
+- **Preconditions**: The `sock` parameter must be a valid socket object. The `device` parameter must be a valid, null-terminated string.
+- **Postconditions**: The socket is bound to the specified interface if no error occurs.
+- **Thread Safety**: This function is thread-safe.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `bind_to_device`, `bind_device(unsigned int)`
 
-## bind_to_device (Constructor)
+## bind_to_device (unsigned int constructor)
 
 - **Signature**: `explicit bind_to_device(unsigned int idx)`
-- **Description**: Constructs a `bind_to_device` option object that can be used to bind a socket to a specific network interface by its interface index.
+- **Description**: Constructs a bind_to_device option that binds a socket to a specific network interface using its interface index. This is used to set the IP_BOUND_IF socket option on Unix-like systems.
 - **Parameters**:
-  - `idx` (unsigned int): The interface index of the network interface (e.g., the value returned by `if_nametoindex`).
-- **Return Value**: None (constructor)
-- **Exceptions/Errors**: None
+  - `idx` (unsigned int): The interface index to bind to. This must be a valid interface index on the system.
+- **Return Value**:
+  - This is a constructor, so it doesn't return a value in the traditional sense. It initializes a bind_to_device object.
+- **Exceptions/Errors**:
+  - No exceptions are thrown from this constructor.
 - **Example**:
 ```cpp
-bind_to_device device_option(3);
-// Use device_option with a socket
+// Create a bind_to_device option for interface index 2
+bind_to_device binding(2);
 ```
-- **Preconditions**: `idx` must be a valid interface index.
-- **Postconditions**: The option object is initialized with the specified interface index.
-- **Thread Safety**: Thread-safe as it's a constructor.
-- **Complexity**: O(1)
-- **See Also**: `bind_device`, `bind_to_device` (overload with char const*)
+- **Preconditions**: The `idx` parameter must be a valid interface index on the system.
+- **Postconditions**: The bind_to_device object is initialized with the specified interface index.
+- **Thread Safety**: This function is thread-safe as it's a constructor.
+- **Complexity**: O(1) time and space complexity.
+- **See Also**: `bind_device`, `bind_to_device(char const*)`
 
 ## level
 
 - **Signature**: `int level(Protocol const&) const`
-- **Description**: Returns the socket level at which the option should be applied. For this overload, it returns `IPPROTO_IP`.
+- **Description**: Returns the socket level at which the bind_to_device option should be set. This function is part of the socket option interface and returns IPPROTO_IP for interface index binding.
 - **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns `IPPROTO_IP`.
-- **Exceptions/Errors**: None
+  - `Protocol` (Protocol const&): The protocol parameter is ignored as this is a standard socket option.
+- **Return Value**:
+  - Returns `IPPROTO_IP`, which is the socket level for IP-level socket options.
+- **Exceptions/Errors**:
+  - None.
 - **Example**:
 ```cpp
-bind_to_device option(3);
-int level_value = option.level(Protocol());
+bind_to_device binding(2);
+int socket_level = binding.level(Protocol());
+// socket_level will be IPPROTO_IP
 ```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct socket level for the option.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
+- **Preconditions**: None.
+- **Postconditions**: The function returns the appropriate socket level.
+- **Thread Safety**: This function is thread-safe.
+- **Complexity**: O(1) time and space complexity.
 - **See Also**: `name`, `data`, `size`
 
 ## name
 
 - **Signature**: `int name(Protocol const&) const`
-- **Description**: Returns the option name (IP_BOUND_IF) that should be used with the socket's `set_option` method.
+- **Description**: Returns the socket option name for the bind_to_device option. This function is part of the socket option interface and returns IP_BOUND_IF for interface index binding.
 - **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns `IP_BOUND_IF`.
-- **Exceptions/Errors**: None
+  - `Protocol` (Protocol const&): The protocol parameter is ignored as this is a standard socket option.
+- **Return Value**:
+  - Returns `IP_BOUND_IF`, which is the option name for binding a socket to a specific network interface by index.
+- **Exceptions/Errors**:
+  - None.
 - **Example**:
 ```cpp
-bind_to_device option(3);
-int option_name = option.name(Protocol());
+bind_to_device binding(2);
+int option_name = binding.name(Protocol());
+// option_name will be IP_BOUND_IF
 ```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct option name for the option.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
+- **Preconditions**: None.
+- **Postconditions**: The function returns the appropriate socket option name.
+- **Thread Safety**: This function is thread-safe.
+- **Complexity**: O(1) time and space complexity.
 - **See Also**: `level`, `data`, `size`
 
 ## data
 
 - **Signature**: `char const* data(Protocol const&) const`
-- **Description**: Returns a pointer to the data associated with the option. For interface index-based options, this returns a pointer to the interface index.
+- **Description**: Returns a pointer to the data that should be passed to the socket option. For interface index binding, this returns a pointer to the interface index value.
 - **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns a pointer to the interface index.
-- **Exceptions/Errors**: None
+  - `Protocol` (Protocol const&): The protocol parameter is ignored as this is a standard socket option.
+- **Return Value**:
+  - Returns a pointer to the interface index value.
+- **Exceptions/Errors**:
+  - None.
 - **Example**:
 ```cpp
-bind_to_device option(3);
-char const* interface_index = option.data(Protocol());
-```
-- **Preconditions**: None
-- **Postconditions**: Returns a pointer to the interface index.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `level`, `name`, `size`
-
-## size
-
-- **Signature**: `size_t size(Protocol const&) const`
-- **Description**: Returns the size of the data associated with the option in bytes. This is used by the socket system to know how much data to pass to the underlying system call.
-- **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns the size of the interface index in bytes.
-- **Exceptions/Errors**: None
-- **Example**:
-```cpp
-bind_to_device option(3);
-size_t data_size = option.size(Protocol());
-```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct size of the interface index.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `level`, `name`, `data`
-
-## bind_device
-
-- **Signature**: `void bind_device(T& sock, char const* device, error_code& ec)`
-- **Description**: Binds a socket to a specific network interface by its name using the `bind_to_device` option with interface index resolution.
-- **Parameters**:
-  - `sock` (T&): A reference to the socket object (e.g., `boost::asio::ip::tcp::socket`) that should be bound to the specified device.
-  - `device` (char const*): A null-terminated string representing the name of the network interface (e.g., "eth0", "wlan0"). Must not be null.
-  - `ec` (error_code&): An error code object that will be set to indicate any errors that occur during the operation.
-- **Return Value**: None
-- **Exceptions/Errors**: 
-  - If the device name is invalid or not found, `ec` will be set to the corresponding error code (typically `ENOENT` or similar).
-  - If the socket operation fails, `ec` will be set to the appropriate error code.
-- **Example**:
-```cpp
-boost::asio::ip::tcp::socket socket(io_context);
-error_code ec;
-bind_device(socket, "eth0", ec);
-if (ec) {
-    std::cerr << "Failed to bind to device: " << ec.message() << std::endl;
-}
-```
-- **Preconditions**: 
-  - `sock` must be a valid socket object.
-  - `device` must be a valid null-terminated string.
-  - `ec` must be a valid error_code object.
-- **Postconditions**: 
-  - If successful, the socket is bound to the specified device.
-  - If failed, `ec` contains the error code describing the failure.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `bind_to_device` (constructor), `bind_to_device` (overload with unsigned int)
-
-## bind_to_device (Constructor)
-
-- **Signature**: `explicit bind_to_device(char const* device)`
-- **Description**: Constructs a `bind_to_device` option object that can be used to bind a socket to a specific network interface by its name. This option is typically used with `boost::asio::socket` or similar socket types.
-- **Parameters**:
-  - `device` (char const*): A null-terminated string representing the name of the network interface (e.g., "eth0", "wlan0"). The string must remain valid for the lifetime of the option object. Must not be null.
-- **Return Value**: None (constructor)
-- **Exceptions/Errors**: None
-- **Example**:
-```cpp
-bind_to_device device_option("eth0");
-// Use device_option with a socket
-```
-- **Preconditions**: `device` must be a valid null-terminated string.
-- **Postconditions**: The option object is initialized with the specified device name.
-- **Thread Safety**: Thread-safe as it's a constructor.
-- **Complexity**: O(1)
-- **See Also**: `bind_device`, `bind_to_device` (overload with unsigned int)
-
-## level
-
-- **Signature**: `int level(Protocol const&) const`
-- **Description**: Returns the socket level at which the option should be applied. This is typically `SOL_SOCKET` for socket-level options.
-- **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns `SOL_SOCKET`.
-- **Exceptions/Errors**: None
-- **Example**:
-```cpp
-bind_to_device option("eth0");
-int level_value = option.level(Protocol());
-```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct socket level for the option.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `name`, `data`, `size`
-
-## name
-
-- **Signature**: `int name(Protocol const&) const`
-- **Description**: Returns the option name (IP_FORCE_OUT_IFP) that should be used with the socket's `set_option` method.
-- **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns `IP_FORCE_OUT_IFP`.
-- **Exceptions/Errors**: None
-- **Example**:
-```cpp
-bind_to_device option("eth0");
-int option_name = option.name(Protocol());
-```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct option name for the option.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `level`, `data`, `size`
-
-## data
-
-- **Signature**: `char const* data(Protocol const&) const`
-- **Description**: Returns a pointer to the data associated with the option. For string-based options, this returns the device name string.
-- **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns a pointer to the device name string.
-- **Exceptions/Errors**: None
-- **Example**:
-```cpp
-bind_to_device option("eth0");
-char const* device_name = option.data(Protocol());
-```
-- **Preconditions**: None
-- **Postconditions**: Returns a pointer to the device name string.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `level`, `name`, `size`
-
-## size
-
-- **Signature**: `size_t size(Protocol const&) const`
-- **Description**: Returns the size of the data associated with the option in bytes. This is used by the socket system to know how much data to pass to the underlying system call.
-- **Parameters**:
-  - `Protocol` (Protocol const&): A protocol parameter that is part of the template instantiation. This parameter is not used in the implementation but serves as a type constraint.
-- **Return Value**: Returns the size of the device name string in bytes, including the null terminator.
-- **Exceptions/Errors**: None
-- **Example**:
-```cpp
-bind_to_device option("eth0");
-size_t data_size = option.size(Protocol());
-```
-- **Preconditions**: None
-- **Postconditions**: Returns the correct size of the device name string.
-- **Thread Safety**: Thread-safe
-- **Complexity**: O(1)
-- **See Also**: `level`, `name`, `data`
-
-## bind_device
-
-- **Signature**: `void bind_device(T& sock, char const* device, error_code& ec)`
-- **Description**: Binds a socket to a specific network interface by its name using the `bind_to_device` option.
-- **Parameters**:
-  - `sock` (T&): A reference to the socket object (e.g., `boost::asio::ip::tcp::socket`) that should be bound to the specified device.
-  - `device` (char const*): A null-terminated string representing the name of the network interface (e.g., "eth0", "wlan0"). Must not be null.
+bind_to_device binding(2);
+char const* index_data = binding.data

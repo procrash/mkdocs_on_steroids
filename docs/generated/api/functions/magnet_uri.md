@@ -1,146 +1,189 @@
-# libtorrent Magnet URI API Documentation
+# Magnet URI API Documentation
 
 ## _add_magnet_uri
 
 - **Signature**: `torrent_handle _add_magnet_uri(lt::session& s, std::string uri, dict params)`
-- **Description**: Adds a torrent to a libtorrent session using a magnet URI. This function is deprecated and should not be used in new code. It parses the magnet URI and adds the torrent to the session with the specified parameters.
+- **Description**: Adds a torrent to the session using a magnet URI. This function is deprecated and should not be used in new code. It converts the magnet URI and parameters into an add_torrent_params structure and adds the torrent to the session. The function is marked as deprecated with a warning message.
 - **Parameters**:
-  - `s` (lt::session&): Reference to the libtorrent session object where the torrent will be added. The session must be valid and running.
-  - `uri` (std::string): The magnet URI string to parse and add. Must be a valid magnet URI format (e.g., "magnet:?xt=urn:btih:ABC123...").
-  - `params` (dict): Dictionary containing additional parameters for the torrent addition. This can include settings like save path, priority, etc.
+  - `s` (lt::session&): Reference to the libtorrent session object. Must be valid and not destroyed during the function call.
+  - `uri` (std::string): The magnet URI string to be parsed and added. Must be a valid magnet URI format.
+  - `params` (dict): Dictionary containing additional parameters for the torrent addition. These parameters are converted to an add_torrent_params structure.
 - **Return Value**:
-  - `torrent_handle`: A handle to the added torrent, which can be used to control the torrent. Returns a valid handle on success.
+  - `torrent_handle`: A handle to the added torrent. This handle can be used to control the torrent and access its information. If the function fails, the behavior is undefined due to the incomplete code.
 - **Exceptions/Errors**:
-  - `system_error`: Thrown if there's an error parsing the magnet URI or adding the torrent to the session.
-  - `std::invalid_argument`: If the input parameters are invalid.
+  - `system_error`: Thrown if the magnet URI parsing fails or if there's an error during the torrent addition process. The error code is obtained from the parse_magnet_uri function.
+  - `std::runtime_error`: Potentially thrown if the parameters dictionary is invalid or contains unsupported keys.
 - **Example**:
 ```cpp
 try {
-    lt::session s;
-    auto handle = _add_magnet_uri(s, "magnet:?xt=urn:btih:ABC123...", dict());
-    std::cout << "Torrent added with handle: " << handle.info_hash() << std::endl;
+    lt::session ses;
+    std::string magnet_uri = "magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678";
+    dict params;
+    params["save_path"] = "/tmp/torrents";
+    
+    torrent_handle handle = _add_magnet_uri(ses, magnet_uri, params);
+    if (handle.is_valid()) {
+        std::cout << "Torrent added successfully with handle: " << handle.info_hash().to_string() << std::endl;
+    }
 } catch (const std::exception& e) {
     std::cerr << "Error adding magnet URI: " << e.what() << std::endl;
 }
 ```
 - **Preconditions**:
   - The session object must be valid and running.
-  - The magnet URI must be properly formatted.
-  - The parameters dictionary must be valid.
+  - The magnet URI must be syntactically correct.
+  - The parameters dictionary must be properly formatted and contain valid keys.
 - **Postconditions**:
-  - The torrent is added to the session.
-  - A valid torrent handle is returned if successful.
-- **Thread Safety**: This function is thread-safe as it uses a threading guard.
-- **Complexity**: O(n) where n is the length of the magnet URI.
-- **See Also**: `parse_magnet_uri_wrap`, `make_magnet_uri`
+  - A torrent is added to the session if successful.
+  - The returned torrent handle is valid and can be used to control the torrent.
+  - If the function fails, the session state is unchanged.
+- **Thread Safety**: The function is thread-safe as it acquires a threading guard.
+- **Complexity**:
+  - Time Complexity: O(n) where n is the length of the magnet URI.
+  - Space Complexity: O(1) additional space, excluding the input parameters.
+- **See Also**: `parse_magnet_uri`, `add_torrent_params`, `lt::session`
 
 ## parse_magnet_uri_dict
 
 - **Signature**: `dict parse_magnet_uri_dict(std::string const& uri)`
-- **Description**: Parses a magnet URI and returns a dictionary containing the extracted information. This function is used to extract metadata from a magnet URI without adding it to a session.
+- **Description**: Parses a magnet URI and returns a dictionary containing the extracted information. This function converts the magnet URI into an add_torrent_params structure and then extracts relevant fields into a Python dictionary format. It's useful for examining the components of a magnet URI without actually adding a torrent.
 - **Parameters**:
   - `uri` (std::string const&): The magnet URI to parse. Must be a valid magnet URI format.
 - **Return Value**:
-  - `dict`: A dictionary containing the parsed information from the magnet URI, including torrent info (ti), trackers, and other metadata.
+  - `dict`: A dictionary containing the parsed components of the magnet URI. The dictionary may include keys like "ti" for the torrent info, "trackers" for tracker URLs, and other relevant fields.
 - **Exceptions/Errors**:
-  - `system_error`: Thrown if there's an error parsing the magnet URI.
+  - `system_error`: Thrown if the magnet URI cannot be parsed due to invalid format or other parsing errors.
 - **Example**:
 ```cpp
 try {
-    auto result = parse_magnet_uri_dict("magnet:?xt=urn:btih:ABC123...");
-    if (result.contains("ti")) {
-        std::cout << "Found torrent info" << std::endl;
+    std::string magnet_uri = "magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678&tr=http://tracker1.com&tr=http://tracker2.com";
+    dict result = parse_magnet_uri_dict(magnet_uri);
+    
+    if (result.has_key("ti")) {
+        // Process the torrent info
+        torrent_info ti = result["ti"];
+        std::cout << "Torrent info hash: " << ti.info_hash().to_string() << std::endl;
     }
-    if (result.contains("trackers")) {
-        std::cout << "Found trackers" << std::endl;
+    
+    if (result.has_key("trackers")) {
+        list trackers = result["trackers"];
+        for (int i = 0; i < trackers.size(); ++i) {
+            std::cout << "Tracker: " << trackers[i].as<std::string>() << std::endl;
+        }
     }
 } catch (const std::exception& e) {
     std::cerr << "Error parsing magnet URI: " << e.what() << std::endl;
 }
 ```
 - **Preconditions**:
-  - The magnet URI must be properly formatted.
+  - The magnet URI must be valid and properly formatted.
+  - The function should not be called with null or empty strings.
 - **Postconditions**:
-  - The dictionary contains all the parsed information from the magnet URI.
-- **Thread Safety**: This function is thread-safe as it uses a threading guard.
-- **Complexity**: O(n) where n is the length of the magnet URI.
-- **See Also**: `parse_magnet_uri_wrap`, `make_magnet_uri`
+  - The returned dictionary contains the parsed components of the magnet URI.
+  - The dictionary is valid and can be safely used to access the parsed information.
+- **Thread Safety**: The function is thread-safe as it operates on local variables and does not modify global state.
+- **Complexity**:
+  - Time Complexity: O(n) where n is the length of the magnet URI.
+  - Space Complexity: O(m) where m is the number of trackers and other components in the magnet URI.
+- **See Also**: `parse_magnet_uri_wrap`, `add_torrent_params`, `lt::session`
 
 ## parse_magnet_uri_wrap
 
 - **Signature**: `add_torrent_params parse_magnet_uri_wrap(std::string const& uri)`
-- **Description**: Parses a magnet URI and returns an `add_torrent_params` object containing the extracted information. This function is a wrapper around the underlying parse_magnet_uri function.
+- **Description**: A wrapper function that parses a magnet URI and returns an add_torrent_params structure. This function provides a simpler interface for accessing the parsed components of a magnet URI without the need to handle the dictionary conversion directly.
 - **Parameters**:
   - `uri` (std::string const&): The magnet URI to parse. Must be a valid magnet URI format.
 - **Return Value**:
-  - `add_torrent_params`: An object containing the parsed information from the magnet URI, including torrent info, trackers, and other parameters.
+  - `add_torrent_params`: An add_torrent_params structure containing the parsed components of the magnet URI. This structure can be used directly with the add_torrent function.
 - **Exceptions/Errors**:
-  - `system_error`: Thrown if there's an error parsing the magnet URI.
+  - `system_error`: Thrown if the magnet URI cannot be parsed due to invalid format or other parsing errors.
 - **Example**:
 ```cpp
 try {
-    auto params = parse_magnet_uri_wrap("magnet:?xt=urn:btih:ABC123...");
-    if (params.ti) {
-        std::cout << "Found torrent info" << std::endl;
-    }
-    for (const auto& tracker : params.trackers) {
-        std::cout << "Tracker: " << tracker << std::endl;
+    std::string magnet_uri = "magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678&tr=http://tracker1.com&tr=http://tracker2.com";
+    add_torrent_params params = parse_magnet_uri_wrap(magnet_uri);
+    
+    // Use the parameters to add a torrent
+    lt::session ses;
+    torrent_handle handle = ses.add_torrent(params);
+    if (handle.is_valid()) {
+        std::cout << "Torrent added successfully with handle: " << handle.info_hash().to_string() << std::endl;
     }
 } catch (const std::exception& e) {
     std::cerr << "Error parsing magnet URI: " << e.what() << std::endl;
 }
 ```
 - **Preconditions**:
-  - The magnet URI must be properly formatted.
+  - The magnet URI must be valid and properly formatted.
+  - The function should not be called with null or empty strings.
 - **Postconditions**:
-  - The add_torrent_params object contains all the parsed information from the magnet URI.
-- **Thread Safety**: This function is thread-safe as it uses a threading guard.
-- **Complexity**: O(n) where n is the length of the magnet URI.
-- **See Also**: `parse_magnet_uri_dict`, `make_magnet_uri`
+  - The returned add_torrent_params structure contains the parsed components of the magnet URI.
+  - The structure is valid and can be used to add a torrent to a session.
+- **Thread Safety**: The function is thread-safe as it operates on local variables and does not modify global state.
+- **Complexity**:
+  - Time Complexity: O(n) where n is the length of the magnet URI.
+  - Space Complexity: O(m) where m is the number of trackers and other components in the magnet URI.
+- **See Also**: `parse_magnet_uri_dict`, `add_torrent_params`, `lt::session`
 
 ## bind_magnet_uri
 
 - **Signature**: `void bind_magnet_uri()`
-- **Description**: Binds magnet URI functions to the Python interface. This function registers the magnet URI functions with the Python binding system, making them available in the Python API.
+- **Description**: Binds magnet URI functions to the Python module. This function registers the magnet URI functions with the Python module, making them available for use in Python scripts. It conditionally registers functions based on the TORRENT_ABI_VERSION.
 - **Parameters**: None
 - **Return Value**: None
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-// This function is called during initialization of the Python bindings
-// It's not intended to be called directly by application code
+// This function is typically called during module initialization
+// No direct usage in application code
 bind_magnet_uri();
 ```
 - **Preconditions**:
-  - The Python binding system must be initialized.
+  - The Python module must be initialized.
+  - The functions being bound must be properly defined and available.
 - **Postconditions**:
-  - The magnet URI functions are registered with the Python interface.
-- **Thread Safety**: This function is not thread-safe and should only be called during initialization.
-- **Complexity**: O(1)
-- **See Also**: `add_magnet_uri`, `parse_magnet_uri_wrap`
+  - The magnet URI functions are registered in the Python module.
+  - The functions are available for use in Python scripts.
+- **Thread Safety**: The function is not thread-safe and should only be called during module initialization.
+- **Complexity**:
+  - Time Complexity: O(1) as it's a simple registration process.
+  - Space Complexity: O(1) additional space.
+- **See Also**: `def`, `add_magnet_uri`, `make_magnet_uri`, `parse_magnet_uri`
 
 # Usage Examples
 
 ## Basic Usage
 
 ```cpp
-#include "bindings/python/src/magnet_uri.cpp"
+#include <libtorrent/session.hpp>
+#include <libtorrent/add_torrent_params.hpp>
+#include <libtorrent/magnet_uri.hpp>
+#include <libtorrent/dict.hpp>
+#include <libtorrent/torrent_handle.hpp>
 #include <iostream>
 #include <string>
 
 int main() {
-    lt::session s;
+    // Initialize libtorrent session
+    lt::session ses;
     
-    // Parse a magnet URI
-    auto params = parse_magnet_uri_wrap("magnet:?xt=urn:btih:ABC123...");
-    std::cout << "Parsed magnet URI" << std::endl;
+    // Parse a magnet URI and add it to the session
+    std::string magnet_uri = "magnet:?xt=urn:btih:1234567890abcdef1234567890abcdef12345678";
     
-    // Add the torrent to the session
     try {
-        auto handle = _add_magnet_uri(s, "magnet:?xt=urn:btih:ABC123...", dict());
-        std::cout << "Added torrent with handle: " << handle.info_hash() << std::endl;
+        // Parse magnet URI into parameters
+        add_torrent_params params = parse_magnet_uri_wrap(magnet_uri);
+        
+        // Add the torrent to the session
+        torrent_handle handle = ses.add_torrent(params);
+        
+        if (handle.is_valid()) {
+            std::cout << "Successfully added torrent: " << handle.info_hash().to_string() << std::endl;
+        } else {
+            std::cout << "Failed to add torrent" << std::endl;
+        }
     } catch (const std::exception& e) {
-        std::cerr << "Failed to add magnet URI: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
     }
     
     return 0;
@@ -150,31 +193,36 @@ int main() {
 ## Error Handling
 
 ```cpp
-#include "bindings/python/src/magnet_uri.cpp"
+#include <libtorrent/session.hpp>
+#include <libtorrent/add_torrent_params.hpp>
+#include <libtorrent/magnet_uri.hpp>
+#include <libtorrent/dict.hpp>
+#include <libtorrent/torrent_handle.hpp>
 #include <iostream>
 #include <string>
 
-void handle_magnet_uri(const std::string& uri) {
-    try {
-        // Parse the magnet URI
-        auto params = parse_magnet_uri_wrap(uri);
-        std::cout << "Successfully parsed magnet URI" << std::endl;
-        
-        // Add to session
-        lt::session s;
-        auto handle = _add_magnet_uri(s, uri, dict());
-        std::cout << "Added torrent: " << handle.info_hash() << std::endl;
-    } catch (const std::invalid_argument& e) {
-        std::cerr << "Invalid argument: " << e.what() << std::endl;
-    } catch (const std::runtime_error& e) {
-        std::cerr << "Runtime error: " << e.what() << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "General error: " << e.what() << std::endl;
-    }
-}
-
 int main() {
-    handle_magnet_uri("magnet:?xt=urn:btih:ABC123...");
+    lt::session ses;
+    
+    // Test with invalid magnet URI
+    std::string invalid_magnet = "invalid_magnet_uri";
+    
+    try {
+        // Try to parse invalid magnet URI
+        add_torrent_params params = parse_magnet_uri_wrap(invalid_magnet);
+        
+        // This should not be reached if the URI is invalid
+        torrent_handle handle = ses.add_torrent(params);
+        std::cout << "Successfully added torrent: " << handle.info_hash().to_string() << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Caught exception while parsing magnet URI: " << e.what() << std::endl;
+        
+        // Check specific error types
+        if (typeid(e) == typeid(lt::system_error)) {
+            std::cerr << "Error was a system_error, check the error code" << std::endl;
+        }
+    }
+    
     return 0;
 }
 ```
@@ -182,190 +230,19 @@ int main() {
 ## Edge Cases
 
 ```cpp
-#include "bindings/python/src/magnet_uri.cpp"
+#include <libtorrent/session.hpp>
+#include <libtorrent/add_torrent_params.hpp>
+#include <libtorrent/magnet_uri.hpp>
+#include <libtorrent/dict.hpp>
+#include <libtorrent/torrent_handle.hpp>
 #include <iostream>
 #include <string>
 
-void test_edge_cases() {
-    // Empty URI
-    try {
-        auto params = parse_magnet_uri_wrap("");
-        std::cout << "Empty URI parsed successfully" << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Empty URI error: " << e.what() << std::endl;
-    }
-    
-    // Invalid URI
-    try {
-        auto params = parse_magnet_uri_wrap("not a magnet uri");
-        std::cout << "Invalid URI parsed successfully" << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Invalid URI error: " << e.what() << std::endl;
-    }
-    
-    // URI with special characters
-    try {
-        auto params = parse_magnet_uri_wrap("magnet:?xt=urn:btih:ABC123%20test");
-        std::cout << "URI with special characters parsed successfully" << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "URI with special characters error: " << e.what() << std::endl;
-    }
-}
-
 int main() {
-    test_edge_cases();
-    return 0;
-}
-```
-
-# Best Practices
-
-## How to Use These Functions Effectively
-
-1. Use `parse_magnet_uri_wrap` to extract information from a magnet URI without adding it to a session.
-2. Use `_add_magnet_uri` to add a torrent to a session, but be aware it's deprecated.
-3. Always handle exceptions when parsing and adding magnet URIs.
-4. Validate magnet URIs before passing them to these functions.
-
-## Common Mistakes to Avoid
-
-1. **Using deprecated functions**: Avoid using `_add_magnet_uri` in new code.
-2. **Not handling exceptions**: Always wrap magnet URI operations in try-catch blocks.
-3. **Passing invalid URIs**: Validate URIs before passing them to these functions.
-4. **Not checking return values**: Always verify that operations succeed.
-
-## Performance Tips
-
-1. **Cache parsed parameters**: If you need to use the same magnet URI multiple times, parse it once and reuse the parameters.
-2. **Use string_view**: For read-only string operations, consider using `std::string_view` for better performance.
-3. **Batch operations**: When adding multiple torrents, consider batch processing to reduce overhead.
-
-# Code Review & Improvement Suggestions
-
-## Potential Issues
-
-### **Function**: `_add_magnet_uri`
-**Issue**: Function is deprecated but still used in bindings
-**Severity**: High
-**Impact**: Using deprecated code can lead to maintenance issues and potential future compatibility problems
-**Fix**: Replace with modern equivalent:
-```cpp
-// Replace deprecated function
-// Instead of using _add_magnet_uri, use the modern API
-auto add_torrent_params p;
-dict_to_add_torrent_params(params, p);
-p.url = uri;
-auto handle = s.add_torrent(p);
-```
-
-### **Function**: `parse_magnet_uri_dict`
-**Issue**: Incomplete function (code snippet truncated)
-**Severity**: Critical
-**Impact**: The function is incomplete and cannot be compiled or used
-**Fix**: Complete the function implementation:
-```cpp
-dict parse_magnet_uri_dict(std::string const& uri)
-{
-    error_code ec;
-    add_torrent_params p = parse_magnet_uri(uri, ec);
-
-    if (ec) throw system_error(ec);
-
-    dict ret;
-
-    if (p.ti) ret["ti"] = p.ti;
-    list tracker_list;
-    for (std::vector<std::string>::const_iterator i = p.trackers.begin()
-        , e = p.trackers.end(); i != e; ++i) {
-        tracker_list.append(*i);
-    }
-    ret["trackers"] = tracker_list;
-
-    if (p.save_path.size()) ret["save_path"] = p.save_path;
-    if (p.storage_mode != storage_mode_allocate) {
-        ret["storage_mode"] = p.storage_mode;
-    }
-    if (p.torrent_file) ret["torrent_file"] = p.torrent_file;
-    if (p.url.size()) ret["url"] = p.url;
-    if (p.priorities.size()) ret["priorities"] = p.priorities;
-    if (p.file_priorities.size()) ret["file_priorities"] = p.file_priorities;
-    if (p.resume_data.size()) ret["resume_data"] = p.resume_data;
-
-    return ret;
-}
-```
-
-### **Function**: `parse_magnet_uri_wrap`
-**Issue**: Incomplete function (code snippet truncated)
-**Severity**: Critical
-**Impact**: The function is incomplete and cannot be compiled or used
-**Fix**: Complete the function implementation:
-```cpp
-add_torrent_params parse_magnet_uri_wrap(std::string const& uri)
-{
-    error_code ec;
-    add_torrent_params p = parse_magnet_uri(uri, ec);
-    if (ec) throw system_error(ec);
-    return p;
-}
-```
-
-### **Function**: `bind_magnet_uri`
-**Issue**: Incomplete function (code snippet truncated)
-**Severity**: High
-**Impact**: The function is incomplete and cannot be compiled or used
-**Fix**: Complete the function implementation:
-```cpp
-void bind_magnet_uri()
-{
-#if TORRENT_ABI_VERSION == 1
-    def("add_magnet_uri", &_add_magnet_uri);
-#endif
-    def("make_magnet_uri", make_magnet_uri0);
-    def("make_magnet_uri", make_magnet_uri1);
-    def("make_magnet_uri", make_magnet_uri2);
-    def("parse_magnet_uri", parse_magnet_uri_wrap);
-    def("parse_magnet_uri_dict", parse_magnet_uri_dict);
-}
-```
-
-## Modernization Opportunities
-
-### **Function**: `_add_magnet_uri`
-```cpp
-// Before
-torrent_handle _add_magnet_uri(lt::session& s, std::string uri, dict params)
-
-// After
-[[nodiscard]] torrent_handle add_magnet_uri(lt::session& s, std::string_view uri, dict params)
-```
-
-### **Function**: `parse_magnet_uri_dict`
-```cpp
-// Before
-dict parse_magnet_uri_dict(std::string const& uri)
-
-// After
-[[nodiscard]] dict parse_magnet_uri_dict(std::string_view uri)
-```
-
-### **Function**: `parse_magnet_uri_wrap`
-```cpp
-// Before
-add_torrent_params parse_magnet_uri_wrap(std::string const& uri)
-
-// After
-[[nodiscard]] add_torrent_params parse_magnet_uri_wrap(std::string_view uri)
-```
-
-## Refactoring Suggestions
-
-1. **Split functions**: The `bind_magnet_uri` function should be split into separate registration functions for better organization.
-2. **Combine similar functions**: The three `make_magnet_uri` functions should be combined into a single function with overloads.
-3. **Move to utility namespace**: These magnet URI functions should be moved to a utility namespace for better organization.
-
-## Performance Optimizations
-
-1. **Use string_view**: Replace `std::string const&` with `std::string_view` for read-only string parameters.
-2. **Return by value**: The functions can return by value for better performance due to RVO.
-3. **Add noexcept**: Mark functions as `noexcept` where appropriate to improve performance.
+    lt::session ses;
+    
+    // Test with empty magnet URI
+    std::string empty_magnet = "";
+    
+    try {
+        add_torrent_params params = parse_m

@@ -1,233 +1,289 @@
-# API Documentation for `hasher512`
+# hasher512 Class API Documentation
 
 ## hasher512
 
-### **Signature**: `auto update()`
-
-### **Description**
-The `update` function is a member function of the `hasher512` class, which implements the SHA-512 hash algorithm. This function is used to feed data into the hasher incrementally, allowing the computation of a hash over large datasets without requiring the entire data to be loaded into memory at once.
-
-The `hasher512` class is designed to support streaming hash computation, where data is processed in chunks. The `update` function is called repeatedly with different data segments, and the hash state is maintained internally between calls.
-
-### **Parameters**
-None. The `update` function does not take any parameters.
-
-### **Return Value**
-The return type of the `update` function is `auto`, which is determined by the implementation. Based on the context, this function likely returns a reference to the `hasher512` object itself (i.e., `hasher512&`), enabling method chaining.
-
-- **Return Type**: `hasher512&` (likely)
-- **Meaning**: Returns a reference to the `hasher512` object to allow for method chaining.
-- **Special Values**: None.
-
-### **Exceptions/Errors**
-- **No exceptions** are thrown by this function.
-- **Error Handling**: The function does not return error codes or throw exceptions. It assumes that the internal state of the hasher is valid and that the data being processed is well-formed.
-
-### **Example**
+### Signature
 ```cpp
-#include <libtorrent/aux_/hasher512.hpp>
+struct TORRENT_EXTRA_EXPORT hasher512
+```
 
+### Description
+The `hasher512` class implements a SHA-512 hash function that allows incremental hashing of data. This class is designed to handle large datasets by processing data in chunks rather than requiring the entire input to be loaded into memory at once. It's particularly useful for computing hash values of large files or streams where memory efficiency is important.
+
+The class follows a streaming interface where you can call the `update()` method multiple times to feed data to the hasher, and then call a final method (not shown in the provided code) to obtain the complete hash value. This approach enables efficient processing of data that may be too large to fit in memory.
+
+### Parameters
+This class does not have function parameters in the traditional sense, as it's a class that maintains internal state. The "parameters" would be the data chunks passed to the `update()` method.
+
+### Return Value
+This class does not have a function that returns a value in the traditional sense. The `update()` method returns a reference to the hasher instance itself to support method chaining.
+
+### Exceptions/Errors
+- No exceptions are thrown by the `update()` method.
+- The class does not have explicit error handling mechanisms.
+- The hash value is not computed until the final hash operation (not shown in the provided code).
+
+### Example
+```cpp
 // Create a hasher512 instance
 libtorrent::aux::hasher512 hasher;
 
-// Feed data into the hasher incrementally
-hasher.update("Hello, ");
-hasher.update("world!");
-hasher.update(" This is a test.");
+// Update the hasher with data chunks
+std::string data1 = "Hello ";
+std::string data2 = "World!";
 
-// Finalize the hash computation (assuming a finalize() method exists)
-// auto hash = hasher.finalize();
+hasher.update(data1.data(), data1.size());
+hasher.update(data2.data(), data2.size());
+
+// Finalize the hash and get the result
+// (Note: The finalize method is not shown in the provided code)
+// std::array<unsigned char, 64> hash = hasher.finalize();
 ```
 
-### **Preconditions**
-- The `hasher512` object must be properly constructed before calling `update`.
-- The `update` function should not be called after the hash has been finalized (if a `finalize` method exists).
+### Preconditions
+- The `hasher512` instance must be constructed before calling `update()`.
+- The data pointer passed to `update()` must be valid and not null.
+- The length parameter must be non-negative.
+- The data must remain valid for the duration of the hashing process.
 
-### **Postconditions**
-- The internal hash state of the `hasher512` object is updated to include the data provided.
-- The `hasher512` object remains in a valid state and can be used for further calls to `update` or `finalize`.
+### Postconditions
+- After calling `update()`, the hasher's internal state is updated to include the processed data.
+- The hasher maintains its state and can continue processing additional data.
+- The `update()` method does not modify the input data.
+- The class maintains internal consistency and is ready for subsequent operations.
 
-### **Thread Safety**
-- **Thread-Safe**: No, the `hasher512` class is not thread-safe. Concurrent calls to `update` or other methods from multiple threads may result in undefined behavior.
-- **Usage**: Use a separate `hasher512` instance for each thread or protect access with a mutex.
+### Thread Safety
+- The `hasher512` class is not thread-safe.
+- Concurrent calls to `update()` from multiple threads on the same instance may lead to undefined behavior.
+- To use the hasher safely in a multithreaded environment, either use synchronization primitives or create separate hasher instances for each thread.
 
-### **Complexity**
-- **Time Complexity**: O(n), where n is the size of the data being processed in the current `update` call.
-- **Space Complexity**: O(1), as the function only processes the data incrementally and does not store additional data.
+### Complexity
+- **Time Complexity**: O(n) where n is the number of bytes processed in the update call.
+- **Space Complexity**: O(1) additional space beyond the input data, as the hasher maintains a fixed-size internal state.
 
-### **See Also**
-- `finalize()`: Finalizes the hash computation and returns the hash digest.
-- `hasher512()`: Constructor for the `hasher512` class.
-
----
+### See Also
+- `hasher` (for SHA-1 hashing)
+- `hasher256` (for SHA-256 hashing)
+- `sha512_hash` (for hash computation function)
 
 ## Usage Examples
 
-### 1. Basic Usage
+### Basic Usage
 ```cpp
-#include <libtorrent/aux_/hasher512.hpp>
+#include "libtorrent/aux_/hasher512.hpp"
 #include <iostream>
 #include <string>
 
-int main() {
+void basic_hashing_example() {
     libtorrent::aux::hasher512 hasher;
-
-    // Feed data in chunks
-    hasher.update("Hello, ");
-    hasher.update("world!");
-    hasher.update(" This is a test.");
-
-    // Assuming a finalize() method exists, get the hash
-    // auto hash = hasher.finalize();
-    // std::cout << "Hash: " << hash << std::endl;
-
-    return 0;
+    
+    // Process data in chunks
+    std::string data1 = "This is the first part of the message.";
+    std::string data2 = " This is the second part.";
+    
+    hasher.update(data1.data(), data1.size());
+    hasher.update(data2.data(), data2.size());
+    
+    // Get the final hash (assuming finalize method exists)
+    // std::array<unsigned char, 64> hash = hasher.finalize();
+    // std::cout << "Hash value: ";
+    // for (auto& b : hash) std::cout << std::hex << static_cast<int>(b);
+    // std::cout << std::endl;
 }
 ```
 
-### 2. Error Handling
+### Error Handling
 ```cpp
-#include <libtorrent/aux_/hasher512.hpp>
+#include "libtorrent/aux_/hasher512.hpp"
 #include <iostream>
-#include <stdexcept>
+#include <vector>
 
-int main() {
-    libtorrent::aux::hasher512 hasher;
-
+void error_handling_example() {
     try {
-        // Feed data in chunks
-        hasher.update("Hello, ");
-        hasher.update("world!");
-        hasher.update(" This is a test.");
-
-        // Check if the hash computation was successful
-        // auto hash = hasher.finalize();
-        // if (hash.empty()) {
-        //     throw std::runtime_error("Failed to compute hash");
+        libtorrent::aux::hasher512 hasher;
+        
+        // Check for null data pointer
+        const char* data = nullptr;
+        size_t length = 1024;
+        
+        if (data == nullptr && length > 0) {
+            std::cerr << "Error: Cannot process null data pointer" << std::endl;
+            return;
+        }
+        
+        // Process data
+        if (data != nullptr && length > 0) {
+            hasher.update(data, length);
+        }
+        
+        // Handle potential errors from finalization
+        // try {
+        //     std::array<unsigned char, 64> hash = hasher.finalize();
+        // } catch (const std::exception& e) {
+        //     std::cerr << "Hashing error: " << e.what() << std::endl;
         // }
+        
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "Exception during hashing: " << e.what() << std::endl;
     }
-
-    return 0;
 }
 ```
 
-### 3. Edge Cases
+### Edge Cases
 ```cpp
-#include <libtorrent/aux_/hasher512.hpp>
+#include "libtorrent/aux_/hasher512.hpp"
 #include <iostream>
-#include <string>
 
-int main() {
+void edge_case_examples() {
     libtorrent::aux::hasher512 hasher;
-
-    // Empty data
-    hasher.update("");
-
-    // Large data in chunks
-    std::string large_data(1000000, 'a'); // 1MB of 'a' characters
-    for (size_t i = 0; i < large_data.size(); i += 1024) {
-        size_t chunk_size = std::min(size_t(1024), large_data.size() - i);
-        hasher.update(large_data.substr(i, chunk_size));
+    
+    // Empty data update
+    hasher.update(nullptr, 0);
+    std::cout << "Updated with empty data" << std::endl;
+    
+    // Large data update (simulate)
+    const size_t large_size = 1024 * 1024 * 10; // 10MB
+    std::vector<char> large_data(large_size, 'a');
+    
+    // Update in smaller chunks
+    size_t chunk_size = 1024 * 1024; // 1MB chunks
+    for (size_t i = 0; i < large_size; i += chunk_size) {
+        size_t actual_size = std::min(chunk_size, large_size - i);
+        hasher.update(large_data.data() + i, actual_size);
     }
-
-    return 0;
+    
+    std::cout << "Successfully processed large data" << std::endl;
 }
 ```
-
----
 
 ## Best Practices
 
-### How to Use Effectively
-- Use `update` in a loop to process large datasets in chunks.
-- Ensure that the `hasher512` object is not used after `finalize` has been called (if applicable).
-- Avoid sharing the same `hasher512` instance across multiple threads without synchronization.
+### Usage Guidelines
+- Use the hasher for processing large files or streams where memory efficiency is important.
+- Process data in reasonable chunks (typically 4KB-64KB) to balance performance and memory usage.
+- Always check for null pointers and valid sizes when passing data to `update()`.
+- Create a new hasher instance for each hash computation to avoid state conflicts.
 
 ### Common Mistakes to Avoid
-- **Not calling `finalize`**: Failing to call `finalize` may result in incomplete or incorrect hash values.
-- **Overuse of `update`**: While the function is designed for incremental processing, excessive calls may impact performance.
-- **Ignoring thread safety**: Using the same `hasher512` instance across threads without synchronization can lead to undefined behavior.
+- **Not checking data validity**: Always validate that the data pointer is not null and the length is appropriate.
+- **Using the same hasher instance for multiple hash computations**: This can lead to incorrect results or state corruption.
+- **Passing invalid memory ranges**: Ensure that the data remains valid for the duration of the hashing process.
+- **Ignoring return values**: While `update()` doesn't return meaningful values in this case, the pattern of method chaining suggests that you should verify the object's state.
 
 ### Performance Tips
-- **Minimize allocations**: Reuse the `hasher512` instance for multiple hash computations instead of creating new instances.
-- **Batch processing**: Process data in larger chunks to reduce the number of `update` calls.
-- **Use const references**: When passing data to `update`, ensure that the data is not modified, and prefer `const` references where possible.
-
----
+- **Batch updates**: Process multiple chunks in a single call to reduce function call overhead.
+- **Optimal chunk size**: Use chunk sizes that are multiples of 4KB (page size) for better memory management.
+- **Avoid frequent allocations**: Reuse memory buffers when possible rather than creating new ones for each update.
+- **Consider parallel processing**: For very large datasets, consider using multiple hasher instances in parallel if the hash computation can be parallelized.
 
 ## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
-**Function**: `update`
-**Issue**: The function signature is incomplete and unclear. The return type is `auto`, which is ambiguous. Additionally, the function is documented as part of a class but lacks a clear interface.
+**Function**: `update()`
+**Issue**: The documentation is incomplete and the function signature is missing the parameters.
+**Severity**: Critical
+**Impact**: Users cannot determine how to use the function properly, leading to potential misuse and undefined behavior.
+**Fix**: Complete the function documentation and signature:
+
+```markdown
+**Function**: `update()`
+**Issue**: Incomplete documentation and missing function signature
+**Severity**: Critical
+**Impact**: Users cannot properly use the function, leading to undefined behavior
+**Fix**: Complete the documentation with proper function signature and parameters:
+```cpp
+auto update(const void* data, std::size_t size)
+```
+```
+
+**Function**: `hasher512`
+**Issue**: Missing error handling and no validation of input parameters.
 **Severity**: Medium
-**Impact**: Developers may misunderstand the function's purpose and usage, leading to incorrect implementations.
-**Fix**: Clarify the return type and provide a complete function signature. For example:
-```cpp
-hasher512& update(const char* data, size_t length);
-```
+**Impact**: Can lead to undefined behavior when invalid inputs are provided.
+**Fix**: Add input validation and error handling:
 
-**Function**: `update`
-**Issue**: No input validation for `data` or `length`. Passing invalid pointers or lengths could lead to undefined behavior.
-**Severity**: High
-**Impact**: Buffer overflows or crashes could occur if invalid data is passed.
-**Fix**: Add input validation:
 ```cpp
-hasher512& update(const char* data, size_t length) {
-    if (data == nullptr && length > 0) {
-        throw std::invalid_argument("Data pointer cannot be null when length is positive");
+auto update(const void* data, std::size_t size)
+{
+    if (data == nullptr && size > 0) {
+        throw std::invalid_argument("Cannot process null data pointer with positive size");
     }
-    // Process data
-    return *this;
+    // Continue with normal processing
 }
-```
-
-**Function**: `update`
-**Issue**: The function name `update` is generic and could be confused with other functions. Consider a more descriptive name.
-**Severity**: Low
-**Impact**: Reduced code clarity.
-**Fix**: Rename to `feedData` or `processData` for better readability:
-```cpp
-hasher512& feedData(const char* data, size_t length);
 ```
 
 ### Modernization Opportunities
 
-**Function**: `update`
-**Opportunity**: Use `std::span` for safer and more expressive handling of data ranges.
-**Fix**: Replace `const char*` and `size_t` with `std::span<const char>`:
+**Function**: `update()`
+**Issue**: Could benefit from modern C++ features for better usability and safety.
+**Severity**: High
+**Impact**: Improves code safety and maintainability.
+**Fix**: Use `std::span` for safer memory handling:
+
 ```cpp
-hasher512& update(std::span<const char> data);
+#include <span>
+
+auto update(std::span<const std::byte> data)
+{
+    // Process data using span
+    // This provides bounds checking and safer memory handling
+}
 ```
 
-**Function**: `update`
-**Opportunity**: Use `[[nodiscard]]` to indicate that the return value should not be ignored.
-**Fix**: Mark the function as `[[nodiscard]]`:
+**Function**: `hasher512`
+**Issue**: Could benefit from `constexpr` for compile-time evaluation where possible.
+**Severity**: Low
+**Impact**: Improves performance for compile-time constants.
+**Fix**: Use `constexpr` for constructors and utility functions where applicable:
+
 ```cpp
-[[nodiscard]] hasher512& update(std::span<const char> data);
+constexpr hasher512() = default;
 ```
 
 ### Refactoring Suggestions
 
-**Function**: `update`
-**Suggestion**: The `hasher512` class should be refactored to include a clear interface with a `finalize` method. The `update` function should only be responsible for processing data.
-**Reason**: Separating concerns improves code maintainability and reduces confusion.
+**Function**: `hasher512`
+**Issue**: The class should be split into separate components for hashing logic and state management.
+**Severity**: Medium
+**Impact**: Improves maintainability and testability.
+**Fix**: Consider extracting the hash algorithm implementation into a separate class and using composition:
+
+```cpp
+class hasher512_impl {
+    // Hashing algorithm implementation
+};
+
+class hasher512 {
+    hasher512_impl impl_;
+    // Other state and methods
+};
+```
 
 ### Performance Optimizations
 
-**Function**: `update`
-**Opportunity**: Use move semantics for data if it is temporary.
-**Fix**: Allow `update` to accept rvalue references:
+**Function**: `update()`
+**Issue**: No move semantics for data ownership.
+**Severity**: Medium
+**Impact**: Can lead to unnecessary memory copies.
+**Fix**: Add move semantics to allow efficient data transfer:
+
 ```cpp
-hasher512& update(std::string&& data);
+auto update(std::vector<std::byte>&& data)
+{
+    // Move data instead of copying
+}
 ```
 
-**Function**: `update`
-**Opportunity**: Return the hash digest by value instead of using a separate `finalize` method.
-**Fix**: Modify the interface to return the hash digest directly:
+**Function**: `hasher512`
+**Issue**: No `noexcept` specification for operations.
+**Severity**: Low
+**Impact**: Affects exception safety and optimization opportunities.
+**Fix**: Add `noexcept` where appropriate:
+
 ```cpp
-std::array<uint8_t, 64> finalize();
+auto update(const void* data, std::size_t size) noexcept
+{
+    // No exceptions thrown
+}
 ```

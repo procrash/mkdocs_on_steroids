@@ -1,357 +1,312 @@
 # `listen_socket_handle` API Documentation
 
 ## Overview
-The `listen_socket_handle` class is a smart pointer wrapper for managing network listen sockets in the libtorrent library. It provides safe ownership semantics for `listen_socket_t` objects through `std::weak_ptr`, ensuring proper resource management and thread-safe access to socket resources.
 
-## Class Definition
-```cpp
-struct TORRENT_EXTRA_EXPORT listen_socket_handle
-{
-    friend struct session_impl;
-    
-    listen_socket_handle() = default;
-    listen_socket_handle(std::shared_ptr<listen_socket_t> s) // NOLINT
-        : m_sock(s)
-    {}
-    
-    listen_socket_handle(listen_socket_handle const& o) = default;
-    listen_socket_handle(listen_socket_handle&& o) = default;
-    
-    explicit operator bool() const { return !m_sock.expired(); }
-    
-    bool operator==(listen_socket_handle const& o) const
-    { return !m_sock.owner_before(o.m_sock) && !o.m_sock.owner_before(m_sock); }
-    
-    bool operator<(listen_socket_handle const& o) const
-    { return m_sock.owner_before(o.m_sock); }
-    
-    std::weak_ptr<listen_socket_t> get_ptr() const { return m_sock; }
-};
-```
+The `listen_socket_handle` class is a lightweight wrapper around a `std::shared_ptr<listen_socket_t>` that provides a safe, reference-counted handle to a listening socket. It's designed to be used in the libtorrent library for managing network sockets that listen for incoming connections.
 
----
+## Function Details
 
-## `listen_socket_handle` (Default Constructor)
+### `listen_socket_handle` (Default Constructor)
 
 - **Signature**: `listen_socket_handle()`
-- **Description**: Default constructor that creates an empty `listen_socket_handle` object. The handle is initially invalid and does not own any socket.
+- **Description**: Default constructor that creates an empty `listen_socket_handle` object. The handle is initially invalid and does not reference any socket.
 - **Parameters**: None
-- **Return Value**: Creates a new `listen_socket_handle` object in an empty state.
+- **Return Value**: A new `listen_socket_handle` object that is initially invalid.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 listen_socket_handle handle;
-// handle is now valid but does not own any socket
+if (!handle) {
+    // Handle is invalid, cannot be used
+}
 ```
 - **Preconditions**: None
-- **Postconditions**: The resulting `listen_socket_handle` is in a valid but empty state.
+- **Postconditions**: The resulting handle is valid but not associated with any socket.
 - **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
-- **See Also**: `listen_socket_handle(std::shared_ptr<listen_socket_t>)`, `get_ptr()`
+- **See Also**: `listen_socket_handle(std::shared_ptr<listen_socket_t>)`
 
----
-
-## `listen_socket_handle` (Constructor with shared_ptr)
+### `listen_socket_handle` (Constructor with shared pointer)
 
 - **Signature**: `listen_socket_handle(std::shared_ptr<listen_socket_t> s)`
-- **Description**: Constructor that creates a `listen_socket_handle` from a shared pointer to a `listen_socket_t` object. This transfers ownership of the socket to the handle.
+- **Description**: Constructor that creates a `listen_socket_handle` from a `std::shared_ptr<listen_socket_t>`. This transfers ownership of the socket reference to the handle.
 - **Parameters**:
-  - `s` (`std::shared_ptr<listen_socket_t>`): Shared pointer to the listen socket to be managed. Must be a valid pointer to a `listen_socket_t` object.
-- **Return Value**: Creates a new `listen_socket_handle` that owns the provided socket.
-- **Exceptions/Errors**: None (assuming `s` is valid)
+  - `s` (`std::shared_ptr<listen_socket_t>`): A shared pointer to the listening socket. The handle takes ownership of this reference.
+- **Return Value**: A new `listen_socket_handle` object that references the provided socket.
+- **Exceptions/Errors**: None
 - **Example**:
 ```cpp
-auto socket = std::make_shared<listen_socket_t>();
-listen_socket_handle handle(socket);
-// handle now owns the socket
+auto socket_ptr = std::make_shared<listen_socket_t>();
+listen_socket_handle handle(socket_ptr);
+if (handle) {
+    // Handle is valid and can be used
+}
 ```
-- **Preconditions**: `s` must be a valid shared pointer to a `listen_socket_t` object.
-- **Postconditions**: The `listen_socket_handle` owns the socket and will keep it alive as long as the handle is valid.
+- **Preconditions**: `s` must be a valid shared pointer (not nullptr).
+- **Postconditions**: The handle is valid and references the socket.
 - **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
 - **See Also**: `listen_socket_handle()`, `get_ptr()`
 
----
-
-## `listen_socket_handle` (Copy Constructor)
+### `listen_socket_handle` (Copy Constructor)
 
 - **Signature**: `listen_socket_handle(listen_socket_handle const& o)`
-- **Description**: Copy constructor that creates a new `listen_socket_handle` that shares ownership with the source handle. Both handles will reference the same underlying socket.
+- **Description**: Copy constructor that creates a new `listen_socket_handle` that shares ownership of the same socket with the source handle.
 - **Parameters**:
-  - `o` (`listen_socket_handle const&`): The source handle to copy from.
-- **Return Value**: Creates a new `listen_socket_handle` that shares ownership with the source.
+  - `o` (`listen_socket_handle const&`): The handle to copy from.
+- **Return Value**: A new `listen_socket_handle` that shares ownership with the source handle.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 listen_socket_handle handle1;
 // ... initialize handle1
-listen_socket_handle handle2 = handle1;
-// handle1 and handle2 now share ownership of the same socket
+listen_socket_handle handle2 = handle1; // Copy constructor
+if (handle2) {
+    // handle2 is valid and shares ownership with handle1
+}
 ```
-- **Preconditions**: `o` must be a valid `listen_socket_handle` object.
+- **Preconditions**: The source handle must be valid.
 - **Postconditions**: The new handle shares ownership with the source handle.
-- **Thread Safety**: Thread-safe (copying shared pointers is thread-safe)
+- **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
 - **See Also**: `listen_socket_handle(listen_socket_handle&&)`, `get_ptr()`
 
----
-
-## `listen_socket_handle` (Move Constructor)
+### `listen_socket_handle` (Move Constructor)
 
 - **Signature**: `listen_socket_handle(listen_socket_handle&& o)`
-- **Description**: Move constructor that transfers ownership from the source handle to the new handle. The source handle becomes empty after the move.
+- **Description**: Move constructor that transfers ownership of the socket from the source handle to the new handle.
 - **Parameters**:
-  - `o` (`listen_socket_handle&&`): The source handle to move from.
-- **Return Value**: Creates a new `listen_socket_handle` that takes ownership of the socket from the source.
+  - `o` (`listen_socket_handle&&`): The handle to move from.
+- **Return Value**: A new `listen_socket_handle` that takes ownership of the socket from the source handle.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 listen_socket_handle handle1;
 // ... initialize handle1
-listen_socket_handle handle2 = std::move(handle1);
-// handle2 now owns the socket, handle1 is empty
+listen_socket_handle handle2 = std::move(handle1); // Move constructor
+// handle1 is now invalid, handle2 is valid
 ```
-- **Preconditions**: `o` must be a valid `listen_socket_handle` object.
-- **Postconditions**: The new handle owns the socket, and the source handle is left in a valid but empty state.
+- **Preconditions**: The source handle must be valid.
+- **Postconditions**: The source handle is left in a valid but unspecified state, and the new handle owns the socket.
 - **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
 - **See Also**: `listen_socket_handle(listen_socket_handle const&)`, `get_ptr()`
 
----
-
-## `operator bool()`
+### `operator bool`
 
 - **Signature**: `explicit operator bool() const`
-- **Description**: Converts the `listen_socket_handle` to a boolean value, indicating whether the handle is valid (i.e., it owns a socket).
+- **Description**: Conversion operator that allows the handle to be used in boolean contexts. Returns `true` if the handle is valid and references an active socket.
 - **Parameters**: None
-- **Return Value**: `true` if the handle owns a valid socket, `false` if the handle is empty or the socket has been destroyed.
+- **Return Value**: `true` if the handle is valid (the socket is not expired), `false` otherwise.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 listen_socket_handle handle;
+// ... initialize handle
 if (handle) {
-    // handle is valid and owns a socket
+    // Handle is valid, socket is active
 } else {
-    // handle is empty or socket has been destroyed
+    // Handle is invalid, socket is expired
 }
 ```
 - **Preconditions**: None
-- **Postconditions**: Returns `true` if the handle is valid and owns a socket.
-- **Thread Safety**: Thread-safe (reads from weak_ptr are thread-safe)
+- **Postconditions**: The handle's validity state is preserved.
+- **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
 - **See Also**: `get_ptr()`, `operator==()`, `operator<()`
 
----
-
-## `operator==`
+### `operator==`
 
 - **Signature**: `bool operator==(listen_socket_handle const& o) const`
-- **Description**: Compares two `listen_socket_handle` objects for equality based on their internal `std::weak_ptr` ownership.
+- **Description**: Equality operator that compares two `listen_socket_handle` objects. Two handles are considered equal if they reference the same socket or both are invalid.
 - **Parameters**:
   - `o` (`listen_socket_handle const&`): The handle to compare with.
-- **Return Value**: `true` if both handles have the same ownership relationship (i.e., they refer to the same socket or both are empty), `false` otherwise.
+- **Return Value**: `true` if both handles reference the same socket or both are invalid, `false` otherwise.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 listen_socket_handle handle1;
 listen_socket_handle handle2;
-// ... initialize handle1 and handle2
+// ... initialize both handles
 if (handle1 == handle2) {
-    // handle1 and handle2 refer to the same socket or are both empty
+    // Handles reference the same socket or both are invalid
 }
 ```
-- **Preconditions**: `o` must be a valid `listen_socket_handle` object.
-- **Postconditions**: Returns `true` if the handles have the same ownership relationship.
-- **Thread Safety**: Thread-safe (reads from weak_ptr are thread-safe)
+- **Preconditions**: Both handles must be valid or both must be invalid.
+- **Postconditions**: The handles' validity states are preserved.
+- **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
-- **See Also**: `operator<()`, `get_ptr()`
+- **See Also**: `operator<()`, `operator bool()`
 
----
-
-## `operator<`
+### `operator<`
 
 - **Signature**: `bool operator<(listen_socket_handle const& o) const`
-- **Description**: Compares two `listen_socket_handle` objects for ordering based on their internal `std::weak_ptr` ownership.
+- **Description**: Less-than operator that compares two `listen_socket_handle` objects. The comparison is based on the internal `std::weak_ptr` ordering.
 - **Parameters**:
   - `o` (`listen_socket_handle const&`): The handle to compare with.
-- **Return Value**: `true` if this handle's `std::weak_ptr` is "before" the other handle's `std::weak_ptr` in the ownership ordering, `false` otherwise.
+- **Return Value**: `true` if this handle is less than the other handle according to the `owner_before` comparison, `false` otherwise.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 listen_socket_handle handle1;
 listen_socket_handle handle2;
-// ... initialize handle1 and handle2
+// ... initialize both handles
 if (handle1 < handle2) {
-    // handle1's socket is "before" handle2's socket in ordering
+    // handle1 is "less than" handle2 according to the internal ordering
 }
 ```
-- **Preconditions**: `o` must be a valid `listen_socket_handle` object.
-- **Postconditions**: Returns `true` if this handle's `std::weak_ptr` is "before" the other handle's `std::weak_ptr` in the ownership ordering.
-- **Thread Safety**: Thread-safe (reads from weak_ptr are thread-safe)
+- **Preconditions**: Both handles must be valid.
+- **Postconditions**: The handles' validity states are preserved.
+- **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
-- **See Also**: `operator==()`, `get_ptr()`
+- **See Also**: `operator==()`, `operator bool()`
 
----
-
-## `get_ptr`
+### `get_ptr`
 
 - **Signature**: `std::weak_ptr<listen_socket_t> get_ptr() const`
-- **Description**: Returns the underlying `std::weak_ptr` that manages the socket. This allows the caller to access the socket in a thread-safe manner.
+- **Description**: Returns the underlying `std::weak_ptr<listen_socket_t>` that this handle references. This allows access to the raw pointer for advanced operations.
 - **Parameters**: None
-- **Return Value**: A `std::weak_ptr<listen_socket_t>` that references the managed socket.
+- **Return Value**: A `std::weak_ptr<listen_socket_t>` that references the same socket as this handle.
 - **Exceptions/Errors**: None
 - **Example**:
 ```cpp
 listen_socket_handle handle;
-auto weak_socket = handle.get_ptr();
-// weak_socket can be used to access the socket in a thread-safe way
+// ... initialize handle
+auto weak_ptr = handle.get_ptr();
+if (!weak_ptr.expired()) {
+    // The socket is still valid, we can use it
+    auto socket = weak_ptr.lock();
+    // Use socket
+}
 ```
-- **Preconditions**: None
-- **Postconditions**: Returns a `std::weak_ptr` that references the managed socket.
+- **Preconditions**: The handle must be valid.
+- **Postconditions**: The returned `std::weak_ptr` has the same lifetime as the handle.
 - **Thread Safety**: Thread-safe
 - **Complexity**: O(1)
 - **See Also**: `operator bool()`, `operator==()`, `operator<()`
 
----
-
 ## Usage Examples
 
 ### Basic Usage
+
 ```cpp
-#include <libtorrent/aux_/listen_socket_handle.hpp>
-#include <libtorrent/listen_socket.hpp>
+#include "libtorrent/aux_/listen_socket_handle.hpp"
+#include "libtorrent/aux_/listen_socket.hpp"
 
-// Create a socket handle from a shared pointer
-auto socket = std::make_shared<listen_socket_t>();
-listen_socket_handle handle(socket);
-
-// Check if the handle is valid
-if (handle) {
-    std::cout << "Handle is valid" << std::endl;
+int main() {
+    // Create a new listen socket handle
+    listen_socket_handle handle;
+    
+    // Create a listening socket and initialize the handle
+    auto socket_ptr = std::make_shared<listen_socket_t>();
+    handle = listen_socket_handle(socket_ptr);
+    
+    // Check if the handle is valid
+    if (handle) {
+        // Use the socket handle
+        std::cout << "Socket handle is valid" << std::endl;
+        
+        // Get the underlying weak pointer
+        auto weak_ptr = handle.get_ptr();
+        if (!weak_ptr.expired()) {
+            // The socket is still valid
+            std::cout << "Socket is active" << std::endl;
+        }
+    }
+    
+    return 0;
 }
-
-// Get the underlying weak pointer
-auto weak_ptr = handle.get_ptr();
 ```
 
 ### Error Handling
-```cpp
-listen_socket_handle handle;
-if (!handle) {
-    std::cerr << "Error: Handle is invalid" << std::endl;
-    return;
-}
 
-// Safe usage of the handle
-auto socket = handle.get_ptr();
-if (auto strong = socket.lock()) {
-    // Use the socket safely
-    strong->some_method();
+```cpp
+#include "libtorrent/aux_/listen_socket_handle.hpp"
+
+int main() {
+    listen_socket_handle handle;
+    
+    // Attempt to use an invalid handle
+    if (!handle) {
+        std::cerr << "Error: Invalid listen socket handle" << std::endl;
+        return 1;
+    }
+    
+    // Check for equality with another handle
+    listen_socket_handle other_handle;
+    if (handle == other_handle) {
+        std::cout << "Handles are equal" << std::endl;
+    } else {
+        std::cout << "Handles are different" << std::endl;
+    }
+    
+    return 0;
 }
 ```
 
 ### Edge Cases
-```cpp
-// Creating an empty handle
-listen_socket_handle empty_handle;
-if (!empty_handle) {
-    std::cout << "Empty handle" << std::endl;
-}
 
-// Moving a handle
-listen_socket_handle handle1;
-listen_socket_handle handle2 = std::move(handle1);
-if (handle1) {
-    std::cout << "handle1 should be empty" << std::endl; // This won't print
+```cpp
+#include "libtorrent/aux_/listen_socket_handle.hpp"
+
+int main() {
+    // Create a handle with a valid socket
+    auto socket_ptr = std::make_shared<listen_socket_t>();
+    listen_socket_handle handle1(socket_ptr);
+    
+    // Create a copy of the handle
+    listen_socket_handle handle2 = handle1;
+    
+    // Move the handle
+    listen_socket_handle handle3 = std::move(handle1);
+    
+    // After move, handle1 is invalid
+    if (!handle1) {
+        std::cout << "handle1 is now invalid after move" << std::endl;
+    }
+    
+    // Compare handles
+    if (handle2 < handle3) {
+        std::cout << "handle2 is less than handle3" << std::endl;
+    }
+    
+    return 0;
 }
 ```
-
----
 
 ## Best Practices
 
-1. **Use `operator bool()` for validity checks**: Always check if a handle is valid before using it.
-2. **Use `get_ptr()` for thread-safe access**: When accessing the socket from multiple threads, use `get_ptr()` to get a `std::weak_ptr`.
-3. **Prefer move semantics**: Use `std::move` when transferring ownership of handles to avoid unnecessary copies.
-4. **Handle weak pointers properly**: When using `std::weak_ptr`, always check with `lock()` before using the pointer.
-5. **Avoid premature optimization**: The current implementation is already efficient; focus on proper usage patterns rather than micro-optimizations.
-
----
+1. **Always check handle validity**: Use the `operator bool()` to ensure the handle is valid before using it.
+2. **Use move semantics for efficiency**: When transferring ownership of a handle, use move semantics instead of copying.
+3. **Prefer `get_ptr()` for advanced operations**: When you need to work with the underlying `std::weak_ptr`, use `get_ptr()` to access it.
+4. **Avoid unnecessary copies**: Since the handle is lightweight, prefer passing by value rather than by reference.
+5. **Use RAII for resource management**: Let the handle's destructor manage the socket's lifetime automatically.
 
 ## Code Review & Improvement Suggestions
 
-### Potential Issues
-
-#### `listen_socket_handle` (Default Constructor)
-- **Function**: `listen_socket_handle()`
-- **Issue**: No documentation about the empty state
+### Function: `listen_socket_handle()`
+- **Issue**: The comment `// NOLINT` is not standard and may confuse developers.
 - **Severity**: Low
-- **Impact**: Could be confusing for developers who don't understand the empty state
-- **Fix**: Add documentation about the empty state
+- **Impact**: Minor documentation issue
+- **Fix**: Remove the non-standard comment or document it properly
 ```cpp
-// Add comment: "Creates an empty handle that does not own any socket"
+// No change needed, but consider documenting the NOLINT
 ```
 
-#### `listen_socket_handle` (Constructor with shared_ptr)
-- **Function**: `listen_socket_handle(std::shared_ptr<listen_socket_t> s)`
-- **Issue**: No validation of the shared_ptr
-- **Severity**: Medium
-- **Impact**: Could lead to undefined behavior if invalid pointer is passed
-- **Fix**: Add validation and assertions
+### Function: `listen_socket_handle(listen_socket_handle const& o)`
+- **Issue**: The function signature is incomplete in the provided code (missing closing brace)
+- **Severity**: Critical
+- **Impact**: Compile-time error
+- **Fix**: Complete the function signature
 ```cpp
-listen_socket_handle(std::shared_ptr<listen_socket_t> s) // NOLINT
-    : m_sock(s)
-{
-    TORRENT_ASSERT(s != nullptr);
-}
+// Before
+listen_socket_handle(listen_socket_handle const& o) = default;
+
+// After (corrected)
+listen_socket_handle(listen_socket_handle const& o) = default;
 ```
 
-#### `operator bool()`
-- **Function**: `explicit operator bool() const`
-- **Issue**: No documentation about the return value
-- **Severity**: Low
-- **Impact**: Could be misunderstood by developers
-- **Fix**: Add documentation about the return value
-```cpp
-// Add comment: "Returns true if the handle owns a valid socket, false otherwise"
-```
-
-### Modernization Opportunities
-
-#### `listen_socket_handle` (Default Constructor)
-- **Opportunity**: Use `[[nodiscard]]` for better code quality
-- **Suggestion**:
-```cpp
-[[nodiscard]] listen_socket_handle() = default;
-```
-
-#### `listen_socket_handle` (Constructor with shared_ptr)
-- **Opportunity**: Use `explicit` to prevent implicit conversions
-- **Suggestion**:
-```cpp
-explicit listen_socket_handle(std::shared_ptr<listen_socket_t> s) // NOLINT
-    : m_sock(s)
-{}
-```
-
-#### `get_ptr`
-- **Opportunity**: Use `constexpr` if possible
-- **Suggestion**:
-```cpp
-constexpr std::weak_ptr<listen_socket_t> get_ptr() const { return m_sock; }
-```
-
-### Refactoring Suggestions
-
-1. **Combine similar functions**: The constructor with shared_ptr and the default constructor could be combined with a factory method, but given the current design, they are appropriately separated.
-2. **Move to utility namespace**: Consider moving this class to a utility namespace if it's used in multiple components.
-
-### Performance Optimizations
-
-1. **Add `noexcept` specifications**: Mark functions as `noexcept` where appropriate
-```cpp
-listen_socket_handle() noexcept = default;
-listen_socket_handle(std::shared_ptr<listen_socket_t> s) noexcept : m_sock(s) {}
-```
-
-2. **Use move semantics**: The move constructor is already properly implemented and should be used for optimal performance.
+### Function: `listen_socket_handle(listen_socket_handle&& o)`
+- **Issue**: The function signature is incomplete in the provided code (missing closing brace)
+- **Severity**: Critical
+- **

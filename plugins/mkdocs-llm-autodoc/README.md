@@ -102,10 +102,15 @@ plugins:
         - '**/*.h'
         - '**/*.hpp'
         - '**/*.cpp'
-      exclude_patterns:
-        - '**/build/**'
-        - '**/third_party/**'
-        - '**/external/**'
+      exclude_patterns:        # Recursively exclude paths matching these patterns
+        - '**/build/**'        # Exclude build directories at any level
+        - '**/third_party/**'  # Exclude third_party directories
+        - '**/external/**'     # Exclude external dependencies
+        - '**/.git/**'         # Exclude git directory
+        - '**/__pycache__/**'  # Exclude Python cache
+        - '**/*.pyc'           # Exclude Python compiled files
+        - '**/.cache/**'       # Exclude cache directories
+        - '**/node_modules/**' # Exclude Node.js modules
 
       # Advanced
       max_concurrent_llm_calls: 3
@@ -189,6 +194,109 @@ plugins:
 
 ```bash
 rm -rf .cache/llm-autodoc
+```
+
+### Dateien einschließen/ausschließen
+
+Das Plugin unterstützt flexible Glob-Patterns zum Ein- und Ausschließen von Dateien.
+
+#### Include Patterns
+
+Definiere, welche Dateien dokumentiert werden sollen:
+
+```yaml
+include_patterns:
+  - '**/*.h'      # Alle .h Header-Dateien
+  - '**/*.hpp'    # Alle .hpp Header-Dateien
+  - '**/*.cpp'    # Alle .cpp Implementierungen
+  - '**/*.cc'     # Alternative .cc Dateien
+  - 'src/**/*'    # Nur Dateien im src-Verzeichnis
+```
+
+#### Exclude Patterns (Rekursiv)
+
+Das Plugin unterstützt rekursive Ausschluss-Patterns, die auf alle Ebenen der Verzeichnisstruktur angewendet werden:
+
+```yaml
+exclude_patterns:
+  # Verzeichnisse rekursiv ausschließen
+  - '**/build/**'        # Alle build-Verzeichnisse und deren Inhalte
+  - '**/third_party/**'  # Alle Drittanbieter-Bibliotheken
+  - '**/external/**'     # Externe Dependencies
+  - '**/vendor/**'       # Vendor-Verzeichnisse
+  - '**/.git/**'         # Git-Verzeichnisse
+  - '**/__pycache__/**'  # Python-Cache
+  - '**/.cache/**'       # Cache-Verzeichnisse
+  - '**/node_modules/**' # Node.js-Module
+  - '**/test/**'         # Test-Verzeichnisse
+  - '**/tests/**'        # Alternative Test-Verzeichnisse
+
+  # Dateien nach Pattern ausschließen
+  - '**/*.pyc'           # Python-Compiled-Dateien
+  - '**/*.o'             # Object-Dateien
+  - '**/*.a'             # Static Libraries
+  - '**/*.so'            # Shared Libraries
+  - '**/*_test.cpp'      # Test-Dateien mit bestimmtem Suffix
+```
+
+#### Wie Exclusion Patterns funktionieren
+
+Die Exclude Patterns werden rekursiv auf alle Pfade angewendet:
+
+- **`**/build/**`**: Schließt das `build`-Verzeichnis aus, egal wo es sich befindet
+  - ✅ Schließt aus: `build/main.o`, `foo/build/lib.a`, `src/build/Debug/app.exe`
+
+- **`**/*.pyc`**: Schließt alle `.pyc`-Dateien rekursiv aus
+  - ✅ Schließt aus: `__pycache__/module.pyc`, `src/utils/cache.pyc`
+
+- **`**/test/**`**: Schließt alle `test`-Verzeichnisse und deren Inhalte aus
+  - ✅ Schließt aus: `test/unit.cpp`, `src/test/integration.cpp`
+
+#### Beispielkonfiguration für große Projekte
+
+```yaml
+include_patterns:
+  - 'src/**/*.h'
+  - 'src/**/*.hpp'
+  - 'src/**/*.cpp'
+  - 'include/**/*.h'
+
+exclude_patterns:
+  # Build-Artefakte
+  - '**/build/**'
+  - '**/cmake-build-*/**'
+  - '**/out/**'
+  - '**/*.o'
+  - '**/*.a'
+  - '**/*.so'
+  - '**/*.dll'
+
+  # Tests
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/*_test.cpp'
+  - '**/*_unittest.cpp'
+
+  # Dependencies
+  - '**/third_party/**'
+  - '**/external/**'
+  - '**/vendor/**'
+  - '**/deps/**'
+
+  # Version Control & System
+  - '**/.git/**'
+  - '**/.svn/**'
+  - '**/.hg/**'
+
+  # IDE & Editor
+  - '**/.vscode/**'
+  - '**/.idea/**'
+  - '**/*.swp'
+
+  # Cache & Temp
+  - '**/.cache/**'
+  - '**/tmp/**'
+  - '**/temp/**'
 ```
 
 ## Generierte Struktur

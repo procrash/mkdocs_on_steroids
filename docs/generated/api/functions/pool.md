@@ -1,100 +1,76 @@
-# libtorrent::aux::pool Memory Management Functions
+# Memory Management Functions
 
 ## malloc
 
 - **Signature**: `static char* malloc(size_type const bytes)`
-- **Description**: Allocates a block of memory of the specified size in bytes. This function is a static member function of the `aux::pool` class that provides a simple memory allocation interface. It wraps the standard `new[]` operator to allocate an array of characters.
+- **Description**: Allocates a block of memory of the specified size and returns a pointer to the beginning of the allocated memory. This function is part of a custom memory management pool implementation and is designed to be used as a replacement for the standard `malloc` function. The allocated memory is guaranteed to be aligned to the natural alignment of the system.
 - **Parameters**:
-  - `bytes` (size_type): The number of bytes to allocate. Must be non-negative. If zero is passed, the function will allocate a block of size 0 (which typically returns a non-null pointer, though the behavior is implementation-defined).
+  - `bytes` (size_type): The number of bytes to allocate. Must be a non-negative value. If zero, the function may return a null pointer or a valid pointer to a zero-sized block, depending on implementation.
 - **Return Value**:
   - Returns a pointer to the allocated memory block on success.
-  - Returns `nullptr` if the allocation fails (i.e., when the requested memory cannot be allocated).
+  - Returns `nullptr` if memory allocation fails or if the requested size is zero.
 - **Exceptions/Errors**:
-  - May throw `std::bad_alloc` if the memory allocation fails and exceptions are enabled.
-  - No exceptions are thrown if exceptions are disabled (in which case the function returns `nullptr`).
+  - Throws `std::bad_alloc` if memory allocation fails.
+  - No other exceptions are expected to be thrown.
 - **Example**:
 ```cpp
-auto* block = aux::pool::malloc(1024);
+// Allocate 100 bytes of memory
+auto block = malloc(100);
 if (block != nullptr) {
     // Use the allocated memory
     // ...
-    aux::pool::free(block); // Don't forget to free it
+    free(block); // Don't forget to free the memory
 }
 ```
-- **Preconditions**:
-  - `bytes` must be a valid size (non-negative).
-  - The system must have sufficient memory available.
-- **Postconditions**:
-  - If successful, returns a pointer to a block of memory of at least `bytes` bytes.
-  - The memory is guaranteed to be properly aligned for any type.
-  - The memory is uninitialized.
-- **Thread Safety**:
-  - This function is thread-safe only if the underlying `new[]` operator is thread-safe, which is generally true in modern C++ implementations.
-- **Complexity**:
-  - Time Complexity: O(1) average case, O(n) worst case if the memory allocator needs to perform complex operations.
-  - Space Complexity: O(1) - only the size parameter is needed for computation.
-- **See Also**: `free()`, `new[]`, `std::new_handler`
+- **Preconditions**: The `bytes` parameter must be a valid size that does not exceed the maximum allowed memory allocation size for the system.
+- **Postconditions**: On successful allocation, the function returns a pointer to a block of memory of the specified size. The memory is uninitialized.
+- **Thread Safety**: This function is thread-safe as long as the underlying memory pool is properly synchronized.
+- **Complexity**: O(1) time complexity, O(1) space complexity.
 
 ## free
 
 - **Signature**: `static void free(char* const block)`
-- **Description**: Frees a block of memory previously allocated by `malloc()`. This function is a static member function of the `aux::pool` class that wraps the standard `delete[]` operator to deallocate an array of characters.
+- **Description**: Deallocates a block of memory that was previously allocated by `malloc`. This function is part of a custom memory management pool implementation and is designed to be used as a replacement for the standard `free` function. It ensures that the memory is properly returned to the pool for future reuse.
 - **Parameters**:
-  - `block` (char* const): A pointer to the memory block to be freed. This must be a pointer returned by a previous call to `malloc()`, or `nullptr`.
+  - `block` (char*): Pointer to the memory block to be deallocated. Must be a pointer returned by `malloc` or a null pointer.
 - **Return Value**:
   - This function does not return a value.
 - **Exceptions/Errors**:
-  - No exceptions are thrown.
+  - Throws `std::invalid_argument` if the pointer is not a valid pointer returned by `malloc`.
+  - No other exceptions are expected to be thrown.
 - **Example**:
 ```cpp
-char* block = aux::pool::malloc(1024);
+// Allocate 100 bytes of memory
+auto block = malloc(100);
 if (block != nullptr) {
     // Use the allocated memory
     // ...
-    aux::pool::free(block); // Free the memory
+    free(block); // Deallocate the memory
 }
 ```
-- **Preconditions**:
-  - `block` must be a pointer returned by a previous call to `malloc()`, or `nullptr`.
-  - If `block` is not a valid pointer returned by `malloc()`, the behavior is undefined.
-- **Postconditions**:
-  - The memory block pointed to by `block` is deallocated and becomes invalid.
-  - After calling `free()`, the pointer `block` should not be used again.
-  - The memory is returned to the system for reuse.
-- **Thread Safety**:
-  - This function is thread-safe only if the underlying `delete[]` operator is thread-safe, which is generally true in modern C++ implementations.
-- **Complexity**:
-  - Time Complexity: O(1) - typically constant time.
-  - Space Complexity: O(1) - only the pointer is needed for deallocation.
-- **See Also**: `malloc()`, `delete[]`, `std::nothrow`
+- **Preconditions**: The `block` parameter must be a valid pointer returned by `malloc` or a null pointer.
+- **Postconditions**: The memory block pointed to by `block` is deallocated and returned to the memory pool. The pointer `block` is no longer valid after this call.
+- **Thread Safety**: This function is thread-safe as long as the underlying memory pool is properly synchronized.
+- **Complexity**: O(1) time complexity, O(1) space complexity.
 
 # Usage Examples
 
 ## Basic Usage
 
 ```cpp
-#include <libtorrent/aux_/pool.hpp>
-#include <iostream>
+#include "libtorrent/aux_/pool.hpp"
 
 int main() {
-    // Allocate memory
-    char* buffer = aux::pool::malloc(1024);
-    
+    // Allocate memory for 100 characters
+    char* buffer = malloc(100);
     if (buffer != nullptr) {
         // Use the allocated memory
-        for (size_t i = 0; i < 1024; ++i) {
-            buffer[i] = static_cast<char>(i % 256);
+        for (size_t i = 0; i < 100; ++i) {
+            buffer[i] = 'A';
         }
-        
-        // Process the data...
-        
-        // Free the memory
-        aux::pool::free(buffer);
+        // Free the memory when done
+        free(buffer);
     }
-    else {
-        std::cerr << "Memory allocation failed!" << std::endl;
-    }
-    
     return 0;
 }
 ```
@@ -102,37 +78,19 @@ int main() {
 ## Error Handling
 
 ```cpp
-#include <libtorrent/aux_/pool.hpp>
+#include "libtorrent/aux_/pool.hpp"
 #include <iostream>
-#include <stdexcept>
-
-// Function that safely allocates memory with error handling
-char* allocateSafeMemory(size_t size) {
-    try {
-        char* memory = aux::pool::malloc(size);
-        if (memory == nullptr) {
-            throw std::bad_alloc("Failed to allocate memory");
-        }
-        return memory;
-    }
-    catch (const std::bad_alloc& e) {
-        std::cerr << "Memory allocation failed: " << e.what() << std::endl;
-        return nullptr;
-    }
-}
 
 int main() {
     // Try to allocate a large block of memory
-    char* largeBuffer = allocateSafeMemory(1000000000); // 1GB
-    
-    if (largeBuffer != nullptr) {
-        // Use the buffer
-        // ...
-        
-        // Free the memory
-        aux::pool::free(largeBuffer);
+    char* large_buffer = malloc(1000000000); // 1 GB
+    if (large_buffer == nullptr) {
+        std::cerr << "Failed to allocate memory" << std::endl;
+        return 1;
     }
-    
+    // Use the allocated memory
+    // ...
+    free(large_buffer);
     return 0;
 }
 ```
@@ -140,29 +98,21 @@ int main() {
 ## Edge Cases
 
 ```cpp
-#include <libtorrent/aux_/pool.hpp>
+#include "libtorrent/aux_/pool.hpp"
 #include <iostream>
 
 int main() {
-    // Edge case 1: Allocate 0 bytes
-    char* zeroBuffer = aux::pool::malloc(0);
-    std::cout << "Allocated 0 bytes: " << (zeroBuffer != nullptr ? "Success" : "Failed") << std::endl;
-    
-    // Edge case 2: Free null pointer (safe)
-    aux::pool::free(nullptr);
-    
-    // Edge case 3: Reuse a freed pointer (undefined behavior)
-    char* reusableBuffer = aux::pool::malloc(100);
-    aux::pool::free(reusableBuffer);
-    // Do NOT use reusableBuffer here - it's undefined behavior
-    
-    // Edge case 4: Allocate maximum possible size
-    size_t maxSize = static_cast<size_t>(-1);
-    char* maxBuffer = aux::pool::malloc(maxSize);
-    if (maxBuffer == nullptr) {
-        std::cout << "Could not allocate maximum size, as expected" << std::endl;
+    // Allocate zero bytes
+    char* zero_buffer = malloc(0);
+    if (zero_buffer == nullptr) {
+        std::cout << "Allocated zero bytes returned null pointer" << std::endl;
+    } else {
+        std::cout << "Allocated zero bytes returned non-null pointer" << std::endl;
+        free(zero_buffer); // Free the zero-sized block
     }
-    
+
+    // Free a null pointer
+    free(nullptr); // This should be safe and do nothing
     return 0;
 }
 ```
@@ -171,143 +121,130 @@ int main() {
 
 ## How to Use These Functions Effectively
 
-1. **Always pair malloc with free**: Every call to `malloc` must be paired with exactly one call to `free` for the same pointer.
-
-2. **Check for null pointers**: Always check the return value of `malloc` to ensure memory was allocated successfully.
-
-3. **Use RAII patterns**: Consider using smart pointers or RAII (Resource Acquisition Is Initialization) patterns instead of raw memory management.
-
-4. **Avoid manual memory management when possible**: Use standard containers (vector, string) instead of manual memory management whenever possible.
+1. Always check the return value of `malloc` to ensure memory allocation was successful.
+2. Use `free` to deallocate memory when it is no longer needed to prevent memory leaks.
+3. Ensure that `free` is called with the exact pointer returned by `malloc` to avoid undefined behavior.
+4. Consider using RAII (Resource Acquisition Is Initialization) patterns to automatically manage memory.
 
 ## Common Mistakes to Avoid
 
-1. **Double free**: Never call `free()` on a pointer more than once.
-   ```cpp
-   // BAD: Double free
-   char* buffer = aux::pool::malloc(1024);
-   aux::pool::free(buffer);
-   aux::pool::free(buffer); // Undefined behavior
-   ```
-
-2. **Use after free**: Never use a pointer after it has been freed.
-   ```cpp
-   // BAD: Use after free
-   char* buffer = aux::pool::malloc(1024);
-   aux::pool::free(buffer);
-   buffer[0] = 'A'; // Undefined behavior
-   ```
-
-3. **Freed pointer reuse**: Never reuse a pointer after it has been freed.
-   ```cpp
-   // BAD: Reuse after free
-   char* buffer = aux::pool::malloc(1024);
-   aux::pool::free(buffer);
-   buffer = aux::pool::malloc(1024); // This might work but is confusing
-   ```
-
-4. **Incorrect free usage**: Never use `free()` on a pointer that wasn't allocated with `malloc()`.
-   ```cpp
-   // BAD: Using free on non-malloc allocated memory
-   int* array = new int[100];
-   aux::pool::free(array); // Wrong - use delete[] instead
-   ```
+1. Forgetting to free allocated memory, leading to memory leaks.
+2. Calling `free` with a pointer that was not allocated by `malloc`, leading to undefined behavior.
+3. Using the allocated memory after it has been freed, leading to undefined behavior.
+4. Allocating too much memory, which can cause the program to crash or be terminated by the operating system.
 
 ## Performance Tips
 
-1. **Pre-allocate when possible**: If you know the size of your data in advance, pre-allocate to avoid frequent allocation/deallocation.
-
-2. **Use pools for frequently allocated objects**: If you're allocating many small objects of the same size, consider using a custom memory pool.
-
-3. **Minimize allocations**: Combine allocations where possible to reduce the overhead of memory management.
-
-4. **Use aligned allocation if needed**: For performance-critical applications, consider using aligned allocation.
+1. Use these functions in performance-critical sections of code where custom memory management is beneficial.
+2. Consider using memory pools for frequent allocations of small objects to reduce fragmentation and improve performance.
+3. Use `malloc` and `free` sparingly in favor of more modern memory management techniques like smart pointers when possible.
 
 # Code Review & Improvement Suggestions
 
-## malloc
+## Potential Issues
 
-### Potential Issues
+### Function: `malloc`
+**Issue**: The function signature uses `auto` as the return type, which is not standard practice and can be confusing. It should be explicitly typed as `char*`.
+**Severity**: Low
+**Impact**: Can lead to confusion for developers reading the code.
+**Fix**: Change the return type from `auto` to `char*`.
 
-**Security:**
-- **Issue**: No input validation for `bytes` parameter.
-- **Severity**: Low
-- **Impact**: If `bytes` is negative (which shouldn't happen due to size_type being unsigned), it could cause undefined behavior.
-- **Fix**: Ensure the parameter type prevents negative values (size_type is unsigned, so this is already handled).
+```cpp
+// Before
+static char* malloc(size_type const bytes)
+	{ return new char[bytes]; }
 
-**Performance:**
-- **Issue**: No error handling for allocation failure in the basic implementation.
-- **Severity**: Medium
-- **Impact**: Could lead to crashes or undefined behavior if allocation fails.
-- **Fix**: Add proper error handling and consider returning a result that indicates success/failure.
+// After
+static char* malloc(size_type const bytes)
+	{ return new char[bytes]; }
+```
 
-**Correctness:**
-- **Issue**: No validation that `bytes` is not too large for the system.
-- **Severity**: Medium
-- **Impact**: Could cause integer overflow or allocation failure.
-- **Fix**: Add bounds checking for very large values.
+### Function: `free`
+**Issue**: The function does not validate the pointer before attempting to deallocate it, which could lead to undefined behavior if the pointer is invalid.
+**Severity**: Medium
+**Impact**: Could cause crashes or security vulnerabilities.
+**Fix**: Add a check to ensure the pointer is valid before attempting to deallocate it.
 
-**Code Quality:**
-- **Issue**: The function is not const-correct - it should not modify the object state.
-- **Severity**: Low
-- **Impact**: Minor issue, but violates C++ best practices.
-- **Fix**: Mark the function as const.
+```cpp
+// Before
+static void free(char* const block)
+	{ delete [] block; }
 
-### Modernization Opportunities
+// After
+static void free(char* const block)
+	{ 
+        if (block != nullptr) {
+            delete [] block; 
+        }
+    }
+```
 
-- **Use [[nodiscard]]**: Add `[[nodiscard]]` to indicate that the return value should not be ignored.
-- **Use std::size_t**: Replace `size_type` with `std::size_t` for standard portability.
+## Modernization Opportunities
 
-### Refactoring Suggestions
+### Function: `malloc`
+**Opportunity**: Use `[[nodiscard]]` to indicate that the return value should not be ignored.
+**Benefit**: Helps prevent bugs where the caller forgets to check the return value.
+**Implementation**:
 
-- **Function**: `malloc`
-- **Suggestion**: Consider moving this functionality to a standalone memory pool class instead of having it as static methods.
-- **Rationale**: This would allow for better encapsulation and potential multiple memory pools.
+```cpp
+[[nodiscard]] static char* malloc(size_type const bytes)
+	{ return new char[bytes]; }
+```
 
-### Performance Optimizations
+### Function: `free`
+**Opportunity**: Use `std::span` for array parameters in future versions to improve safety and readability.
+**Benefit**: Reduces the risk of buffer overflows and improves code clarity.
+**Implementation**:
 
-- **Add bounds checking**: Add checks for very large allocation requests.
-- **Use constexpr**: If the size is known at compile time, consider providing a constexpr version.
+```cpp
+// Future version
+[[nodiscard]] static std::span<char> allocate(size_type bytes) {
+    return {new char[bytes], bytes};
+}
+```
 
-## free
+## Refactoring Suggestions
 
-### Potential Issues
+### Function: `malloc` and `free`
+**Suggestion**: These functions should be part of a larger memory pool class rather than being standalone static functions. This would improve encapsulation and make the code more maintainable.
+**Benefit**: Better organization and easier to manage memory pool state.
+**Implementation**:
 
-**Security:**
-- **Issue**: No validation that the pointer is valid or was allocated by this allocator.
-- **Severity**: High
-- **Impact**: Using `free()` on an invalid pointer causes undefined behavior, which could lead to security vulnerabilities.
-- **Fix**: Add validation checks or document the requirement more clearly.
+```cpp
+class MemoryPool {
+public:
+    static char* malloc(size_type bytes) {
+        return new char[bytes];
+    }
+    
+    static void free(char* block) {
+        delete [] block;
+    }
+};
+```
 
-**Performance:**
-- **Issue**: No optimization for common cases (like freeing null pointers).
-- **Severity**: Low
-- **Impact**: Minor performance impact.
-- **Fix**: Add early exit for null pointers.
+## Performance Optimizations
 
-**Correctness:**
-- **Issue**: No validation that the pointer was allocated by this allocator.
-- **Severity**: Medium
-- **Impact**: Could lead to memory corruption if used incorrectly.
-- **Fix**: Document the requirement more clearly and consider runtime checks.
+### Function: `malloc`
+**Optimization**: Consider using `new` with `std::nothrow` to avoid throwing exceptions, which can improve performance in certain scenarios.
+**Benefit**: Reduces the overhead of exception handling.
+**Implementation**:
 
-**Code Quality:**
-- **Issue**: The function is not const-correct - it should not modify the object state.
-- **Severity**: Low
-- **Impact**: Minor issue, but violates C++ best practices.
-- **Fix**: Mark the function as const.
+```cpp
+static char* malloc(size_type const bytes)
+	{ return new (std::nothrow) char[bytes]; }
+```
 
-### Modernization Opportunities
+### Function: `free`
+**Optimization**: Add `noexcept` to indicate that the function will not throw exceptions, which can help the compiler optimize the code.
+**Benefit**: Improves performance and allows the compiler to make better optimizations.
+**Implementation**:
 
-- **Use std::span**: Consider using `std::span<char>` for the parameter type.
-- **Use [[nodiscard]]**: Add `[[nodiscard]]` to indicate that the function should not be ignored.
-
-### Refactoring Suggestions
-
-- **Function**: `free`
-- **Suggestion**: Consider moving this functionality to a standalone memory pool class.
-- **Rationale**: This would allow for better encapsulation and potential multiple memory pools.
-
-### Performance Optimizations
-
-- **Early exit for null pointers**: Add an early return for null pointers to avoid unnecessary function call overhead.
-- **Add noexcept**: Mark the function as `noexcept` since it should not throw exceptions.
+```cpp
+static void free(char* const block) noexcept
+	{ 
+        if (block != nullptr) {
+            delete [] block; 
+        }
+    }
+```

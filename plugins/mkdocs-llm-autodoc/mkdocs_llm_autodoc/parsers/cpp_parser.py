@@ -42,6 +42,64 @@ class CppParser:
         except ImportError:
             logger.warning("Tree-sitter not available, using fallback regex parser")
 
+    def _is_excluded(self, file_path: Path, project_path: Path) -> bool:
+        """
+        Check if a file should be excluded based on exclude patterns.
+
+        Supports glob patterns including:
+        - **/build/** - Recursively excludes 'build' directories and their contents
+        - **/*.pyc - Recursively excludes all .pyc files
+        - **/node_modules/** - Recursively excludes 'node_modules' directories
+        - .git/** - Excludes .git directory from project root
+
+        Args:
+            file_path: Absolute path to the file
+            project_path: Root path of the project
+
+        Returns:
+            True if the file should be excluded, False otherwise
+        """
+        try:
+            # Get relative path from project root for pattern matching
+            relative_path = file_path.relative_to(project_path)
+            relative_path_str = relative_path.as_posix()  # Use forward slashes for matching
+
+            # Check each exclusion pattern
+            for exclude_pattern in self.exclude_patterns:
+                # Normalize pattern to use forward slashes
+                pattern = exclude_pattern.replace('\\', '/')
+
+                # Direct match using Path.match()
+                if relative_path.match(pattern):
+                    return True
+
+                # Handle directory patterns like **/build/** or **/node_modules/**
+                # These should match any file inside those directories
+                if pattern.startswith('**/') and pattern.endswith('/**'):
+                    # Extract directory name
+                    dir_name = pattern[3:-3]  # Remove **/ and /**
+
+                    # Check if the directory appears anywhere in the path
+                    path_parts = relative_path.parts
+                    if dir_name in path_parts:
+                        return True
+
+                # Handle patterns like **/.git/** that start with .
+                elif pattern.startswith('**/') and '/**' in pattern:
+                    # Extract directory name
+                    dir_name = pattern[3:].rstrip('/**').rstrip('/*')
+
+                    # Check if the directory appears anywhere in the path
+                    path_parts = relative_path.parts
+                    if dir_name in path_parts:
+                        return True
+
+        except ValueError:
+            # file_path is not relative to project_path
+            pass
+
+        return False
+
     def parse_project_structure(self, project_path: str) -> Dict[str, Any]:
         """
         Parse entire C++ project structure.
@@ -114,6 +172,35 @@ class CppParser:
         else:
             return self._parse_file_regex(file_path, content)
 
+    def find_all_source_files(self, project_path: Path) -> List[str]:
+        """
+        Find ALL source files matching include patterns (not just C++).
+        This is useful for uploading all project files to RAG systems.
+        """
+        all_files = []
+
+        for pattern in self.include_patterns:
+            search_pattern = str(project_path / pattern)
+            files = glob(search_pattern, recursive=True)
+            all_files.extend(files)
+
+        # Remove duplicates and excluded files
+        all_files = list(set(all_files))
+        filtered_files = []
+
+        for file in all_files:
+            # Skip directories
+            if not Path(file).is_file():
+                continue
+
+            # Check if file should be excluded using proper glob pattern matching
+            excluded = self._is_excluded(Path(file), project_path)
+
+            if not excluded:
+                filtered_files.append(file)
+
+        return sorted(filtered_files)
+
     def _find_cpp_files(self, project_path: Path) -> List[str]:
         """Find all C++ files matching include patterns"""
         all_files = []
@@ -128,11 +215,8 @@ class CppParser:
         filtered_files = []
 
         for file in all_files:
-            excluded = False
-            for exclude_pattern in self.exclude_patterns:
-                if exclude_pattern.replace('**/', '') in file or exclude_pattern in file:
-                    excluded = True
-                    break
+            # Check if file should be excluded using proper glob pattern matching
+            excluded = self._is_excluded(Path(file), project_path)
 
             if not excluded:
                 filtered_files.append(file)

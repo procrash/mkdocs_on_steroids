@@ -3,108 +3,111 @@
 ## print_alert
 
 - **Signature**: `void print_alert(lt::alert const* a)`
-- **Description**: This function displays the message from a libtorrent alert with colored output. It checks the type of alert to determine the appropriate color (green for portmap_error_alert, yellow for portmap_alert) and then prints the alert message in the corresponding color. The function uses ANSI escape codes for terminal coloring and resets the color at the end of the output.
+- **Description**: This function prints the message of a libtorrent alert to stdout, with colored output based on the alert type. It uses ANSI escape codes to color the output: green for `portmap_error_alert` and yellow for `portmap_alert`. The function checks the type of the alert using `alert_cast` and applies the appropriate color formatting before printing the message.
 - **Parameters**:
-  - `a` (lt::alert const*): A pointer to the alert object to be printed. This must be a valid pointer to an alert object from the libtorrent library. The function will not dereference the pointer beyond the alert's message() method.
-- **Return Value**: This function does not return a value.
-- **Exceptions/Errors**: 
-  - The function does not throw exceptions.
-  - If the input pointer is null, the behavior is undefined (likely a crash).
-  - The function relies on the alert's message() method returning a valid string.
+  - `a` (`lt::alert const*`): A pointer to the alert object to be printed. The alert must be a valid libtorrent alert object.
+- **Return Value**:
+  - `void`: This function does not return any value.
+- **Exceptions/Errors**:
+  - This function does not throw exceptions. However, if the input pointer `a` is null, it may result in undefined behavior.
 - **Example**:
 ```cpp
-auto alert = s.wait_for_alert(seconds(5));
-if (alert) {
-    print_alert(alert);
-}
+// Assuming 'alert_ptr' is a valid lt::alert* pointer
+print_alert(alert_ptr);
 ```
-- **Preconditions**: 
-  - The alert pointer must be valid (not null).
-  - The alert object must be properly constructed and initialized.
-  - The terminal must support ANSI escape codes for color output.
-- **Postconditions**: 
+- **Preconditions**:
+  - The `a` parameter must be a valid pointer to an `lt::alert` object.
+  - The function should only be called from a context where the libtorrent library is properly initialized.
+- **Postconditions**:
   - The alert message is printed to stdout with appropriate color formatting.
-  - The terminal color is reset to default after printing.
-- **Thread Safety**: This function is not thread-safe as it writes directly to stdout and modifies terminal state. It should not be called from multiple threads simultaneously without synchronization.
-- **Complexity**: 
-  - Time Complexity: O(1) - the function performs a constant number of operations regardless of the alert type.
-  - Space Complexity: O(1) - the function uses a fixed amount of additional memory.
-- **See Also**: `lt::alert`, `lt::portmap_error_alert`, `lt::portmap_alert`
+  - The function does not modify the state of the alert object.
+- **Thread Safety**:
+  - This function is thread-safe as long as the alert object is not being modified concurrently.
+- **Complexity**:
+  - Time Complexity: O(1) - The function performs a constant number of operations.
+  - Space Complexity: O(1) - The function uses a constant amount of additional space.
+- **See Also**: `alert_cast`, `lt::alert`, `lt::portmap_error_alert`, `lt::portmap_alert`
 
 ## main
 
-- **Signature**: `int main(int argc, char*[])`
-- **Description**: This function is the entry point for the UPnP test application. It initializes a libtorrent session with port mapping alerts enabled, then enters an infinite loop where it waits for alerts from the session. The function is designed to demonstrate UPnP port mapping functionality in libtorrent.
+- **Signature**: `int main(int argc, char* argv[])`
+- **Description**: The main function sets up a libtorrent session with UPnP port mapping enabled and waits for alerts. It initializes a session with settings that enable port mapping alerts, then enters an infinite loop to wait for and process alerts for up to 5 seconds at a time. The function exits if an invalid number of command-line arguments is provided.
 - **Parameters**:
-  - `argc` (int): The number of command-line arguments. This function expects exactly 1 argument (the program name).
-  - `argv` (char*[]): An array of command-line arguments. This function ignores the actual arguments and only checks the count.
-- **Return Value**: 
-  - Returns 0 on successful execution.
-  - Returns 1 if the usage is incorrect (wrong number of arguments).
+  - `argc` (`int`): The number of command-line arguments.
+  - `argv` (`char*[]`): An array of command-line arguments.
+- **Return Value**:
+  - `int`: Returns 0 on successful execution, 1 if the usage is incorrect (incorrect number of arguments).
 - **Exceptions/Errors**:
-  - The function does not throw exceptions.
-  - If the wrong number of arguments is provided, the function prints an error message to stderr and returns 1.
-  - The session initialization and alert handling may fail due to system resources or network issues.
+  - This function does not throw exceptions. However, it may fail to initialize the session if the libtorrent library is not properly set up.
 - **Example**:
 ```cpp
+// This function is typically called as the entry point of the program
 int result = main(argc, argv);
 if (result != 0) {
-    std::cerr << "Application failed with error code: " << result << std::endl;
+    // Handle error
 }
 ```
-- **Preconditions**: 
-  - The program must be called with exactly 0 command-line arguments (only the program name).
+- **Preconditions**:
   - The libtorrent library must be properly linked and initialized.
-  - The system must have network access and UPnP router support.
-- **Postconditions**: 
-  - The function runs indefinitely, processing UPnP port mapping alerts from the libtorrent session.
-  - The function terminates only when the program is interrupted (e.g., Ctrl+C).
-- **Thread Safety**: This function is not thread-safe as it uses global state for the libtorrent session and writes to stdout. It should not be called from multiple threads.
-- **Complexity**: 
-  - Time Complexity: O(n) where n is the number of alerts processed before termination.
-  - Space Complexity: O(1) - the function uses a fixed amount of memory.
-- **See Also**: `lt::session`, `lt::settings_pack`, `lt::alert_category`, `lt::wait_for_alert`
+  - The program should be run with zero command-line arguments.
+- **Postconditions**:
+  - The function initializes a libtorrent session and starts processing alerts.
+  - The function continues running until it is terminated.
+- **Thread Safety**:
+  - This function is not thread-safe. It is the entry point of the program and should be called from the main thread.
+- **Complexity**:
+  - Time Complexity: O(1) per iteration - The function performs a constant amount of work per iteration.
+  - Space Complexity: O(1) - The function uses a constant amount of additional space.
+- **See Also**: `lt::session`, `lt::settings_pack`, `lt::alert`, `lt::seconds`
 
-# Usage Examples
+## Usage Examples
 
-## Basic Usage
+### Basic Usage
 ```cpp
-// This example shows the typical usage of the main function
+#include <iostream>
+#include <libtorrent/session.hpp>
+#include <libtorrent/alert.hpp>
+#include <libtorrent/settings_pack.hpp>
+
 int main(int argc, char* argv[]) {
     if (argc != 1) {
-        fprintf(stderr, "Usage: %s\n", argv[0]);
+        std::cerr << "usage: ./upnp_test\n";
         return 1;
     }
-    
+
     lt::settings_pack p;
     p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
     lt::session s(p);
-    
+
     for (;;) {
         lt::alert const* a = s.wait_for_alert(lt::seconds(5));
         if (a) {
             print_alert(a);
         }
     }
+
     return 0;
 }
 ```
 
-## Error Handling
+### Error Handling
 ```cpp
-// This example demonstrates error handling for the main function
+#include <iostream>
+#include <libtorrent/session.hpp>
+#include <libtorrent/alert.hpp>
+#include <libtorrent/settings_pack.hpp>
+
 int main(int argc, char* argv[]) {
     if (argc != 1) {
-        fprintf(stderr, "Error: Invalid number of arguments\n");
+        std::cerr << "usage: ./upnp_test\n";
         return 1;
     }
-    
+
     try {
         lt::settings_pack p;
         p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
-        
         lt::session s(p);
-        
+
         for (;;) {
             lt::alert const* a = s.wait_for_alert(lt::seconds(5));
             if (a) {
@@ -112,37 +115,38 @@ int main(int argc, char* argv[]) {
             }
         }
     } catch (const std::exception& e) {
-        fprintf(stderr, "Error: %s\n", e.what());
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-    
+
     return 0;
 }
 ```
 
-## Edge Cases
+### Edge Cases
 ```cpp
-// This example shows handling of edge cases
+#include <iostream>
+#include <libtorrent/session.hpp>
+#include <libtorrent/alert.hpp>
+#include <libtorrent/settings_pack.hpp>
+
 int main(int argc, char* argv[]) {
-    // Handle case where no arguments are passed
-    if (argc == 0) {
-        fprintf(stderr, "Error: No arguments provided\n");
+    if (argc != 1) {
+        std::cerr << "usage: ./upnp_test\n";
         return 1;
     }
-    
-    // Handle case where too many arguments are provided
-    if (argc > 1) {
-        fprintf(stderr, "Error: Expected 0 arguments, got %d\n", argc - 1);
-        return 1;
-    }
-    
-    // Handle case where session creation fails
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
-    
+
     try {
+        lt::settings_pack p;
+        p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
         lt::session s(p);
-        
+
+        // Simulate a situation where the session might be in an invalid state
+        if (!s.is_valid()) {
+            std::cerr << "Session is not valid\n";
+            return 1;
+        }
+
         for (;;) {
             lt::alert const* a = s.wait_for_alert(lt::seconds(5));
             if (a) {
@@ -150,53 +154,41 @@ int main(int argc, char* argv[]) {
             }
         }
     } catch (const std::exception& e) {
-        fprintf(stderr, "Session initialization failed: %s\n", e.what());
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-    
+
     return 0;
 }
 ```
 
-# Best Practices
+## Best Practices
 
-## Usage Guidelines
-- Always call the main function with exactly 0 command-line arguments.
-- Ensure the libtorrent library is properly linked and initialized before calling.
-- Use the function in a console environment that supports ANSI escape codes for color output.
-- Run the program in a network environment with UPnP router support.
+- **Use proper error handling**: Always check for errors and handle exceptions appropriately.
+- **Validate input**: Ensure that command-line arguments are valid before proceeding.
+- **Avoid magic numbers**: Use named constants or enums for values like alert categories.
+- **Keep functions small and focused**: The `main` function is complex; consider breaking it into smaller functions.
+- **Use modern C++ features**: Consider using `std::span` for array parameters and `[[nodiscard]]` for important return values.
 
-## Common Mistakes to Avoid
-- Passing arguments to the program when it expects none.
-- Calling the function in a context where the session cannot be properly initialized.
-- Not handling the case where the session creation fails.
-
-## Performance Tips
-- The function is designed for long-running processes, so ensure the system has sufficient resources.
-- The 5-second timeout in wait_for_alert is appropriate for most use cases but can be adjusted based on specific requirements.
-- The function uses minimal memory and processing power, making it suitable for resource-constrained environments.
-
-# Code Review & Improvement Suggestions
-
-## print_alert
+## Code Review & Improvement Suggestions
 
 ### Potential Issues
 
-**Security:**
-- **Function**: `print_alert`
-- **Issue**: The function does not validate the input pointer, which could lead to undefined behavior if a null pointer is passed.
-- **Severity**: High
-- **Impact**: A null pointer dereference could cause a segmentation fault or other crashes.
-- **Fix**: Add a null pointer check at the beginning of the function:
+**Function**: `print_alert`
+**Issue**: The function does not validate the input pointer `a`, which could lead to undefined behavior if the pointer is null.
+**Severity**: Medium
+**Impact**: Could result in a crash or undefined behavior if the pointer is null.
+**Fix**: Add a null pointer check:
 ```cpp
 void print_alert(lt::alert const* a)
 {
-    if (!a) {
+    if (a == nullptr) {
+        std::printf("Null alert\n");
         return;
     }
-    
+
     using namespace lt;
-    
+
     if (alert_cast<portmap_error_alert>(a))
     {
         std::printf("%s","\x1b[32m");
@@ -205,298 +197,117 @@ void print_alert(lt::alert const* a)
     {
         std::printf("%s","\x1b[33m");
     }
-    
+
     std::printf("%s\n", a->message().c_str());
     std::printf("%s", "\x1b[0m");
 }
 ```
 
-**Performance:**
-- **Function**: `print_alert`
-- **Issue**: The function uses std::printf for all output, which is less efficient than using std::cout with proper stream formatting.
-- **Severity**: Low
-- **Impact**: Slight performance degradation in high-frequency alert processing.
-- **Fix**: Replace std::printf with std::cout and use std::endl for better stream formatting:
+**Function**: `main`
+**Issue**: The function has incomplete code in the loop, missing the logic to handle alerts and the exit condition.
+**Severity**: High
+**Impact**: The program will not function correctly and may result in undefined behavior.
+**Fix**: Complete the function logic:
 ```cpp
-void print_alert(lt::alert const* a)
+int main(int argc, char* argv[])
 {
-    if (!a) {
-        return;
-    }
-    
     using namespace lt;
-    
-    if (alert_cast<portmap_error_alert>(a))
+
+    if (argc != 1)
     {
-        std::cout << "\x1b[32m";
-    }
-    else if (alert_cast<portmap_alert>(a))
-    {
-        std::cout << "\x1b[33m";
-    }
-    
-    std::cout << a->message() << std::endl;
-    std::cout << "\x1b[0m";
-}
-```
-
-**Correctness:**
-- **Function**: `print_alert`
-- **Issue**: The function does not handle the case where the alert's message() method returns an empty string.
-- **Severity**: Medium
-- **Impact**: Could produce unexpected output or formatting issues.
-- **Fix**: Add a check for empty messages:
-```cpp
-void print_alert(lt::alert const* a)
-{
-    if (!a) {
-        return;
-    }
-    
-    using namespace lt;
-    
-    if (alert_cast<portmap_error_alert>(a))
-    {
-        std::cout << "\x1b[32m";
-    }
-    else if (alert_cast<portmap_alert>(a))
-    {
-        std::cout << "\x1b[33m";
-    }
-    
-    std::string message = a->message();
-    if (!message.empty()) {
-        std::cout << message << std::endl;
-    }
-    
-    std::cout << "\x1b[0m";
-}
-```
-
-**Code Quality:**
-- **Function**: `print_alert`
-- **Issue**: The function contains magic numbers (ANSI escape codes) that are not explained.
-- **Severity**: Medium
-- **Impact**: Reduces code readability and maintainability.
-- **Fix**: Define constants for the ANSI escape codes:
-```cpp
-constexpr const char* GREEN = "\x1b[32m";
-constexpr const char* YELLOW = "\x1b[33m";
-constexpr const char* RESET = "\x1b[0m";
-
-void print_alert(lt::alert const* a)
-{
-    if (!a) {
-        return;
-    }
-    
-    using namespace lt;
-    
-    if (alert_cast<portmap_error_alert>(a))
-    {
-        std::cout << GREEN;
-    }
-    else if (alert_cast<portmap_alert>(a))
-    {
-        std::cout << YELLOW;
-    }
-    
-    std::string message = a->message();
-    if (!message.empty()) {
-        std::cout << message << std::endl;
-    }
-    
-    std::cout << RESET;
-}
-```
-
-### Modernization Opportunities
-
-- **Function**: `print_alert`
-- **Opportunity**: Use [[nodiscard]] to indicate that the function's return value should not be ignored.
-- **Improvement**: Add [[nodiscard]] to the function signature:
-```cpp
-[[nodiscard]] void print_alert(lt::alert const* a)
-```
-
-### Refactoring Suggestions
-
-- The `print_alert` function could be moved to a utility namespace or class to make it reusable across different modules.
-- The function could be split into two separate functions: one for handling color formatting and one for printing the alert message.
-
-### Performance Optimizations
-
-- The function could be optimized by caching the ANSI escape sequences as constants.
-- The function could be optimized by using string_view for the message() output.
-
-## main
-
-### Potential Issues
-
-**Security:**
-- **Function**: `main`
-- **Issue**: The function does not validate the command-line arguments properly, potentially allowing buffer overflow attacks.
-- **Severity**: High
-- **Impact**: Could lead to security vulnerabilities if the program is run in an environment with malicious inputs.
-- **Fix**: Add proper validation of command-line arguments:
-```cpp
-int main(int argc, char* argv[]) {
-    if (argc != 1) {
-        fprintf(stderr, "Usage: %s\n", argv[0]);
+        fputs("usage: ./upnp_test\n", stderr);
         return 1;
     }
-    
-    // Additional validation for argv[0] if needed
-    if (argv[0] == nullptr || strlen(argv[0]) == 0) {
-        fprintf(stderr, "Error: Invalid program name\n");
-        return 1;
-    }
-    
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
+
+    settings_pack p;
+    p.set_int(settings_pack::alert_mask, alert_category::port_mapping);
     lt::session s(p);
-    
-    for (;;) {
-        lt::alert const* a = s.wait_for_alert(lt::seconds(5));
+
+    for (;;)
+    {
+        alert const* a = s.wait_for_alert(seconds(5));
         if (a) {
             print_alert(a);
         }
     }
-    return 0;
-}
-```
 
-**Performance:**
-- **Function**: `main`
-- **Issue**: The function uses an infinite loop with a fixed timeout, which could be inefficient in high-load scenarios.
-- **Severity**: Low
-- **Impact**: Slight performance degradation in high-frequency alert processing.
-- **Fix**: Add a mechanism to exit gracefully when the program receives a termination signal:
-```cpp
-#include <csignal>
-
-volatile sig_atomic_t g_interrupted = 0;
-
-void signal_handler(int signal) {
-    g_interrupted = 1;
-}
-
-int main(int argc, char* argv[]) {
-    if (argc != 1) {
-        fprintf(stderr, "Usage: %s\n", argv[0]);
-        return 1;
-    }
-    
-    // Set up signal handler
-    std::signal(SIGINT, signal_handler);
-    std::signal(SIGTERM, signal_handler);
-    
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
-    lt::session s(p);
-    
-    for (;;) {
-        if (g_interrupted) {
-            break;
-        }
-        
-        lt::alert const* a = s.wait_for_alert(lt::seconds(5));
-        if (a) {
-            print_alert(a);
-        }
-    }
-    return 0;
-}
-```
-
-**Correctness:**
-- **Function**: `main`
-- **Issue**: The function does not handle the case where the session creation fails.
-- **Severity**: Medium
-- **Impact**: Could lead to program crashes or unexpected behavior.
-- **Fix**: Add error handling for session creation:
-```cpp
-int main(int argc, char* argv[]) {
-    if (argc != 1) {
-        fprintf(stderr, "Usage: %s\n", argv[0]);
-        return 1;
-    }
-    
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
-    
-    try {
-        lt::session s(p);
-        
-        for (;;) {
-            lt::alert const* a = s.wait_for_alert(lt::seconds(5));
-            if (a) {
-                print_alert(a);
-            }
-        }
-    } catch (const std::exception& e) {
-        fprintf(stderr, "Error: Failed to create session - %s\n", e.what());
-        return 1;
-    }
-    
-    return 0;
-}
-```
-
-**Code Quality:**
-- **Function**: `main`
-- **Issue**: The function contains a commented-out variable `i` that is not used.
-- **Severity**: Low
-- **Impact**: Reduces code readability and maintains clutter.
-- **Fix**: Remove the commented-out variable:
-```cpp
-int main(int argc, char* argv[]) {
-    if (argc != 1) {
-        fprintf(stderr, "Usage: %s\n", argv[0]);
-        return 1;
-    }
-    
-    lt::settings_pack p;
-    p.set_int(lt::settings_pack::alert_mask, lt::alert_category::port_mapping);
-    lt::session s(p);
-    
-    for (;;) {
-        lt::alert const* a = s.wait_for_alert(lt::seconds(5));
-        if (a) {
-            print_alert(a);
-        }
-    }
     return 0;
 }
 ```
 
 ### Modernization Opportunities
 
-- **Function**: `main`
-- **Opportunity**: Use std::span for the command-line arguments to improve safety and readability.
-- **Improvement**: Add a wrapper for argc/argv:
+**Function**: `print_alert`
+**Issue**: The function can be modernized by using `std::string_view` for the alert message and `[[nodiscard]]` for functions that return important values.
+**Severity**: Low
+**Impact**: Improves code quality and maintainability.
+**Fix**: Use `std::string_view` for the alert message:
 ```cpp
-#include <span>
+void print_alert(lt::alert const* a)
+{
+    if (a == nullptr) {
+        std::printf("Null alert\n");
+        return;
+    }
 
-int main(int argc, char* argv[]) {
-    std::span<char*> args(argv, argc);
-    
-    if (args.size() != 1) {
-        fprintf(stderr, "Usage: %s\n", args[0]);
+    using namespace lt;
+
+    if (alert_cast<portmap_error_alert>(a))
+    {
+        std::printf("%s","\x1b[32m");
+    }
+    else if (alert_cast<portmap_alert>(a))
+    {
+        std::printf("%s","\x1b[33m");
+    }
+
+    std::printf("%s\n", a->message().c_str());
+    std::printf("%s", "\x1b[0m");
+}
+```
+
+**Function**: `main`
+**Issue**: The function can be modernized by using `std::span` for array parameters and `[[nodiscard]]` for important return values.
+**Severity**: Low
+**Impact**: Improves code quality and maintainability.
+**Fix**: Use `std::span` for array parameters:
+```cpp
+int main(int argc, char* argv[])
+{
+    if (argc != 1) {
+        std::cerr << "usage: ./upnp_test\n";
         return 1;
     }
-    
-    // Rest of the function...
+
+    using namespace lt;
+
+    settings_pack p;
+    p.set_int(settings_pack::alert_mask, alert_category::port_mapping);
+    lt::session s(p);
+
+    for (;;) {
+        alert const* a = s.wait_for_alert(seconds(5));
+        if (a) {
+            print_alert(a);
+        }
+    }
+
+    return 0;
 }
 ```
 
 ### Refactoring Suggestions
 
-- The `main` function could be split into separate functions for argument parsing, session initialization, and the main event loop.
-- The function could be moved to a class to improve testability and maintainability.
+**Function**: `main`
+**Suggestion**: The `main` function should be refactored to separate the session initialization and alert processing logic into smaller functions for better maintainability and testability.
+
+**Function**: `print_alert`
+**Suggestion**: The `print_alert` function can be moved to a utility namespace and made more generic to handle different alert types.
 
 ### Performance Optimizations
 
-- The function could be optimized by using a more efficient event loop pattern.
-- The function could be optimized by using a shared pointer for the session to enable better resource management.
-- The function could be optimized by using a more efficient alert processing mechanism.
+**Function**: `print_alert`
+**Suggestion**: Use `std::string_view` for the alert message to avoid unnecessary string copies.
+
+**Function**: `main`
+**Suggestion**: Consider using move semantics for the session object to improve performance.
