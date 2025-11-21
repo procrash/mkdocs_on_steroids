@@ -113,7 +113,7 @@ plugins:
 
       # OpenAI-Compatible Local Server Configuration (Port 1234)
       llm_provider: 'lmstudio'
-      llm_model: 'qwen3-vl-30b-a3b-instruct'  # Ändern Sie dies zum Namen Ihres geladenen Modells
+      llm_model: 'qwen/qwen3-vl-4b' # llm_model: 'qwen3-vl-30b-a3b-instruct'  # Ändern Sie dies zum Namen Ihres geladenen Modells
       llm_base_url: 'http://127.0.0.1:1234/v1'  # Lokaler OpenAI-kompatibler Server
       llm_api_key: ''  # Für lokale Server meist nicht erforderlich
 
@@ -166,7 +166,7 @@ plugins:
       enabled: true
       api_key: ''  # No API key needed for local LM Studio server
       api_base_url: 'http://127.0.0.1:1234/v1'  # Local LM Studio server (OpenAI API compatible)
-      model: 'qwen/qwen3-vl-30b'  # Change this to match your loaded model in LM Studio
+      model: 'qwen/qwen3-vl-4b' # model: 'qwen/qwen3-vl-30b'  # Change this to match your loaded model in LM Studio
       position: 'bottom-right'
       button_color: '#667eea'
       button_text_color: '#ffffff'

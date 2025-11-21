@@ -120,6 +120,12 @@ class LLMAutoDocPluginConfig(config_options.Config):
     rag_upload_generated_docs = config_options.Type(bool, default=True)  # Upload generated documentation
     rag_upload_all_source = config_options.Type(bool, default=True)  # Upload ALL files in project (Python, Markdown, C++, etc.)
 
+    # Doxygen Legacy Import
+    enable_doxygen_import = config_options.Type(bool, default=False)
+    doxygen_xml_dir = config_options.Type(str, default=None)  # Path to Doxygen XML output directory
+    doxygen_validate_freshness = config_options.Type(bool, default=True)  # Validate documentation against current code
+    doxygen_merge_strategy = config_options.Type(str, default='auto')  # 'auto', 'integrate', 'new_section', 'skip'
+
 
 class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
     """
@@ -145,6 +151,10 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
         self.cross_ref_manager = None
         self.llm_provider = None
         self.rag_uploader = None
+        self.doxygen_importer = None
+        self.document_chunker = None
+        self.auto_rag_uploader = None
+        self.exclusion_checker = None
 
         self.high_level_agent = None
         self.mid_level_agent = None
@@ -244,6 +254,61 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
         else:
             logger.info("RAG upload disabled")
 
+        # Initialize Doxygen importer
+        if self.config.enable_doxygen_import:
+            if not self.config.doxygen_xml_dir:
+                logger.warning("✗ Doxygen import enabled but doxygen_xml_dir not specified")
+            else:
+                try:
+                    from .utils.doxygen_importer import DoxygenImporter
+                    # Parse all source files to get content
+                    source_files = {}
+                    project_path = Path(self.config.cpp_project_path)
+                    for file_path in project_path.rglob('*.cpp'):
+                        try:
+                            source_files[str(file_path)] = file_path.read_text(encoding='utf-8')
+                        except:
+                            pass
+                    for file_path in project_path.rglob('*.h'):
+                        try:
+                            source_files[str(file_path)] = file_path.read_text(encoding='utf-8')
+                        except:
+                            pass
+
+                    self.doxygen_importer = DoxygenImporter(
+                        doxygen_xml_dir=self.config.doxygen_xml_dir,
+                        llm_provider=self.llm_provider,
+                        source_files=source_files
+                    )
+                    if self.doxygen_importer.available:
+                        logger.info(f"✓ Doxygen importer initialized (XML dir: {self.config.doxygen_xml_dir})")
+                    else:
+                        logger.warning("✗ Doxygen XML directory not found")
+                except Exception as e:
+                    logger.error(f"✗ Failed to initialize Doxygen importer: {e}")
+        else:
+            logger.info("Doxygen import disabled")
+
+        # Initialize Exclusion Checker
+        try:
+            from .utils.exclusion_checker import ExclusionChecker
+            self.exclusion_checker = ExclusionChecker(self.config.cpp_project_path)
+        except Exception as e:
+            logger.error(f"✗ Failed to initialize exclusion checker: {e}")
+
+        # Initialize Document Chunker for RAG
+        if self.config.enable_rag_upload:
+            try:
+                from .utils.document_chunker import DocumentChunker
+                self.document_chunker = DocumentChunker(
+                    max_chunk_size=1000,
+                    overlap=100,
+                    min_chunk_size=100
+                )
+                logger.info("✓ Document chunker initialized")
+            except Exception as e:
+                logger.error(f"✗ Failed to initialize document chunker: {e}")
+
         logger.info(f"LLM AutoDoc plugin initialized with {self.config.llm_provider}/{self.config.llm_model}")
 
         return config
@@ -323,22 +388,30 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
 
             # Generate High-Level Documentation
             if self.config.generate_high_level:
-                logger.info("Generating high-level documentation...")
                 output_dir = docs_dir / self.config.high_level_output
                 output_dir.mkdir(parents=True, exist_ok=True)
 
-                high_level_files = self.high_level_agent.generate(
-                    project_structure=project_structure,
-                    output_dir=str(output_dir)
-                )
-                with self.files_lock:
-                    self.generated_files.extend(high_level_files)
-                logger.info(f"✓ Generated {len(high_level_files)} high-level documentation files")
+                # Check if high-level docs already exist and project hasn't changed
+                existing_high_level_files = list(output_dir.rglob('*.md')) if output_dir.exists() else []
 
-                # Upload to RAG
-                if self.rag_uploader and self.rag_uploader.enabled:
-                    logger.info("📤 Uploading high-level documentation to RAG...")
-                    self._upload_to_rag(doc_files=high_level_files)
+                if existing_high_level_files and len(changed_files) == 0 and not self.config.force_regenerate:
+                    logger.info(f"⏭️  High-level documentation already exists ({len(existing_high_level_files)} files) and no files changed - skipping generation")
+                    with self.files_lock:
+                        self.generated_files.extend([str(f) for f in existing_high_level_files])
+                else:
+                    logger.info("Generating high-level documentation...")
+                    high_level_files = self.high_level_agent.generate(
+                        project_structure=project_structure,
+                        output_dir=str(output_dir)
+                    )
+                    with self.files_lock:
+                        self.generated_files.extend(high_level_files)
+                    logger.info(f"✓ Generated {len(high_level_files)} high-level documentation files")
+
+                    # Upload to RAG
+                    if self.rag_uploader and self.rag_uploader.enabled:
+                        logger.info("📤 Uploading high-level documentation to RAG...")
+                        self._upload_to_rag(doc_files=high_level_files)
 
             # Generate Mid-Level Documentation
             if self.config.generate_mid_level and project_structure['modules']:
@@ -388,7 +461,6 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
 
             # Generate Detailed API Documentation
             if self.config.generate_detailed_level:
-                logger.info("Generating detailed API documentation...")
                 output_dir = docs_dir / self.config.detailed_level_output
                 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -396,84 +468,94 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                 detailed_files = []
 
                 total_api_files = len(files_to_document)
-                logger.info(f"📄 Processing {total_api_files} API documentation files...")
 
-                processed_count = 0
-                success_count = 0
-                error_count = 0
+                # Skip if no files need to be processed
+                if total_api_files == 0 and not self.config.force_regenerate:
+                    existing_detailed_files = list(output_dir.rglob('*.md')) if output_dir.exists() else []
+                    if existing_detailed_files:
+                        logger.info(f"⏭️  Detailed API documentation already exists ({len(existing_detailed_files)} files) and no files changed - skipping generation")
+                        with self.files_lock:
+                            self.generated_files.extend([str(f) for f in existing_detailed_files])
+                else:
+                    logger.info("Generating detailed API documentation...")
+                    logger.info(f"📄 Processing {total_api_files} API documentation files...")
 
-                # Helper function for parallel processing
-                def process_file(file_path):
-                    file_info = self.cpp_parser.parse_file(file_path)
-                    if file_info and (file_info.get('classes') or file_info.get('functions')):
-                        try:
-                            files = self.detailed_agent.generate(
-                                file_info=file_info,
-                                project_structure=project_structure,
-                                output_dir=str(output_dir)
-                            )
-                            # Upload to RAG immediately after generation
-                            if self.rag_uploader and self.rag_uploader.enabled:
-                                self._upload_to_rag(source_file=file_path, doc_files=files)
-                            return files, None, file_path
-                        except Exception as e:
-                            if self.config.retry_failed:
-                                try:
-                                    files = self.detailed_agent.generate(
-                                        file_info=file_info,
-                                        project_structure=project_structure,
-                                        output_dir=str(output_dir)
-                                    )
-                                    # Upload to RAG on retry success
-                                    if self.rag_uploader and self.rag_uploader.enabled:
-                                        self._upload_to_rag(source_file=file_path, doc_files=files)
-                                    return files, None, file_path
-                                except Exception as retry_error:
-                                    return None, retry_error, file_path
-                            return None, e, file_path
-                    return None, None, file_path
+                    processed_count = 0
+                    success_count = 0
+                    error_count = 0
 
-                # Use ThreadPoolExecutor for parallel processing with tqdm
-                max_workers = self.config.max_concurrent_llm_calls
-                logger.info(f"🔧 Using {max_workers} parallel workers for API documentation")
-
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Submit all tasks
-                    futures = {executor.submit(process_file, fp): fp for fp in files_to_document}
-
-                    # Process completed tasks with tqdm progress bar
-                    desc = "📄 Generating API Docs" if self.config.show_generation_progress else None
-                    with tqdm(total=len(files_to_document), desc=desc, unit="file", disable=not self.config.show_generation_progress) as pbar:
-                        for future in as_completed(futures):
-                            file_path = futures[future]
+                    # Helper function for parallel processing
+                    def process_file(file_path):
+                        file_info = self.cpp_parser.parse_file(file_path)
+                        if file_info and (file_info.get('classes') or file_info.get('functions')):
                             try:
-                                files, error, processed_path = future.result()
-                                processed_count += 1
+                                files = self.detailed_agent.generate(
+                                    file_info=file_info,
+                                    project_structure=project_structure,
+                                    output_dir=str(output_dir)
+                                )
+                                # Upload to RAG immediately after generation
+                                if self.rag_uploader and self.rag_uploader.enabled:
+                                    self._upload_to_rag(source_file=file_path, doc_files=files)
+                                return files, None, file_path
+                            except Exception as e:
+                                if self.config.retry_failed:
+                                    try:
+                                        files = self.detailed_agent.generate(
+                                            file_info=file_info,
+                                            project_structure=project_structure,
+                                            output_dir=str(output_dir)
+                                        )
+                                        # Upload to RAG on retry success
+                                        if self.rag_uploader and self.rag_uploader.enabled:
+                                            self._upload_to_rag(source_file=file_path, doc_files=files)
+                                        return files, None, file_path
+                                    except Exception as retry_error:
+                                        return None, retry_error, file_path
+                                return None, e, file_path
+                        return None, None, file_path
 
-                                if files:
-                                    detailed_files.extend(files)
-                                    # Immediately add to generated_files so they can be picked up
-                                    with self.files_lock:
-                                        self.generated_files.extend(files)
-                                    # Mark file as successfully processed for cache update
-                                    successfully_processed_files.append(processed_path)
-                                    success_count += 1
+                    # Use ThreadPoolExecutor for parallel processing with tqdm
+                    max_workers = self.config.max_concurrent_llm_calls
+                    logger.info(f"🔧 Using {max_workers} parallel workers for API documentation")
 
-                                    # Log progress every 10% or every 5 files (whichever is smaller)
-                                    log_interval = max(1, min(5, total_api_files // 10))
-                                    if processed_count % log_interval == 0 or processed_count == total_api_files:
-                                        logger.info(f"📄 Progress: {processed_count}/{total_api_files} files ({success_count} success, {error_count} errors)")
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        # Submit all tasks
+                        futures = {executor.submit(process_file, fp): fp for fp in files_to_document}
 
-                                if error:
+                        # Process completed tasks with tqdm progress bar
+                        desc = "📄 Generating API Docs" if self.config.show_generation_progress else None
+                        with tqdm(total=len(files_to_document), desc=desc, unit="file", disable=not self.config.show_generation_progress) as pbar:
+                            for future in as_completed(futures):
+                                file_path = futures[future]
+                                try:
+                                    files, error, processed_path = future.result()
+                                    processed_count += 1
+
+                                    if files:
+                                        detailed_files.extend(files)
+                                        # Immediately add to generated_files so they can be picked up
+                                        with self.files_lock:
+                                            self.generated_files.extend(files)
+                                        # Mark file as successfully processed for cache update
+                                        successfully_processed_files.append(processed_path)
+                                        success_count += 1
+
+                                        # Log progress every 10% or every 5 files (whichever is smaller)
+                                        log_interval = max(1, min(5, total_api_files // 10))
+                                        if processed_count % log_interval == 0 or processed_count == total_api_files:
+                                            logger.info(f"📄 Progress: {processed_count}/{total_api_files} files ({success_count} success, {error_count} errors)")
+
+                                    if error:
+                                        error_count += 1
+                                        logger.error(f"✗ Failed to generate documentation for {processed_path}: {error}")
+                                except Exception as exc:
                                     error_count += 1
-                                    logger.error(f"✗ Failed to generate documentation for {processed_path}: {error}")
-                            except Exception as exc:
-                                error_count += 1
-                                logger.error(f"✗ Exception processing {file_path}: {exc}")
-                            finally:
-                                pbar.update(1)
+                                    logger.error(f"✗ Exception processing {file_path}: {exc}")
+                                finally:
+                                    pbar.update(1)
 
-                logger.info(f"✅ Generated {len(detailed_files)} API documentation files ({success_count} success, {error_count} errors)")
+                    logger.info(f"✅ Generated {len(detailed_files)} API documentation files ({success_count} success, {error_count} errors)")
 
             # Update cross-references
             if self.config.enable_cross_references:

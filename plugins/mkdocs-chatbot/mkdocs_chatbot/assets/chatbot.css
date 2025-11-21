@@ -364,3 +364,62 @@
         border-color: #667eea;
     }
 }
+
+/* Sources Display */
+.chatbot-sources .chatbot-message-content {
+    background: #edf2f7 !important;
+    border-left: 4px solid #667eea;
+    max-width: 90%;
+}
+
+.chatbot-sources details {
+    cursor: pointer;
+}
+
+.chatbot-sources summary {
+    font-weight: 600;
+    padding: 4px 0;
+    outline: none;
+    user-select: none;
+}
+
+.chatbot-sources summary:hover {
+    color: #667eea;
+}
+
+.chatbot-sources-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0 0;
+}
+
+.chatbot-sources-list li {
+    padding: 8px;
+    margin: 4px 0;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.chatbot-sources-list li strong {
+    color: #667eea;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.chatbot-sources-list li small {
+    color: #718096;
+    font-size: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chatbot-sources .chatbot-message-content {
+        background: #2d3748 !important;
+        border-left-color: #667eea;
+    }
+
+    .chatbot-sources-list li {
+        background: #1a202c;
+        border-color: #4a5568;
+    }
+}

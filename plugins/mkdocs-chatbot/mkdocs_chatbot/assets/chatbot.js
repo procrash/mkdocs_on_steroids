@@ -146,6 +146,14 @@
         }
 
         async function callOpenAI(messages) {
+            // Check if backend API is available (for RAG/MCP tools)
+            const useBackendAPI = config.enableRag || config.enableMcpTools || config.enableN8n;
+
+            if (useBackendAPI) {
+                return await callBackendAPI(messages);
+            }
+
+            // Original direct OpenAI call
             // Prepare messages with system prompt
             const apiMessages = [
                 {
@@ -184,6 +192,61 @@
 
             const data = await response.json();
             return data.choices[0].message.content;
+        }
+
+        async function callBackendAPI(messages) {
+            // Call enhanced backend API with RAG/MCP tools/n8n
+            const apiUrl = `http://${config.apiServerHost}:${config.apiServerPort}/api/query`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: messages[messages.length - 1].content,
+                    page_context: config.currentPage,
+                    conversation_history: messages.slice(0, -1)  // All except last message
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Backend API request failed');
+            }
+
+            const data = await response.json();
+
+            // Display sources if available
+            if (data.sources && data.sources.length > 0) {
+                displaySources(data.sources);
+            }
+
+            return data.response;
+        }
+
+        function displaySources(sources) {
+            // Display RAG sources in the chat
+            const sourcesDiv = document.createElement('div');
+            sourcesDiv.className = 'chatbot-message chatbot-message-assistant chatbot-sources';
+            sourcesDiv.innerHTML = `
+                <div class="chatbot-message-content">
+                    <details>
+                        <summary>📚 Sources (${sources.length})</summary>
+                        <ul class="chatbot-sources-list">
+                            ${sources.map((source, i) => `
+                                <li>
+                                    <strong>${source.metadata.title || `Source ${i + 1}`}</strong><br>
+                                    ${source.content}<br>
+                                    <small>Relevance: ${(source.score * 100).toFixed(0)}%</small>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </details>
+                </div>
+            `;
+            elements.messages.appendChild(sourcesDiv);
+            elements.messages.scrollTop = elements.messages.scrollHeight;
         }
 
         function addMessage(type, content) {

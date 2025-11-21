@@ -1,0 +1,796 @@
+# ============================================================================
+# LLM-AutoDoc Prompt Configuration
+# ============================================================================
+# This file contains all prompts used by the LLM-AutoDoc plugin.
+# You can customize these prompts to change how documentation is generated.
+#
+# Template Variables (use {variable_name} syntax):
+#   - {topic_name}, {topic_description}, {topic_questions}
+#   - {file_path}, {content}, {source_content}, {doc_content}
+#   - {class_name}, {functions}, {members}, {methods}
+#   - {module_name}, {module_files}, {module_classes}
+#   - {project_name}, {project_structure}, {entry_points}
+#   - {extracted_info}, {extractions_count}
+#
+# Note: All prompts support markdown formatting
+# ============================================================================
+
+# ====================
+# OVERVIEW AGENT PROMPTS
+# ====================
+
+overview:
+  # Phase 1: Topic Extraction (Hybrid: Source + Docs)
+  extraction_hybrid: |
+    Analyze both the source code AND its generated documentation to extract information relevant to: **{topic_name}**
+
+    # Topic Description
+    {topic_description}
+
+    # Specific Questions to Answer
+    {topic_questions}
+
+    # File Information
+    **Path**: {file_path}
+
+    # Source Code
+    ```
+    {source_content}
+    ```
+
+    # Generated Documentation
+    ```markdown
+    {doc_content}
+    ```
+
+    # Your Task
+    Analyze BOTH the source code and its documentation to extract information relevant to the topic "{topic_name}".
+
+    **Prioritize information from the generated documentation** as it already contains:
+    - Structured explanations
+    - Code reviews and improvements
+    - Best practices
+    - Examples
+
+    **Supplement with source code** for:
+    - Implementation patterns not explained in docs
+    - Specific technical details
+    - Additional context
+
+    Answer these specific questions based on what you find:
+    {topic_questions}
+
+    # Output Format
+    Provide a concise summary (max 200 words) of what you found relevant to this topic.
+
+    **CRITICAL: Include Code References**:
+    - **ALWAYS** cite specific files, line numbers, classes, functions, or variables
+    - Format: `[ClassName](file.cpp:123)` or `[functionName](file.h:45-67)`
+    - For every claim, provide the source: "According to `[MyClass::init](main.cpp:34)`..."
+    - Example: "The build system uses CMake (see `[CMakeLists.txt](CMakeLists.txt:1)`)"
+    - Example: "Thread pool initialized in `[ThreadPool::start](threadpool.cpp:56-89)`"
+
+    **Format**:
+    - Use bullet points
+    - Be specific and reference code elements
+    - **Always include file:line references** for traceability
+    - Cite whether information comes from source code or documentation
+    - If nothing relevant found, respond with: "No relevant information found."
+
+    Generate ONLY the extracted information, no additional commentary.
+
+  # Phase 1: Topic Extraction (Legacy - Source only)
+  extraction: |
+    Analyze this source file and extract information relevant to the topic: **{topic_name}**
+
+    # Topic Description
+    {topic_description}
+
+    # Specific Questions to Answer
+    {topic_questions}
+
+    # File Information
+    **Path**: {file_path}
+    **Content**:
+    ```
+    {content}
+    ```
+
+    # Your Task
+    Analyze this file and extract ONLY information relevant to the topic "{topic_name}".
+
+    Answer these specific questions based on what you find in the code:
+    {topic_questions}
+
+    # Output Format
+    Provide a concise summary (max 200 words) of what you found relevant to this topic.
+
+    **Format**:
+    - Use bullet points
+    - Be specific and reference code elements (classes, functions, variables)
+    - Include file paths or line references where applicable
+    - If nothing relevant found, respond with: "No relevant information found."
+
+    Generate ONLY the extracted information, no additional commentary.
+
+  # Phase 2: Topic Synthesis
+  synthesis: |
+    Create a comprehensive documentation section about: **{topic_name}**
+
+    # Topic Overview
+    {topic_description}
+
+    # Key Questions to Address
+    {topic_questions}
+
+    # Information Extracted from Codebase
+    The following information was extracted from {extractions_count} files:
+
+    {combined_info}
+
+    # Your Task
+    Create a well-structured, comprehensive documentation section about "{topic_name}" for this project.
+
+    ## Requirements
+    1. **Answer all key questions** listed above based on the extracted information
+    2. **Organize information logically** with clear headings and subheadings
+    3. **Be specific**: Reference actual files, classes, functions, and code elements
+    4. **Include examples**: Show code snippets where relevant
+    5. **Remove duplicates**: Consolidate repeated information
+    6. **Add context**: Explain why things are done this way
+    7. **Use Mermaid diagrams** where helpful (architecture, flow, etc.)
+    8. **CRITICAL: Always include code references** for traceability
+
+    ## Code References (MANDATORY)
+    **Every statement must be traceable to source code:**
+    - Format: `[ClassName](file.cpp:123)` or `[functionName](file.h:45-67)` or `[file.cpp](file.cpp:1)`
+    - Examples:
+      - "The application starts in `[main()](src/main.cpp:15)`"
+      - "Build configuration is in `[CMakeLists.txt](CMakeLists.txt:1)`"
+      - "Thread pool is initialized via `[ThreadPool::init](threadpool.cpp:45-78)`"
+      - "Error handling uses exceptions (see `[ErrorHandler](errors.h:23)`)"
+    - **For every feature mentioned, cite the code location**
+    - **For every claim, provide evidence with file:line references**
+    - This ensures documentation is always verifiable and maintainable
+
+    ## Structure
+    Use this general structure (adapt as needed):
+
+    # {topic_name}
+
+    ## Overview
+    Brief introduction (2-3 sentences)
+
+    ## [Relevant Section 1]
+    Content...
+
+    ## [Relevant Section 2]
+    Content...
+
+    ## Key Files
+    List of important files related to this topic
+
+    ## Examples
+    Practical examples or code snippets
+
+    ## Best Practices
+    Recommendations for developers
+
+    ## See Also
+    Links to related topics (use format: `[Topic Name](topic-id.md)`)
+
+    # Output Format
+    - Use Markdown with proper headings
+    - Include code blocks with syntax highlighting
+    - Use Mermaid diagrams where appropriate
+    - Keep it practical and developer-focused
+    - Aim for 300-500 words per topic
+
+    Generate ONLY the markdown content, no additional commentary.
+
+  # Phase 3: Topic Refinement
+  refinement: |
+    Review and refine this documentation section.
+
+    # Current Content
+    ```markdown
+    {content}
+    ```
+
+    # Your Task
+    Refine this documentation by:
+
+    1. **Remove duplicates**: Eliminate repeated information
+    2. **Improve structure**: Ensure logical flow and clear hierarchy
+    3. **Fix formatting**: Ensure proper Markdown syntax
+    4. **Enhance clarity**: Make explanations clearer and more concise
+    5. **Add missing sections**: If key information is missing, note it
+    6. **Improve examples**: Make code examples more practical
+    7. **Cross-reference**: Add links to related topics where relevant
+
+    # Output Format
+    Return the refined version of the document in Markdown format.
+    Keep the same general structure but improve quality.
+
+    Generate ONLY the refined markdown content, no additional commentary.
+
+  # Code Quality Analysis (Special Topic)
+  code_quality: |
+    Analyze this code for quality issues, dead code, and maintainability problems.
+
+    # File: {file_path}
+    ```cpp
+    {content}
+    ```
+
+    # Your Task
+    Perform a comprehensive code quality analysis and identify the following issues:
+
+    ## 1. Dead Code Detection
+    - **Unused functions/methods**: Functions defined but never called anywhere
+    - **Unused variables/constants**: Declared but never used
+    - **Unreachable code**: Code after return/break/continue statements
+    - **Commented-out code blocks**: Old code that should be removed
+
+    ## 2. Complexity Issues
+    - **High cyclomatic complexity**: Functions with >15 decision points
+    - **Deep nesting**: Code with >4 levels of nesting
+    - **Long functions**: Functions with >100 lines of code
+    - **Long parameter lists**: Functions with >5 parameters
+    - **Long classes**: Classes with >500 lines of code
+
+    ## 3. Code Smells
+    - **God Classes**: Classes with too many responsibilities (>10 methods, >500 LOC)
+    - **Duplicated code**: Identical or very similar code blocks
+    - **Magic numbers/strings**: Hard-coded values without explanation
+    - **Poor naming**: Single letters, unclear abbreviations (except loop counters)
+    - **Missing error handling**: Functions that don't handle errors
+    - **Global variables**: Use of global state
+    - **Feature Envy**: Methods using more data from other classes
+
+    ## 4. SOLID Principle Violations
+    - **Single Responsibility**: Classes doing too many things
+    - **Open/Closed**: Code that requires modification instead of extension
+    - **Liskov Substitution**: Derived classes breaking parent contracts
+    - **Interface Segregation**: Fat interfaces forcing unnecessary implementations
+    - **Dependency Inversion**: High-level modules depending on low-level details
+
+    ## 5. Maintainability Issues
+    - **Tight coupling**: Classes too dependent on each other
+    - **Low cohesion**: Class methods working on unrelated data
+    - **Inconsistent naming**: Mixed naming conventions
+    - **Missing documentation**: Complex code without comments
+    - **TODO/FIXME markers**: Unresolved technical debt
+
+    # Output Format
+    For EACH issue found, provide structured information:
+
+    ### [Issue Type]: [Description]
+    - **Location**: `[Function/Class](file.cpp:line)` or `file.cpp:line-range`
+    - **Severity**: High / Medium / Low
+    - **Category**: Dead Code / Complexity / Code Smell / SOLID / Maintainability
+    - **Description**: Clear explanation of what the problem is
+    - **Impact**: Why this is problematic (maintainability, performance, bugs, etc.)
+    - **Suggestion**: Concrete steps to fix it
+    - **Example** (if applicable): Show before/after code
+
+    ## Example Output Format:
+
+    ### Dead Code: Unused Function `legacy_parse()`
+    - **Location**: `[legacy_parse()](parser.cpp:234)`
+    - **Severity**: Medium
+    - **Category**: Dead Code
+    - **Description**: Function is defined but never called in the entire codebase
+    - **Impact**: Increases code bloat, confuses new developers, maintenance burden
+    - **Suggestion**:
+      - If truly unused: Remove the function
+      - If kept for future: Document why and add @deprecated tag
+      - If used externally: Add comment explaining external usage
+
+    ### High Complexity: `process_request()`
+    - **Location**: `[process_request()](server.cpp:89-145)`
+    - **Severity**: High
+    - **Category**: Complexity
+    - **Description**: Function has cyclomatic complexity of 23 (threshold: 15)
+    - **Impact**:
+      - Difficult to test (23 test cases needed for full coverage)
+      - High chance of bugs
+      - Hard for new developers to understand
+    - **Suggestion**:
+      - Extract validation logic into `validate_request()`
+      - Extract processing into `execute_request()`
+      - Use strategy pattern for different request types
+      - Consider state machine for complex flow
+    - **Example**:
+      ```cpp
+      // Before: 150 LOC with 23 branches
+      void process_request() { ... }
+
+      // After: Split into focused functions
+      bool validate_request() { ... }  // CCN: 5
+      void execute_request() { ... }    // CCN: 8
+      ```
+
+    ### God Class: `ApplicationManager`
+    - **Location**: `[ApplicationManager](manager.cpp:1-687)`
+    - **Severity**: High
+    - **Category**: Code Smell / SOLID Violation
+    - **Description**: Class has 687 LOC, 45 methods, handles config, connections, and workflow
+    - **Impact**:
+      - Violates Single Responsibility Principle
+      - Hard to test (too many dependencies)
+      - Changes ripple through entire class
+      - Difficult to reuse individual components
+    - **Suggestion**:
+      - Split into `ConfigurationManager` (config loading/validation)
+      - Create `ConnectionManager` (network connections)
+      - Create `WorkflowCoordinator` (orchestration)
+      - Use dependency injection for loose coupling
+
+    # Important Guidelines:
+    - **Be specific**: Always include file names, line numbers, function/class names
+    - **Prioritize**: Focus on high-severity issues first
+    - **Be constructive**: Provide actionable suggestions, not just criticism
+    - **Consider context**: Some "violations" might be justified
+    - **Limit output**: Report max 20 most important issues
+    - **Group similar issues**: If 10 functions have same issue, group them
+    - **Use markdown**: Make it easy to scan with headings, lists, code blocks
+
+    # If No Issues Found:
+    If the code is high quality with no significant issues:
+    ```markdown
+    ## Code Quality Assessment: Excellent
+
+    This file demonstrates good code quality with no major issues detected:
+    - ✅ No dead code found
+    - ✅ Complexity within acceptable limits
+    - ✅ Good naming conventions
+    - ✅ Proper error handling
+    - ✅ Follows SOLID principles
+
+    Minor suggestions (if any): [list minor improvements]
+    ```
+
+    Generate ONLY the analysis in markdown format, no additional commentary.
+
+# ====================
+# HIGH-LEVEL AGENT PROMPTS
+# ====================
+
+high_level:
+  # Getting Started Documentation
+  getting_started: |
+    Create a comprehensive "Getting Started" guide for this C++ project.
+
+    # Project Structure
+    {project_structure}
+
+    # Your Task
+    Write a beginner-friendly guide that helps developers get started with this project.
+
+    ## Topics to Cover
+    1. **Project Overview**: What is this project? What does it do?
+    2. **Prerequisites**: Required tools, libraries, dependencies
+    3. **Building the Project**: Step-by-step build instructions
+    4. **First Steps**: How to run the project for the first time
+    5. **Project Structure**: Overview of key directories and files
+    6. **Entry Points**: Where to start reading the code ({entry_points})
+    7. **Common Tasks**: Typical developer workflows
+    8. **Next Steps**: Where to go from here
+
+    ## Requirements
+    - Write in clear, friendly language
+    - Include practical examples and commands
+    - Reference specific files with links: `[filename](path/to/file.cpp)`
+    - Add code snippets where helpful
+    - Use Mermaid diagrams for visual explanations
+    - Aim for 500-700 words
+
+    # Output Format
+    Generate a complete Markdown document with proper headings and formatting.
+
+    Generate ONLY the markdown content, no additional commentary.
+
+  # Architecture Documentation
+  architecture: |
+    Create comprehensive architecture documentation for this C++ project.
+
+    # Project Structure
+    {project_structure}
+
+    # Your Task
+    Document the high-level architecture and design of this project.
+
+    ## Topics to Cover
+    1. **System Overview**: High-level description of the system
+    2. **Architecture Patterns**: Design patterns used (MVC, layered, etc.)
+    3. **Module Organization**: How code is organized into modules
+       - List key modules: {modules}
+    4. **Component Interaction**: How components communicate
+    5. **Data Flow**: How data moves through the system
+    6. **Key Design Decisions**: Important architectural choices and why
+    7. **Dependencies**: External and internal dependencies
+    8. **Extension Points**: Where/how to extend the system
+
+    ## Requirements
+    - Be technical but clear
+    - Use Mermaid diagrams extensively:
+      - System overview diagram
+      - Component interaction diagram
+      - Data flow diagram
+    - Reference specific files and classes
+    - Explain WHY decisions were made, not just WHAT
+    - Aim for 700-1000 words
+
+    # Output Format
+    Generate a complete Markdown document with proper headings and formatting.
+
+    Generate ONLY the markdown content, no additional commentary.
+
+  # Filesystem Structure Documentation
+  filesystem_structure: |
+    Create comprehensive documentation of the project's filesystem structure.
+
+    # Project Information
+    **Project Root**: {project_root}
+    **Total Files**: {total_files}
+    **Total Directories**: {total_directories}
+
+    # Directory Tree
+    {directory_tree}
+
+    # File Statistics by Type
+    {file_statistics}
+
+    # Key Directories
+    {key_directories}
+
+    # Your Task
+    Create clear, navigable documentation of this project's filesystem organization.
+
+    ## Topics to Cover
+    1. **Directory Structure Overview**:
+       - Main directories and their purpose
+       - Organization strategy (by feature, by layer, etc.)
+       - Special directories (build, docs, tests, etc.)
+
+    2. **Source Code Organization**:
+       - Where to find different types of code
+       - Header files location
+       - Implementation files location
+       - How files are grouped
+
+    3. **Key Directories Explained**:
+       - For each major directory, explain:
+         - What it contains
+         - Why it's organized this way
+         - Key files within it
+         - Subdirectory structure
+
+    4. **File Naming Conventions**:
+       - Header file patterns (*.h, *.hpp)
+       - Implementation patterns (*.cpp, *.cc)
+       - Any special naming rules
+
+    5. **Build System Files**:
+       - Location of CMakeLists.txt or build files
+       - Configuration files
+       - Build output directories
+
+    6. **Documentation & Resources**:
+       - Where documentation is stored
+       - README locations
+       - Examples and samples
+
+    7. **Testing Structure**:
+       - Test file locations
+       - Test organization strategy
+
+    8. **Navigation Guide**:
+       - Quick reference: "Where do I find X?"
+       - Common tasks and file locations
+       - Entry points for new developers
+
+    ## Requirements
+    - Use ASCII tree diagrams for structure visualization
+    - Create a table of key directories with descriptions
+    - Include file counts per directory
+    - Provide clear navigation paths
+    - Use Mermaid diagrams for directory hierarchy if helpful
+    - Make it easy for new developers to understand the layout
+    - Reference actual directory and file names
+    - Aim for 600-800 words
+
+    ## Example Structure
+
+    # Project Filesystem Structure
+
+    ## Directory Overview
+
+    ```
+    project-root/
+    ├── src/           # Source code (120 files)
+    ├── include/       # Header files (80 files)
+    ├── tests/         # Unit tests (45 files)
+    ├── docs/          # Documentation (25 files)
+    ├── build/         # Build output (excluded from docs)
+    └── CMakeLists.txt # Build configuration
+    ```
+
+    ## Key Directories
+
+    | Directory | Purpose | Key Files | File Count |
+    |-----------|---------|-----------|------------|
+    | `src/` | Main source code | `main.cpp`, ... | 120 |
+    | ... | ... | ... | ... |
+
+    ## Navigation Guide
+
+    - **Looking for the entry point?** → `src/main.cpp`
+    - **Need to add a new class?** → `include/` for header, `src/` for implementation
+    - **Want to run tests?** → `tests/` directory
+    - **Build the project?** → See `CMakeLists.txt` in root
+
+    # Output Format
+    - Use clear, hierarchical structure
+    - Include actual directory tree (ASCII art)
+    - Create easy-to-scan tables
+    - Add quick navigation references
+    - Use code blocks for directory paths
+    - Keep it practical and developer-focused
+
+    Generate ONLY the markdown content, no additional commentary.
+
+# ====================
+# MID-LEVEL AGENT PROMPTS
+# ====================
+
+mid_level:
+  # Module Documentation
+  module: |
+    Create comprehensive documentation for this module.
+
+    # Module Information
+    **Name**: {module_name}
+    **Files**: {module_files}
+    **Classes**: {module_classes}
+
+    # Project Context
+    {project_structure}
+
+    # Your Task
+    Document this module in detail, explaining its purpose, components, and how it fits into the larger project.
+
+    ## Topics to Cover
+    1. **Module Overview**: Purpose and responsibility
+    2. **Key Components**:
+       - Main classes and their roles
+       - Important functions
+       - Data structures
+    3. **Architecture**: Internal organization
+    4. **Dependencies**:
+       - What this module depends on
+       - What depends on this module
+    5. **Usage Examples**: How to use this module
+    6. **API Summary**: Key public interfaces
+    7. **Design Patterns**: Patterns used in this module
+    8. **Best Practices**: How to work with this module
+
+    ## Requirements
+    - Reference specific classes and functions
+    - Include code examples
+    - Use Mermaid diagrams for module structure
+    - Link to related files: `[ClassName](path/to/file.h)`
+    - Explain relationships with other modules
+    - Aim for 400-600 words
+
+    # Output Format
+    Generate a complete Markdown document with proper headings and formatting.
+
+    Generate ONLY the markdown content, no additional commentary.
+
+# ====================
+# DETAILED-LEVEL AGENT PROMPTS
+# ====================
+
+detailed_level:
+  # Class Documentation
+  class: |
+    Generate comprehensive API documentation for this C++ class.
+
+    # Class Information
+    **Name**: {class_name}
+    **File**: {file_path}
+    **Namespace**: {namespace}
+
+    # Class Definition
+    ```cpp
+    {class_code}
+    ```
+
+    # Members
+    {members}
+
+    # Methods
+    {methods}
+
+    # Project Context
+    {project_structure}
+
+    # Your Task
+    Create detailed API documentation for this class.
+
+    ## Topics to Cover
+    1. **Class Overview**: Purpose and responsibility (2-3 sentences)
+    2. **Class Diagram**: Mermaid class diagram showing relationships
+    3. **Constructor/Destructor**: How to create and destroy instances
+    4. **Public Interface**:
+       - Document each public method
+       - Include parameters, return values, exceptions
+       - Provide usage examples
+    5. **Member Variables**: Document public/protected members
+    6. **Usage Examples**: Real-world usage scenarios
+    7. **Thread Safety**: Is this class thread-safe?
+    8. **Performance Considerations**: Any performance notes
+    9. **Best Practices**: Recommended usage patterns
+    10. **Common Pitfalls**: Things to avoid
+
+    ## Method Documentation Format
+    For each method:
+    ```markdown
+    ### `methodName()`
+
+    **Signature**: `ReturnType methodName(ParamType param)`
+
+    **Description**: What this method does
+
+    **Parameters**:
+    - `param`: Description
+
+    **Returns**: Description of return value
+
+    **Throws**: Exceptions that may be thrown
+
+    **Example**:
+    ```cpp
+    // Usage example
+    MyClass obj;
+    obj.methodName(value);
+    ```
+    ```
+
+    ## Requirements
+    - Be thorough and precise
+    - Include code examples for complex APIs
+    - Use Mermaid diagrams
+    - Reference related classes
+    - Highlight important details
+    - Aim for 600-1000 words
+
+    # Output Format
+    Generate a complete Markdown document with proper headings and formatting.
+
+    Generate ONLY the markdown content, no additional commentary.
+
+  # Functions Documentation
+  functions: |
+    Generate comprehensive API documentation for these C++ functions.
+
+    # File Information
+    **File**: {file_path}
+    **Namespace**: {namespace}
+
+    # Functions
+    {functions_list}
+
+    # Project Context
+    {project_structure}
+
+    # Your Task
+    Create detailed API documentation for these functions.
+
+    ## Topics to Cover
+    1. **File Overview**: Purpose of this file (2-3 sentences)
+    2. **Functions Summary**: Table of all functions
+    3. **Detailed Documentation**: For each function:
+       - Purpose and behavior
+       - Parameters with descriptions
+       - Return value
+       - Exceptions/error handling
+       - Complexity (time/space)
+       - Usage examples
+       - Related functions
+
+    ## Function Documentation Format
+    For each function:
+    ```markdown
+    ### `functionName()`
+
+    **Signature**: `ReturnType functionName(ParamType param)`
+
+    **Description**: What this function does
+
+    **Parameters**:
+    - `param`: Description with type details
+
+    **Returns**: Description of return value
+
+    **Complexity**: O(n) time, O(1) space (if applicable)
+
+    **Throws**: Exceptions that may be thrown
+
+    **Example**:
+    ```cpp
+    // Usage example
+    auto result = functionName(value);
+    ```
+
+    **See Also**: Related functions
+    ```
+
+    ## Requirements
+    - Document each function thoroughly
+    - Include practical examples
+    - Mention edge cases
+    - Note thread safety if relevant
+    - Reference related functions
+    - Aim for 400-800 words
+
+    # Output Format
+    Generate a complete Markdown document with proper headings and formatting.
+
+    Generate ONLY the markdown content, no additional commentary.
+
+# ====================
+# CROSS-LINKER PROMPTS
+# ====================
+
+cross_linker:
+  # Document Linking
+  linking: |
+    Analyze this document and suggest related documents that should be cross-referenced.
+
+    # Current Document
+    **Path**: {doc_path}
+    **Content**:
+    ```markdown
+    {doc_content}
+    ```
+
+    # Candidate Related Documents
+    {candidates}
+
+    # Your Task
+    Analyze the content and identify which of the candidate documents are truly relevant and should be linked.
+
+    For each relevant document:
+    1. Explain WHY it's related (1 sentence)
+    2. Suggest WHERE in the current document to add the link
+    3. Suggest link text
+
+    ## Output Format
+    Return a JSON array of recommendations:
+    ```json
+    [
+      {
+        "target_doc": "path/to/doc.md",
+        "reason": "Why this doc is related",
+        "link_text": "Suggested link text",
+        "section": "Which section to add link to"
+      }
+    ]
+    ```
+
+    Only suggest documents that are genuinely relevant and useful to readers.
+    Maximum 5 recommendations.
+
+    Generate ONLY the JSON array, no additional commentary.
+
+# ====================
+# SETTINGS & CUSTOMIZATION
+# ====================
+
+# You can override individual prompts by setting environment variables:
+# LLMAUTODOC_PROMPT_OVERVIEW_EXTRACTION="your custom prompt..."
+
+# Or by modifying this file directly.

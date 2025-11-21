@@ -1,0 +1,348 @@
+# MkDocs Configuration with Full Feature Set
+# Includes: LLM AutoDoc, ChatBot with RAG/MCP/n8n, Doxygen Import
+
+site_name: My C++ Project Documentation
+site_description: Comprehensive documentation with AI-powered features
+site_url: https://example.com
+
+# Theme configuration
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+# Navigation
+nav:
+  - Home: index.md
+  - Generated Documentation:
+      - Overview: generated/index.md
+      - Architecture: generated/01-architecture.md
+      - Filesystem: generated/02-filesystem-structure.md
+  - API Reference: generated/api/
+
+# Plugins
+plugins:
+  # ========================================
+  # 1. LLM AutoDoc Plugin - Generate Documentation
+  # ========================================
+  - llm-autodoc:
+      # Enable/disable plugin
+      enabled: true
+
+      # C++ project path
+      cpp_project_path: ./src
+
+      # LLM Configuration
+      llm_provider: lmstudio  # Options: anthropic, openai, ollama, lmstudio
+      # llm_api_key: your-api-key-here  # Not needed for LM Studio/Ollama
+      llm_model: local-model  # For LM Studio: the model name shown in LM Studio
+      llm_base_url: http://localhost:1234/v1  # LM Studio default endpoint
+      llm_timeout: 600.0  # 10 minutes timeout
+
+      # Documentation levels
+      generate_high_level: true
+      generate_mid_level: true
+      generate_detailed_level: true
+      generate_overview: true
+
+      # Output paths
+      high_level_output: generated
+      mid_level_output: generated/modules
+      detailed_level_output: generated/api
+      overview_output: generated
+
+      # Caching
+      enable_cache: true
+      cache_dir: .cache/llm-autodoc
+      force_regenerate: false
+
+      # Quality control
+      enable_quality_check: true
+      enable_cross_references: true
+      enable_code_review: true
+
+      # File patterns
+      include_patterns:
+        - '**/*'
+      exclude_patterns:
+        - '**/build/**'
+        - '**/third_party/**'
+        - '**/external/**'
+        - '**/.git/**'
+        - '**/__pycache__/**'
+        - '**/*.pyc'
+        - '**/.cache/**'
+        - '**/node_modules/**'
+
+      # Performance
+      max_concurrent_llm_calls: 3
+      retry_failed: true
+      verbose: false
+
+      # Background processing
+      background_generation: true
+      show_generation_progress: true
+
+      # ========================================
+      # RAG Integration - Upload to Vector DB
+      # ========================================
+      enable_rag_upload: true
+      rag_webhook_url: http://localhost:3000/api/upload  # Your RAG service endpoint
+      rag_upload_source_files: true  # Upload source code files
+      rag_upload_generated_docs: true  # Upload generated documentation
+      rag_upload_all_source: true  # Upload ALL project files
+
+      # ========================================
+      # Doxygen Legacy Import
+      # ========================================
+      enable_doxygen_import: true
+      doxygen_xml_dir: ./doxygen/xml  # Path to Doxygen XML output
+      doxygen_validate_freshness: true  # Validate against current code
+      doxygen_merge_strategy: auto  # Options: auto, integrate, new_section, skip
+
+  # ========================================
+  # 2. ChatBot Plugin - Interactive Assistant
+  # ========================================
+  - chatbot:
+      # Enable/disable plugin
+      enabled: true
+
+      # Basic Configuration
+      api_key: ""  # Not needed if using backend API or local LLM
+      api_base_url: http://localhost:1234/v1  # LM Studio endpoint
+      model: local-model
+      position: bottom-right  # Options: bottom-right, bottom-left, top-right, top-left
+
+      # UI Customization
+      button_color: '#3b82f6'
+      button_text_color: '#ffffff'
+      chat_title: 'Documentation Assistant'
+      placeholder_text: 'Ask me anything about the documentation...'
+      welcome_message: 'Hi! I can help you navigate the documentation and answer questions. I have access to the entire codebase via RAG.'
+
+      # AI Configuration
+      temperature: 0.7
+      max_tokens: 1000
+      system_prompt: |
+        You are a helpful technical documentation assistant for a C++ project.
+        You have access to the complete codebase through RAG (Retrieval-Augmented Generation).
+        Answer questions based on the provided context and sources.
+        Be concise, accurate, and provide code examples when relevant.
+        If you cite information, mention which part of the documentation it comes from.
+        Use markdown formatting in your responses.
+
+      # ========================================
+      # RAG Configuration - Vector Search
+      # ========================================
+      enable_rag: true
+      rag_config:
+        type: qdrant  # Options: chromadb, qdrant, pinecone, weaviate, custom
+
+        # Qdrant Configuration
+        url: http://localhost:6333
+        # api_key: your-qdrant-api-key  # Optional for cloud Qdrant
+        collection_name: mkdocs_documentation
+        top_k: 5  # Number of relevant results to retrieve
+        embedding_model: sentence-transformers/all-MiniLM-L6-v2
+
+        # ChromaDB Configuration (alternative)
+        # type: chromadb
+        # persist_directory: .cache/chromadb
+        # collection_name: mkdocs_documentation
+        # top_k: 5
+
+        # Pinecone Configuration (alternative)
+        # type: pinecone
+        # api_key: your-pinecone-api-key
+        # environment: us-east-1
+        # index_name: mkdocs-docs
+        # top_k: 5
+
+      # ========================================
+      # MCP Tools - External Tool Integration
+      # ========================================
+      enable_mcp_tools: true
+      mcp_tools:
+        # Example 1: HTTP API Tool
+        - name: search_github_issues
+          description: Search for related GitHub issues
+          type: http
+          endpoint: https://api.github.com/search/issues
+          method: GET
+          headers:
+            Accept: application/vnd.github.v3+json
+          auth:
+            type: bearer
+            token: ${GITHUB_TOKEN}  # Use environment variable
+          parameters:
+            q:
+              type: string
+              description: Search query
+              required: true
+            sort:
+              type: string
+              description: Sort field
+              required: false
+              enum: [comments, created, updated]
+
+        # Example 2: CLI Tool
+        - name: run_tests
+          description: Run unit tests for a specific module
+          type: cli
+          command: pytest tests/{module}_test.py -v
+          shell: true
+          timeout: 30
+          parameters:
+            module:
+              type: string
+              description: Module name to test
+              required: true
+
+        # Example 3: Python Function Tool
+        - name: analyze_complexity
+          description: Analyze code complexity of a file
+          type: python
+          module: radon.complexity
+          function: cc_visit
+          parameters:
+            code:
+              type: string
+              description: Code to analyze
+              required: true
+
+      # ========================================
+      # MinIO Storage - Object Storage
+      # ========================================
+      enable_minio: true
+      minio_config:
+        endpoint: localhost:9000
+        access_key: ${MINIO_ACCESS_KEY}
+        secret_key: ${MINIO_SECRET_KEY}
+        bucket_name: mkdocs-documentation
+        secure: false  # true for HTTPS
+        region: us-east-1
+
+      # ========================================
+      # n8n Integration - Workflow Automation
+      # ========================================
+      enable_n8n: false  # Enable to use n8n instead of direct LLM
+      n8n_webhook_url: http://localhost:5678/webhook/chatbot
+      n8n_api_key: ${N8N_API_KEY}
+
+      # Backend API Server
+      api_server_host: localhost
+      api_server_port: 8765
+
+  # ========================================
+  # 3. Additional Useful Plugins
+  # ========================================
+  - search
+  - tags
+
+# Markdown extensions
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+# Extra configuration
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername/yourproject
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/yourusername/yourproject
+
+# ========================================
+# Environment Variables Reference
+# ========================================
+# The following environment variables can be used:
+#
+# LLM Configuration:
+#   - ANTHROPIC_API_KEY: Anthropic API key
+#   - OPENAI_API_KEY: OpenAI API key
+#
+# MCP Tools:
+#   - GITHUB_TOKEN: GitHub API token
+#
+# MinIO:
+#   - MINIO_ACCESS_KEY: MinIO access key
+#   - MINIO_SECRET_KEY: MinIO secret key
+#
+# n8n:
+#   - N8N_API_KEY: n8n API key
+#
+# ========================================
+# Quick Start Commands
+# ========================================
+#
+# 1. Install dependencies:
+#    pip install -r requirements.txt
+#
+# 2. Setup Qdrant (Docker):
+#    docker run -p 6333:6333 qdrant/qdrant
+#
+# 3. Setup MinIO (Docker):
+#    docker run -p 9000:9000 -p 9001:9001 \
+#      -e MINIO_ROOT_USER=admin \
+#      -e MINIO_ROOT_PASSWORD=password \
+#      minio/minio server /data --console-address ":9001"
+#
+# 4. Setup LM Studio:
+#    - Download from https://lmstudio.ai/
+#    - Load a model
+#    - Start the local server on port 1234
+#
+# 5. Build documentation:
+#    mkdocs serve
+#
+# 6. Access documentation:
+#    http://localhost:8000
+#
+# ========================================
+# Optional: Doxygen Setup
+# ========================================
+#
+# 1. Generate Doxygen documentation with XML output:
+#    doxygen Doxyfile
+#
+# 2. Ensure Doxyfile has:
+#    GENERATE_XML = YES
+#    XML_OUTPUT = xml
+#
+# 3. The XML files will be in ./doxygen/xml/
+#
+# ========================================
