@@ -53,8 +53,10 @@ except ImportError:
 from .agents.high_level_agent import HighLevelAgent
 from .agents.mid_level_agent import MidLevelAgent
 from .agents.detailed_level_agent import DetailedLevelAgent
+from .agents.overview_agent import HighLevelOverviewAgent
 from .parsers.cpp_parser import CppParser
 from .utils.cache_manager import CacheManager
+from .utils.state_manager import StateManager
 from .utils.cross_reference import CrossReferenceManager
 from .utils.llm_provider import LLMProviderFactory
 from .utils.rag_uploader import RAGUploader
@@ -80,11 +82,13 @@ class LLMAutoDocPluginConfig(config_options.Config):
     generate_high_level = config_options.Type(bool, default=True)
     generate_mid_level = config_options.Type(bool, default=True)
     generate_detailed_level = config_options.Type(bool, default=True)
+    generate_overview = config_options.Type(bool, default=True)  # NEW: High-level thematic overview
 
     # Output paths
     high_level_output = config_options.Type(str, default='generated')
     mid_level_output = config_options.Type(str, default='generated/modules')
     detailed_level_output = config_options.Type(str, default='generated/api')
+    overview_output = config_options.Type(str, default='generated')  # NEW: Overview documentation
 
     # Caching
     enable_cache = config_options.Type(bool, default=True)
@@ -136,6 +140,7 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
     def __init__(self):
         super().__init__()
         self.cache_manager = None
+        self.state_manager = None
         self.cpp_parser = None
         self.cross_ref_manager = None
         self.llm_provider = None
@@ -144,6 +149,7 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
         self.high_level_agent = None
         self.mid_level_agent = None
         self.detailed_agent = None
+        self.overview_agent = None
 
         self.generated_files = []
         self.generation_thread = None
@@ -179,6 +185,7 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         self.cache_manager = CacheManager(cache_dir, enabled=self.config.enable_cache)
+        self.state_manager = StateManager(cache_dir, enabled=self.config.enable_cache)
         self.cpp_parser = CppParser(
             include_patterns=self.config.include_patterns,
             exclude_patterns=self.config.exclude_patterns
@@ -212,6 +219,16 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
             llm_provider=self.llm_provider,
             cache_manager=self.cache_manager,
             cross_ref_manager=self.cross_ref_manager
+        )
+        # Get mkdocs.yml path (plugin has access to config file path)
+        mkdocs_yml_path = config.config_file_path if hasattr(config, 'config_file_path') else 'mkdocs.yml'
+
+        self.overview_agent = HighLevelOverviewAgent(
+            llm_provider=self.llm_provider,
+            cache_manager=self.cache_manager,
+            state_manager=self.state_manager,
+            mkdocs_yml_path=mkdocs_yml_path,
+            docs_dir=config['docs_dir']
         )
 
         # Initialize RAG uploader
@@ -293,6 +310,8 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
             logger.info("=" * 70)
             logger.info(f"📊 GENERATION PLAN:")
             logger.info(f"   Total files to process: {total_files_to_process}")
+            if self.config.generate_overview:
+                logger.info(f"   ✓ High-level thematic overview enabled (40+ topics)")
             if self.config.generate_high_level:
                 logger.info(f"   ✓ High-level documentation enabled")
             if self.config.generate_mid_level:
@@ -498,6 +517,36 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                 )
             else:
                 logger.warning("⚠️  No files were successfully processed - cache not updated")
+
+            # Generate High-Level Thematic Overview (AFTER all other docs!)
+            if self.config.generate_overview:
+                logger.info("=" * 70)
+                logger.info("Generating high-level thematic overview...")
+                logger.info("This uses both source code AND the generated documentation above")
+                logger.info("=" * 70)
+
+                output_dir = docs_dir / self.config.overview_output
+                output_dir.mkdir(parents=True, exist_ok=True)
+
+                # Collect all generated docs to pass to overview agent
+                with self.files_lock:
+                    all_generated_docs = self.generated_files.copy()
+
+                overview_files = self.overview_agent.generate(
+                    project_structure=project_structure,
+                    output_dir=str(output_dir),
+                    generated_docs=all_generated_docs,
+                    max_workers=self.config.max_concurrent_llm_calls,
+                    force_regenerate=self.config.force_regenerate
+                )
+                with self.files_lock:
+                    self.generated_files.extend(overview_files)
+                logger.info(f"✓ Generated {len(overview_files)} thematic overview documentation files")
+
+                # Upload to RAG
+                if self.rag_uploader and self.rag_uploader.enabled:
+                    logger.info("📤 Uploading overview documentation to RAG...")
+                    self._upload_to_rag(doc_files=overview_files)
 
             with self.files_lock:
                 total_files = len(self.generated_files)

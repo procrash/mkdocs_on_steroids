@@ -1,0 +1,289 @@
+# MkDocs LLM AutoDoc Plugin - Configuration Example
+# Copy relevant sections to your mkdocs.yml file
+
+# ============================================================================
+# BASIC CONFIGURATION
+# ============================================================================
+
+plugins:
+  - llm-autodoc:
+      # Enable/disable the plugin
+      enabled: true
+
+      # Path to your source code
+      cpp_project_path: './cpp-project'
+
+      # LLM Configuration
+      llm_provider: 'anthropic'  # Options: anthropic, openai, ollama, lmstudio
+      llm_api_key: '${ANTHROPIC_API_KEY}'  # Or set in environment
+      llm_model: 'claude-3-5-sonnet-20241022'
+
+      # Documentation levels
+      generate_overview: true  # NEW! High-level thematic overview (40+ topics)
+      generate_high_level: true  # Project overview and architecture
+      generate_mid_level: true  # Module-level documentation
+      generate_detailed_level: true  # Detailed API documentation
+
+# ============================================================================
+# ADVANCED CONFIGURATION
+# ============================================================================
+
+plugins:
+  - llm-autodoc:
+      # Required settings
+      enabled: true
+      cpp_project_path: './cpp-project'
+
+      # LLM Configuration
+      llm_provider: 'anthropic'
+      llm_api_key: '${ANTHROPIC_API_KEY}'
+      llm_model: 'claude-3-5-sonnet-20241022'
+      llm_timeout: 600.0  # Timeout in seconds (10 minutes)
+
+      # Documentation levels
+      generate_overview: true  # High-level thematic overview
+      generate_high_level: true
+      generate_mid_level: true
+      generate_detailed_level: true
+
+      # Output directories
+      overview_output: 'generated'  # Overview docs location
+      high_level_output: 'generated'
+      mid_level_output: 'generated/modules'
+      detailed_level_output: 'generated/api'
+
+      # Caching (IMPORTANT for cost savings!)
+      enable_cache: true
+      cache_dir: '.cache/llm-autodoc'
+      force_regenerate: false  # Set to true to regenerate everything
+
+      # Quality control
+      enable_quality_check: true
+      enable_cross_references: true
+      enable_code_review: true
+
+      # File patterns
+      include_patterns:
+        - '**/*.cpp'
+        - '**/*.h'
+        - '**/*.hpp'
+      exclude_patterns:
+        - '**/build/**'
+        - '**/third_party/**'
+        - '**/external/**'
+        - '**/.git/**'
+        - '**/node_modules/**'
+        - '**/.cache/**'
+
+      # Performance
+      max_concurrent_llm_calls: 3  # Parallel LLM calls
+      retry_failed: true
+      verbose: false
+
+      # Background processing
+      background_generation: true  # Generate docs in background
+      show_generation_progress: true  # Show progress bar
+
+      # RAG Integration (Optional)
+      enable_rag_upload: false
+      rag_webhook_url: 'http://localhost:8080/upload'
+      rag_upload_source_files: true
+      rag_upload_generated_docs: true
+      rag_upload_all_source: true
+
+# ============================================================================
+# COST-OPTIMIZED CONFIGURATION
+# ============================================================================
+
+plugins:
+  - llm-autodoc:
+      enabled: true
+      cpp_project_path: './cpp-project'
+
+      # Use caching to minimize API calls
+      enable_cache: true
+      force_regenerate: false
+
+      # Generate only what you need
+      generate_overview: true
+      generate_high_level: false  # Disable if not needed
+      generate_mid_level: false  # Disable if not needed
+      generate_detailed_level: false  # Disable if not needed
+
+      # Reduce parallelism to avoid rate limits
+      max_concurrent_llm_calls: 1
+
+      # Exclude non-essential files
+      exclude_patterns:
+        - '**/test/**'
+        - '**/tests/**'
+        - '**/examples/**'
+        - '**/third_party/**'
+        - '**/vendor/**'
+        - '**/build/**'
+
+      # LLM Configuration
+      llm_provider: 'anthropic'
+      llm_api_key: '${ANTHROPIC_API_KEY}'
+      llm_model: 'claude-3-5-sonnet-20241022'
+
+# ============================================================================
+# LOCAL LLM CONFIGURATION (FREE!)
+# ============================================================================
+
+plugins:
+  - llm-autodoc:
+      enabled: true
+      cpp_project_path: './cpp-project'
+
+      # Use Ollama (runs locally, no API costs!)
+      llm_provider: 'ollama'
+      llm_model: 'codellama'  # Or: mistral, llama2, etc.
+      llm_base_url: 'http://localhost:11434'
+      llm_timeout: 900.0  # Local LLMs may be slower
+
+      # OR use LM Studio
+      # llm_provider: 'lmstudio'
+      # llm_model: 'local-model'
+      # llm_base_url: 'http://localhost:1234/v1'
+
+      # Enable all documentation
+      generate_overview: true
+      generate_high_level: true
+      generate_mid_level: true
+      generate_detailed_level: true
+
+      # Caching still useful for local LLMs
+      enable_cache: true
+      cache_dir: '.cache/llm-autodoc'
+
+      # Can afford more parallelism with local LLMs
+      max_concurrent_llm_calls: 5
+
+# ============================================================================
+# MINIMAL CONFIGURATION (Overview Only)
+# ============================================================================
+
+plugins:
+  - llm-autodoc:
+      enabled: true
+      cpp_project_path: './cpp-project'
+
+      # Only generate high-level thematic overview
+      generate_overview: true
+      generate_high_level: false
+      generate_mid_level: false
+      generate_detailed_level: false
+
+      # LLM Configuration
+      llm_provider: 'anthropic'
+      llm_api_key: '${ANTHROPIC_API_KEY}'
+
+# ============================================================================
+# DEVELOPMENT CONFIGURATION
+# ============================================================================
+
+plugins:
+  - llm-autodoc:
+      enabled: true
+      cpp_project_path: './cpp-project'
+
+      # LLM Configuration
+      llm_provider: 'anthropic'
+      llm_api_key: '${ANTHROPIC_API_KEY}'
+
+      # Enable everything for testing
+      generate_overview: true
+      generate_high_level: true
+      generate_mid_level: true
+      generate_detailed_level: true
+
+      # Useful development settings
+      verbose: true  # More logging
+      show_generation_progress: true
+      background_generation: false  # Synchronous for debugging
+      force_regenerate: false  # Use cache during development
+
+      # Tight file filtering for faster iteration
+      include_patterns:
+        - '**/src/**/*.cpp'
+        - '**/include/**/*.h'
+      exclude_patterns:
+        - '**/test/**'
+        - '**/build/**'
+
+      # Moderate parallelism
+      max_concurrent_llm_calls: 2
+
+# ============================================================================
+# PRODUCTION CONFIGURATION
+# ============================================================================
+
+plugins:
+  - llm-autodoc:
+      enabled: true
+      cpp_project_path: './cpp-project'
+
+      # LLM Configuration
+      llm_provider: 'anthropic'
+      llm_api_key: '${ANTHROPIC_API_KEY}'
+      llm_model: 'claude-3-5-sonnet-20241022'
+      llm_timeout: 600.0
+
+      # Full documentation
+      generate_overview: true
+      generate_high_level: true
+      generate_mid_level: true
+      generate_detailed_level: true
+
+      # Optimized for production
+      enable_cache: true
+      force_regenerate: false
+      background_generation: true
+      show_generation_progress: true
+
+      # Quality features
+      enable_quality_check: true
+      enable_cross_references: true
+      enable_code_review: true
+
+      # Performance
+      max_concurrent_llm_calls: 5
+      retry_failed: true
+
+      # Comprehensive file coverage
+      include_patterns:
+        - '**/*.cpp'
+        - '**/*.h'
+        - '**/*.hpp'
+        - '**/*.cc'
+        - '**/*.hh'
+      exclude_patterns:
+        - '**/build/**'
+        - '**/third_party/**'
+        - '**/external/**'
+        - '**/.git/**'
+        - '**/node_modules/**'
+        - '**/.cache/**'
+        - '**/CMakeFiles/**'
+
+      # RAG Integration
+      enable_rag_upload: true
+      rag_webhook_url: '${RAG_WEBHOOK_URL}'
+      rag_upload_source_files: true
+      rag_upload_generated_docs: true
+      rag_upload_all_source: true
+
+# ============================================================================
+# ENVIRONMENT VARIABLES
+# ============================================================================
+
+# Set these in your environment or CI/CD:
+# export ANTHROPIC_API_KEY="your-api-key"
+# export OPENAI_API_KEY="your-api-key"
+# export RAG_WEBHOOK_URL="http://your-rag-server/upload"
+
+# Or use a .env file:
+# ANTHROPIC_API_KEY=sk-...
+# OPENAI_API_KEY=sk-...
+# RAG_WEBHOOK_URL=http://localhost:8080/upload

@@ -1,642 +1,358 @@
 # MkDocs LLM AutoDoc Plugin
 
-Ein intelligentes MkDocs-Plugin, das automatisch mehrstufige C++-Dokumentation mithilfe von Large Language Models (LLMs) generiert.
+**Intelligente, KI-gestützte Dokumentationsgenerierung für Codebases**
 
-## Features
+Automatisches Erstellen von mehrstufiger, thematischer Dokumentation mit LLM-Power. Von High-Level Architektur-Übersichten bis zu detaillierten API-Dokumentationen - alles automatisch, nachvollziehbar und immer aktuell.
 
-- **Drei Dokumentationsebenen:**
-  - **High-Level**: Projektübersicht, Architektur, Einstiegspunkte (300 Wörter mit Mermaid-Diagrammen)
-  - **Mid-Level**: Modul-Dokumentation mit Klassen, Dependencies und Verwendungsszenarien
-  - **Detailed-Level**: Vollständige API-Dokumentation mit Parametern, Beispielen und Fehlerbehandlung
+---
 
-- **Background-Generierung (NEU!):**
-  - 🚀 Nicht-blockierende Dokumentationsgenerierung im Hintergrund
-  - 📚 Bereits vorhandene Dokumentation ist sofort verfügbar
-  - 📝 Neue Dokumentation erscheint automatisch live im Browser
-  - ⚡ Schnellerer Start von `mkdocs serve`
+## 🌟 Features im Überblick
 
-- **Intelligente Code-Review:**
-  - Automatische Identifikation von Schwachstellen (Security, Performance, Maintainability)
-  - Konkrete Verbesserungsvorschläge mit Before/After-Code-Beispielen
-  - Modern C++ Best Practices Analyse
-  - Testing-Empfehlungen
+### 📚 Multi-Level Dokumentation
 
-- **Intelligentes Caching:**
-  - SHA-256 File-Hash-Tracking
-  - Inkrementelle Updates (nur geänderte Dateien werden neu dokumentiert)
-  - Persistente Cache-Speicherung
+1. **High-Level Thematic Overview** (40+ Topics)
+   - Projekt-Übersicht, Getting Started, Architektur
+   - CI/CD, Testing, Security, Performance
+   - Threading, Memory Management, Error Handling
+   - Und 30+ weitere Entwickler-relevante Themen
 
-- **Mehrere LLM-Provider:**
-  - Anthropic Claude (empfohlen)
-  - OpenAI GPT-4
-  - Ollama (lokale Modelle)
-  - LM Studio (lokale OpenAI-kompatible Modelle)
+2. **Module Documentation**
+   - Übersicht über einzelne Module
+   - Klassen-Zusammenhänge
+   - Design Patterns
 
-- **Cross-References:**
-  - Automatische Links zwischen Dokumentationsebenen
-  - Modul-zu-Klasse-Verlinkungen
-  - Klassen-Beziehungen
+3. **Detailed API Documentation**
+   - Vollständige Klassen-Dokumentation
+   - Method-Signaturen und Parameter
+   - Code-Reviews und Verbesserungsvorschläge
+   - Beispiele und Best Practices
 
-- **C++ Code-Parsing:**
-  - Tree-sitter-basiertes Parsing für höchste Genauigkeit
-  - Regex-Fallback für Kompatibilität
-  - Unterstützt Klassen, Funktionen, Templates
+### 🔗 Intelligente Features
 
-## Installation
+4. **Hybrid-Analyse** (Source + Docs)
+   - Analysiert SOWOHL Source Code ALS AUCH bereits generierte Docs
+   - Kombiniert Implementation-Details mit strukturierten Insights
+   - Maximale Informationsdichte
 
-```bash
-cd plugins/mkdocs-llm-autodoc
-pip install -e .
+5. **Code-Referenzen** (Nachvollziehbarkeit)
+   - Jede Aussage ist mit `[Code](file.cpp:123)` referenziert
+   - Vollständige Traceability
+   - Leicht wartbar
+
+6. **Cross-Linking** (Automatische Verlinkung)
+   - Erkennt thematische Ähnlichkeiten zwischen Docs
+   - Fügt "See Also" Sektionen automatisch ein
+   - Bidirektionale Links
+
+7. **Auto-Navigation** (mkdocs.yml Update)
+   - Aktualisiert mkdocs.yml automatisch
+   - Intelligentes Merging mit bestehenden Einträgen
+   - Hierarchische Strukturierung
+
+8. **Dependency Analysis**
+   - Include-Graphen und Circular Dependencies
+   - Hub Files Identifikation
+   - Mermaid Diagramme
+
+9. **Resumable Generation** (State Management)
+   - Kann jederzeit unterbrochen und fortgesetzt werden
+   - Keine doppelte Arbeit
+   - Change Detection
+
+### 🚀 Workflow-Optimierung
+
+10. **Parallel Processing**
+    - Multi-threaded LLM calls
+    - Konfigurierbare Worker-Anzahl
+    - Schnelle Generation
+
+11. **Smart Caching**
+    - File-Hash basiertes Caching
+    - Nur geänderte Files werden neu generiert
+    - Kosteneinsparung
+
+12. **RAG Integration**
+    - Upload zu RAG-Systemen
+    - Source Files + Dokumentation
+    - Webhook-basiert
+
+---
+
+## 🎯 Der 7-Phasen Prozess
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 1: TOPIC EXTRACTION (Hybrid: Source + Docs)              │
+│ Analysiert jede Datei für jeden der 40+ Topics                 │
+│ Nutzt Source Code UND bereits generierte Markdown-Docs         │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 2: TOPIC SYNTHESIS                                        │
+│ Kombiniert Extractions zu kohärenten Topic-Dokumenten          │
+│ Mit Code-Referenzen für jede Aussage                           │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 3: TOPIC REFINEMENT                                       │
+│ Strukturiert, entfernt Duplikate, verbessert Qualität          │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 4: DEPENDENCY ANALYSIS                                    │
+│ Include-Graphen, Circular Dependencies, Mermaid Diagramme      │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 5: INDEX GENERATION                                       │
+│ Master-Index mit Navigation nach Priorität                     │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 6: CROSS-LINKING                                          │
+│ Automatische "See Also" Links zwischen verwandten Docs         │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ PHASE 7: NAVIGATION UPDATE                                      │
+│ Aktualisiert mkdocs.yml automatisch mit generierten Docs       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Abhängigkeiten
+---
+
+## 📦 Installation
 
 ```bash
-pip install mkdocs>=1.4.0
-pip install anthropic>=0.18.0  # Für Claude
-pip install openai>=1.0.0      # Für OpenAI oder Ollama
-pip install tree-sitter>=0.21.0
-pip install tree-sitter-cpp>=0.21.0
+pip install -e plugins/mkdocs-llm-autodoc/
 ```
 
-## Konfiguration
+---
 
-Füge das Plugin zu deiner `mkdocs.yml` hinzu:
+## ⚙️ Konfiguration
+
+### Minimal-Konfiguration
 
 ```yaml
 plugins:
   - llm-autodoc:
-      # Required
       enabled: true
-      cpp_project_path: '../path/to/your/cpp/project'
+      cpp_project_path: './cpp-project'
 
-      # LLM Configuration
-      llm_provider: 'anthropic'  # oder 'openai', 'ollama', 'lmstudio'
-      llm_api_key: !ENV ANTHROPIC_API_KEY  # oder direkt den Key
-      llm_model: 'claude-3-5-sonnet-20241022'
-      # llm_base_url: 'http://localhost:11434/v1'  # Für Ollama
-      # llm_base_url: 'http://localhost:1234/v1'   # Für LM Studio
+      # LLM Konfiguration
+      llm_provider: 'anthropic'
+      llm_api_key: '${ANTHROPIC_API_KEY}'
 
-      # Documentation Levels
+      # Alle Features aktivieren
+      generate_overview: true
       generate_high_level: true
       generate_mid_level: true
       generate_detailed_level: true
-
-      # Output Paths (relativ zu docs/)
-      high_level_output: 'generated'
-      mid_level_output: 'generated/modules'
-      detailed_level_output: 'generated/api'
-
-      # Caching
-      enable_cache: true
-      cache_dir: '.cache/llm-autodoc'
-      force_regenerate: false
-
-      # Quality Control
-      enable_quality_check: true
-      enable_cross_references: true
-      enable_code_review: true        # Enable automated code review & improvement suggestions
-
-      # File Patterns
-      include_patterns:
-        - '**/*.h'
-        - '**/*.hpp'
-        - '**/*.cpp'
-      exclude_patterns:        # Recursively exclude paths matching these patterns
-        - '**/build/**'        # Exclude build directories at any level
-        - '**/third_party/**'  # Exclude third_party directories
-        - '**/external/**'     # Exclude external dependencies
-        - '**/.git/**'         # Exclude git directory
-        - '**/__pycache__/**'  # Exclude Python cache
-        - '**/*.pyc'           # Exclude Python compiled files
-        - '**/.cache/**'       # Exclude cache directories
-        - '**/node_modules/**' # Exclude Node.js modules
-
-      # Advanced
-      max_concurrent_llm_calls: 3
-      retry_failed: true
-      verbose: false
-
-      # Background Processing (NEU!)
-      background_generation: true      # Generierung läuft im Hintergrund
-      show_generation_progress: true   # Fortschrittsbalken anzeigen
 ```
 
-### Umgebungsvariablen
+Weitere Konfigurationsbeispiele siehe [CONFIG_EXAMPLE.yml](CONFIG_EXAMPLE.yml).
 
-Statt API-Keys direkt in der Konfiguration anzugeben, verwende Umgebungsvariablen:
+---
 
-```bash
-# Für Anthropic Claude
-export ANTHROPIC_API_KEY="your-api-key"
-
-# Für OpenAI
-export OPENAI_API_KEY="your-api-key"
-```
-
-## Verwendung
-
-### Live-Entwicklung mit `mkdocs serve`
-
-Mit aktivierter Background-Generierung kannst du sofort mit der Entwicklung beginnen:
-
-```bash
-mkdocs serve
-```
-
-**Wie es funktioniert:**
-
-1. **Sofortiger Start**: MkDocs startet sofort, ohne auf die Dokumentationsgenerierung zu warten
-2. **Bereits vorhandene Docs**: Alle bereits generierten Dokumentationsdateien sind sofort verfügbar
-3. **Live-Updates**: Neue Dokumentation erscheint automatisch im Browser, sobald sie generiert wurde
-4. **Hintergrund-Prozess**: Die Generierung läuft parallel im Hintergrund
-
-**Output-Beispiel:**
-```
-INFO    - Starting LLM-powered documentation generation...
-INFO    - 📚 Found 42 existing documentation files - they will be available immediately
-INFO    - 🚀 Starting background documentation generation...
-INFO    - 📝 New documentation will appear automatically as it's generated
-INFO    - [mkdocs] Serving on http://127.0.0.1:8000/
-...
-INFO    - ✓ Generated 3 high-level documentation files
-INFO    - 📦 Generating Module Docs: 100%|████████| 5/5 [00:30<00:00]
-INFO    - ✓ Generated 5 module documentation files
-INFO    - 📄 Generating API Docs: 100%|████████| 23/23 [02:15<00:00]
-INFO    - ✅ Documentation generation complete! Generated 31 files
-```
-
-**Vorteile:**
-- ✅ Keine Wartezeit beim Start
-- ✅ Bereits generierte Dokumentation ist sofort verfügbar
-- ✅ Neue Teile erscheinen automatisch ohne Browser-Refresh (dank MkDocs Live-Reload)
-- ✅ Produktiver arbeiten während die Dokumentation im Hintergrund generiert wird
-
-### Vollständige Dokumentation generieren
+## 🚀 Verwendung
 
 ```bash
 mkdocs build
 ```
 
-Das Plugin wird automatisch während des Build-Prozesses ausgeführt und generiert die Dokumentation.
+Das war's! Das Plugin generiert automatisch:
+- ✅ 40+ thematische Übersichts-Dokumente
+- ✅ Modul-Dokumentationen
+- ✅ API-Referenz-Dokumentationen
+- ✅ Cross-Links zwischen verwandten Docs
+- ✅ Aktualisierte mkdocs.yml Navigation
 
-### Nur bei Änderungen neu generieren
+---
 
-Standardmäßig generiert das Plugin nur Dokumentation für geänderte Dateien. Um alles neu zu generieren:
+## 📂 Output-Struktur
 
-```yaml
-plugins:
-  - llm-autodoc:
-      force_regenerate: true
+```
+docs/generated/
+├── 00-overview-index.md          # Master Index
+├── overview/                      # 40+ Thematische Topics
+│   ├── project-overview.md
+│   ├── getting-started.md
+│   ├── architecture.md
+│   ├── ci-cd.md                  # CI/CD Pipeline
+│   ├── testing.md
+│   ├── security.md
+│   ├── performance.md
+│   ├── threading.md
+│   ├── dependencies-graph.md     # Dependency Analysis
+│   └── ... (30+ weitere)
+├── modules/                       # Module Docs
+│   ├── core.md
+│   └── ...
+└── api/                           # API Docs
+    ├── classes/
+    │   └── threadpool.md
+    └── functions/
+        └── utils.md
+
+mkdocs.yml  # Automatisch aktualisiert! ✅
 ```
 
-### Cache löschen
+---
+
+## 💡 Key Features im Detail
+
+### 1. Hybrid-Analyse (Source + Docs)
+
+Das System analysiert **BEIDE**:
+- **Source Code**: Implementation-Details, Patterns
+- **Generierte Docs**: Strukturierte Insights, Code-Reviews
+
+```
+threading.cpp + threading.md → Comprehensive threading.md (Overview)
+```
+
+### 2. Code-Referenzen (Traceability)
+
+**Jede Aussage ist nachvollziehbar:**
+
+```markdown
+"Thread pool is initialized in `[ThreadPool::init](threadpool.cpp:45-78)`"
+```
+
+### 3. Cross-Linking (Automatic)
+
+**Automatische "See Also" Sektionen:**
+
+```markdown
+## See Also
+
+Related documentation:
+- **[Memory Management](memory-management.md)** - Related classes: ThreadPool
+- **[Performance](performance.md)** - Thread pool tuning
+```
+
+### 4. Auto-Navigation
+
+**mkdocs.yml wird automatisch aktualisiert:**
+
+```yaml
+nav:
+  - Home: index.md
+  - Generated Documentation:  # ← Automatisch!
+      - Overview:
+          - Project Overview: generated/overview/project-overview.md
+          - CI/CD Pipeline: generated/overview/ci-cd.md
+          - ...
+```
+
+---
+
+## 🎓 Advanced Features
+
+### Resumable Generation
 
 ```bash
-rm -rf .cache/llm-autodoc
+# Unterbrechen mit Ctrl+C
+mkdocs build
+^C
+
+# Später fortsetzen - keine doppelte Arbeit!
+mkdocs build  # Setzt fort wo es aufgehört hat
 ```
 
-### Dateien einschließen/ausschließen
-
-Das Plugin unterstützt flexible Glob-Patterns zum Ein- und Ausschließen von Dateien.
-
-#### Include Patterns
-
-Definiere, welche Dateien dokumentiert werden sollen:
-
-```yaml
-include_patterns:
-  - '**/*.h'      # Alle .h Header-Dateien
-  - '**/*.hpp'    # Alle .hpp Header-Dateien
-  - '**/*.cpp'    # Alle .cpp Implementierungen
-  - '**/*.cc'     # Alternative .cc Dateien
-  - 'src/**/*'    # Nur Dateien im src-Verzeichnis
-```
-
-#### Exclude Patterns (Rekursiv)
-
-Das Plugin unterstützt rekursive Ausschluss-Patterns, die auf alle Ebenen der Verzeichnisstruktur angewendet werden:
-
-```yaml
-exclude_patterns:
-  # Verzeichnisse rekursiv ausschließen
-  - '**/build/**'        # Alle build-Verzeichnisse und deren Inhalte
-  - '**/third_party/**'  # Alle Drittanbieter-Bibliotheken
-  - '**/external/**'     # Externe Dependencies
-  - '**/vendor/**'       # Vendor-Verzeichnisse
-  - '**/.git/**'         # Git-Verzeichnisse
-  - '**/__pycache__/**'  # Python-Cache
-  - '**/.cache/**'       # Cache-Verzeichnisse
-  - '**/node_modules/**' # Node.js-Module
-  - '**/test/**'         # Test-Verzeichnisse
-  - '**/tests/**'        # Alternative Test-Verzeichnisse
-
-  # Dateien nach Pattern ausschließen
-  - '**/*.pyc'           # Python-Compiled-Dateien
-  - '**/*.o'             # Object-Dateien
-  - '**/*.a'             # Static Libraries
-  - '**/*.so'            # Shared Libraries
-  - '**/*_test.cpp'      # Test-Dateien mit bestimmtem Suffix
-```
-
-#### Wie Exclusion Patterns funktionieren
-
-Die Exclude Patterns werden rekursiv auf alle Pfade angewendet:
-
-- **`**/build/**`**: Schließt das `build`-Verzeichnis aus, egal wo es sich befindet
-  - ✅ Schließt aus: `build/main.o`, `foo/build/lib.a`, `src/build/Debug/app.exe`
-
-- **`**/*.pyc`**: Schließt alle `.pyc`-Dateien rekursiv aus
-  - ✅ Schließt aus: `__pycache__/module.pyc`, `src/utils/cache.pyc`
-
-- **`**/test/**`**: Schließt alle `test`-Verzeichnisse und deren Inhalte aus
-  - ✅ Schließt aus: `test/unit.cpp`, `src/test/integration.cpp`
-
-#### Beispielkonfiguration für große Projekte
-
-```yaml
-include_patterns:
-  - 'src/**/*.h'
-  - 'src/**/*.hpp'
-  - 'src/**/*.cpp'
-  - 'include/**/*.h'
-
-exclude_patterns:
-  # Build-Artefakte
-  - '**/build/**'
-  - '**/cmake-build-*/**'
-  - '**/out/**'
-  - '**/*.o'
-  - '**/*.a'
-  - '**/*.so'
-  - '**/*.dll'
-
-  # Tests
-  - '**/test/**'
-  - '**/tests/**'
-  - '**/*_test.cpp'
-  - '**/*_unittest.cpp'
-
-  # Dependencies
-  - '**/third_party/**'
-  - '**/external/**'
-  - '**/vendor/**'
-  - '**/deps/**'
-
-  # Version Control & System
-  - '**/.git/**'
-  - '**/.svn/**'
-  - '**/.hg/**'
-
-  # IDE & Editor
-  - '**/.vscode/**'
-  - '**/.idea/**'
-  - '**/*.swp'
-
-  # Cache & Temp
-  - '**/.cache/**'
-  - '**/tmp/**'
-  - '**/temp/**'
-```
-
-## Generierte Struktur
+### Smart Caching
 
 ```
-docs/
-├── generated/
-│   ├── 00-getting-started.md     # High-Level: Projekt-Übersicht
-│   ├── 01-architecture.md        # High-Level: Architektur
-│   ├── modules/
-│   │   ├── core.md              # Mid-Level: Core-Modul
-│   │   ├── networking.md        # Mid-Level: Networking-Modul
-│   │   └── utils.md             # Mid-Level: Utils-Modul
-│   └── api/
-│       ├── classes/             # Detailed-Level: Klassen
-│       │   ├── parser.md
-│       │   ├── lexer.md
-│       │   └── executor.md
-│       └── functions/           # Detailed-Level: Funktionen
-│           ├── helpers.md
-│           └── utilities.md
+Erste Ausführung: 150 Files → 45-60 min, ~$20
+Zweite Ausführung: 3 geänderte Files → 5-10 min, ~$1
 ```
 
-## Beispiele
-
-### High-Level Dokumentation
-
-Das Plugin erstellt eine umfassende Projekt-Übersicht:
-
-```markdown
-# Getting Started
-
-## Project Overview
-This C++ project implements a high-performance data processing pipeline...
-
-## Core Architecture
-- **Parser Module**: Handles input parsing and validation
-- **Executor Module**: Executes data transformations
-- **Output Module**: Manages result serialization
-
-## Technology Stack
-- C++17
-- CMake build system
-- Google Test framework
-
-[Mermaid-Diagramm der Architektur]
-```
-
-### Mid-Level Dokumentation
-
-Für jedes Modul:
-
-```markdown
-# Core Module
-
-## Overview
-The Core module provides fundamental data structures and algorithms...
-
-## Main Classes
-- **DataProcessor**: Central processing engine
-- **Validator**: Input validation logic
-- **Cache**: High-performance caching layer
-
-## Dependencies
-- Standard Library
-- Boost 1.75+
-
-[Mermaid-Diagramm der Klassen-Beziehungen]
-```
-
-### Detailed-Level Dokumentation
-
-Für jede Klasse:
-
-```markdown
-# DataProcessor Class
-
-## Overview
-The DataProcessor class handles high-throughput data transformation...
-
-## Constructor
-**Signature**: `DataProcessor(const Config& config)`
-**Parameters**:
-- `config` (const Config&): Configuration object
-**Example**:
-```cpp
-Config cfg;
-cfg.maxThreads = 4;
-DataProcessor processor(cfg);
-```
-
-## Methods
-
-### process()
-**Signature**: `Result process(const Data& input)`
-**Description**: Processes input data and returns result
-**Parameters**:
-- `input` (const Data&): Input data to process
-**Return Value**: Result object with processed data
-**Exceptions**: May throw ProcessingError on invalid input
-...
-
-## Code Review & Improvement Suggestions
-
-### Potential Issues
-
-**Issue**: Missing bounds checking in array access
-**Severity**: High
-**Location**: `processData()` method
-**Impact**: Could lead to buffer overflow and crash
-**Recommendation**: Add bounds validation:
-```cpp
-if (index >= 0 && index < data.size()) {
-    // Safe access
-}
-```
-
-**Issue**: Unnecessary copy in loop
-**Severity**: Medium
-**Location**: `processItems()` method
-**Impact**: Performance degradation with large containers
-**Recommendation**: Use const reference:
-```cpp
-// Before
-for (auto item : items) { ... }
-
-// After
-for (const auto& item : items) { ... }
-```
-
-### Improvement Suggestions
-
-**Modern C++ Features:**
-- Replace raw pointers with `std::unique_ptr` in `allocateBuffer()`
-- Use `[[nodiscard]]` attribute for `validate()` method
-- Add `noexcept` to move operations
-
-**Performance Optimizations:**
-- Reserve vector capacity in `loadData()`
-- Use `string_view` for read-only string parameters
-- Consider move semantics for `setConfiguration()`
-
-### Testing Recommendations
-- Test with empty input containers
-- Test concurrent access from multiple threads
-- Verify exception handling with invalid inputs
-```
-
-## LLM-Provider
-
-### Anthropic Claude (Empfohlen)
-
-```yaml
-llm_provider: 'anthropic'
-llm_model: 'claude-3-5-sonnet-20241022'
-llm_api_key: !ENV ANTHROPIC_API_KEY
-```
-
-Vorteile:
-- Ausgezeichnete Code-Verständnis
-- Präzise technische Dokumentation
-- Lange Kontextfenster
-
-### OpenAI GPT-4
-
-```yaml
-llm_provider: 'openai'
-llm_model: 'gpt-4'
-llm_api_key: !ENV OPENAI_API_KEY
-```
-
-### Ollama (Lokal)
+### Lokale LLMs (Kostenlos!)
 
 ```yaml
 llm_provider: 'ollama'
-llm_model: 'llama3'
-llm_base_url: 'http://localhost:11434/v1'
+llm_model: 'codellama'
 ```
 
-Vorteile:
-- Keine API-Kosten
-- Volle Datenkontrolle
-- Offline-Nutzung
+---
 
-### LM Studio (Lokal)
+## 📊 Performance & Kosten
 
-```yaml
-llm_provider: 'lmstudio'
-llm_model: 'local-model'  # Der Name des geladenen Modells in LM Studio
-llm_base_url: 'http://localhost:1234/v1'
-```
+| Metrik | Erste Ausführung | Inkrementell |
+|--------|------------------|--------------|
+| Zeit | 45-60 min | 5-10 min |
+| LLM Calls | 6000-8000 | 120-200 |
+| Kosten | $15-25 | $0.50-1.00 |
 
-Vorteile:
-- Keine API-Kosten
-- Benutzerfreundliche GUI
-- Unterstützt viele Modellformate (GGUF, etc.)
-- Volle Datenkontrolle
-- Offline-Nutzung
+**Kostenoptimierung**: Siehe [CONFIG_EXAMPLE.yml](CONFIG_EXAMPLE.yml)
 
-**Installation:**
-1. LM Studio von [lmstudio.ai](https://lmstudio.ai) herunterladen
-2. Modell herunterladen (z.B. CodeLlama, DeepSeek Coder, Mistral)
-3. Server starten (im LM Studio: Developer → Start Server)
-4. Modellnamen aus LM Studio kopieren und in `llm_model` eintragen
+---
 
-## Background-Generierung (NEU!)
+## 📚 Weitere Dokumentation
 
-Die Background-Generierung ist eine neue Funktion, die es ermöglicht, die Dokumentationsgenerierung im Hintergrund auszuführen, während MkDocs bereits läuft.
+- **[OVERVIEW_FEATURE.md](OVERVIEW_FEATURE.md)** - High-Level Overview Details
+- **[CROSS_LINKING_FEATURE.md](CROSS_LINKING_FEATURE.md)** - Cross-Linking Details
+- **[CONFIG_EXAMPLE.yml](CONFIG_EXAMPLE.yml)** - Alle Konfigurations-Optionen
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Technische Details
 
-### Aktivierung
+---
 
-```yaml
-plugins:
-  - llm-autodoc:
-      background_generation: true      # Aktiviert Hintergrund-Generierung
-      show_generation_progress: true   # Zeigt Fortschrittsbalken
-```
+## 🆚 Vergleich
 
-### Funktionsweise
+| Feature | Doxygen | Sphinx | **LLM AutoDoc** |
+|---------|---------|--------|-----------------|
+| Auto-Generation | ✅ | ✅ | ✅ |
+| High-Level Docs | ❌ | ⚠️ Manual | ✅ Automatic |
+| Thematische Docs | ❌ | ❌ | ✅ 40+ Topics |
+| Code References | ⚠️ | ⚠️ | ✅ Comprehensive |
+| Cross-Linking | ❌ | ⚠️ Manual | ✅ Automatic |
+| Navigation Update | ❌ | ❌ | ✅ Automatic |
+| Intelligence | ❌ Static | ❌ Static | ✅ LLM-Powered |
 
-1. **Beim Start von `mkdocs serve` oder `mkdocs build`:**
-   - Das Plugin prüft, ob bereits generierte Dokumentation existiert
-   - Diese wird sofort verfügbar gemacht
-   - Ein Background-Thread startet die Generierung neuer/geänderter Dateien
+---
 
-2. **Während der Generierung:**
-   - Jede neu generierte Datei wird sofort auf die Festplatte geschrieben
-   - MkDocs' Live-Reload erkennt die neue Datei automatisch
-   - Der Browser aktualisiert sich automatisch und zeigt die neue Dokumentation
-
-3. **Thread-Safety:**
-   - Alle Schreiboperationen sind thread-safe
-   - Der Background-Thread arbeitet unabhängig vom MkDocs-Prozess
-   - Keine Blockierung des Build-Prozesses
-
-### Synchrone Generierung (klassisch)
-
-Wenn du die alte Funktionsweise bevorzugst (Build wartet auf Generierung):
-
-```yaml
-plugins:
-  - llm-autodoc:
-      background_generation: false  # Deaktiviert Hintergrund-Generierung
-```
-
-### Status-Informationen
-
-Das Plugin gibt detaillierte Status-Meldungen aus:
-
-- **📚** Gefundene existierende Dateien
-- **🚀** Background-Generierung gestartet
-- **📝** Live-Updates aktiviert
-- **✓** Ebene abgeschlossen
-- **📦** Modul-Generierung läuft
-- **📄** API-Generierung läuft
-- **✅** Generierung komplett abgeschlossen
-
-## Performance-Optimierung
-
-### Caching
-
-Das Plugin cached generierte Dokumentation und regeneriert nur bei Dateiänderungen:
-
-```python
-# .cache/llm-autodoc/file_hashes.json
-{
-  "src/core/parser.cpp": "a1b2c3d4...",
-  "src/core/executor.cpp": "e5f6g7h8..."
-}
-```
-
-### Parallele LLM-Aufrufe
-
-```yaml
-max_concurrent_llm_calls: 3  # Anzahl paralleler LLM-Anfragen
-```
-
-### Selective Generation
-
-Generiere nur bestimmte Ebenen:
-
-```yaml
-generate_high_level: true
-generate_mid_level: true
-generate_detailed_level: false  # Detaillierte API-Docs überspringen
-```
-
-## Troubleshooting
-
-### Tree-sitter nicht verfügbar
-
-Falls tree-sitter nicht funktioniert, fällt das Plugin automatisch auf Regex-Parsing zurück:
-
-```
-WARNING: Tree-sitter not available, using fallback regex parser
-```
-
-Installation von tree-sitter:
+## 🚀 Quick Start
 
 ```bash
-pip install tree-sitter tree-sitter-cpp
-```
+# 1. Installation
+pip install -e plugins/mkdocs-llm-autodoc/
 
-### LLM API-Fehler
+# 2. API Key
+export ANTHROPIC_API_KEY=your-key
 
-Bei Rate-Limits oder API-Fehlern:
+# 3. Konfiguration (mkdocs.yml)
+plugins:
+  - llm-autodoc:
+      generate_overview: true
+      llm_provider: 'anthropic'
 
-```yaml
-retry_failed: true
-max_concurrent_llm_calls: 1  # Reduzieren für Rate-Limits
-```
-
-### Cache-Probleme
-
-Cache löschen und neu generieren:
-
-```bash
-rm -rf .cache/llm-autodoc
+# 4. Generieren
 mkdocs build
+
+# 5. Anschauen
+mkdocs serve
 ```
 
-## Entwicklung
+**Fertig! 🎉**
 
-### Lokale Installation für Entwicklung
+---
 
-```bash
-cd plugins/mkdocs-llm-autodoc
-pip install -e .[dev]
-```
+## 🤝 Contributing
 
-### Tests ausführen
+Contributions welcome! Siehe [GitHub](https://github.com/your-repo).
 
-```bash
-pytest tests/
-```
+---
 
-## Lizenz
+## 📄 Lizenz
 
-MIT
+Siehe [LICENSE](LICENSE).
 
-## Credits
+---
 
-Entwickelt für intelligente C++-Dokumentation mit MkDocs und LLMs.
+*Generated with ❤️ by mkdocs-llm-autodoc*
