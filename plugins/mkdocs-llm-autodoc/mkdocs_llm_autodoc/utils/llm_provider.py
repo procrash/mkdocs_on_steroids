@@ -120,12 +120,14 @@ class OllamaProvider(LLMProvider):
 class LMStudioProvider(LLMProvider):
     """LM Studio local model provider (OpenAI-compatible)"""
 
-    def __init__(self, model: str = 'local-model', base_url: Optional[str] = None, timeout: float = 600.0):
+    def __init__(self, model: str = 'local-model', base_url: Optional[str] = None, api_key: Optional[str] = None, timeout: float = 600.0):
         try:
             import openai  # LM Studio uses OpenAI-compatible API
+            # Use provided API key from config, or default to "lm-studio" if not specified
+            effective_api_key = api_key if api_key is not None else "lm-studio"
             self.client = openai.OpenAI(
                 base_url=base_url or "http://localhost:1234/v1",
-                api_key="lm-studio",  # LM Studio doesn't need a real API key
+                api_key=effective_api_key,
                 timeout=timeout
             )
             self.model = model
@@ -160,7 +162,7 @@ class LLMProviderFactory:
 
         Args:
             provider: Provider name ('anthropic', 'openai', 'ollama', 'lmstudio')
-            api_key: API key (not needed for Ollama or LM Studio)
+            api_key: API key (required for Anthropic/OpenAI, optional for LM Studio, not needed for Ollama)
             model: Model name
             base_url: Base URL (for Ollama, LM Studio, or custom endpoints)
             timeout: Timeout in seconds (default: 600.0 = 10 minutes)
@@ -199,6 +201,7 @@ class LLMProviderFactory:
             return LMStudioProvider(
                 model=model or 'local-model',
                 base_url=base_url,
+                api_key=api_key,
                 timeout=timeout
             )
 
