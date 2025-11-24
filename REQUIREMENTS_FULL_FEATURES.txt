@@ -1,0 +1,165 @@
+# ========================================
+# MkDocs Core and Theme
+# ========================================
+mkdocs>=1.5.0
+mkdocs-material>=9.0.0
+
+# ========================================
+# LLM Providers
+# ========================================
+anthropic>=0.18.0  # Anthropic Claude API
+openai>=1.12.0  # OpenAI API (also compatible with LM Studio)
+
+# ========================================
+# RAG / Vector Databases
+# ========================================
+# ChromaDB
+chromadb>=0.4.22
+sentence-transformers>=2.3.1  # For embeddings
+
+# Qdrant
+qdrant-client>=1.7.0
+
+# Pinecone (optional)
+# pinecone-client>=3.0.0
+
+# Weaviate (optional)
+# weaviate-client>=4.4.0
+
+# ========================================
+# Object Storage
+# ========================================
+minio>=7.2.3
+
+# ========================================
+# Backend API Server
+# ========================================
+flask>=3.0.0
+flask-cors>=4.0.0
+requests>=2.31.0
+
+# ========================================
+# Code Parsing and Analysis
+# ========================================
+libclang>=16.0.0  # For C++ parsing
+tree-sitter>=0.20.0
+tree-sitter-cpp>=0.20.0
+
+# Code complexity analysis (for MCP tools example)
+radon>=6.0.1
+
+# ========================================
+# Documentation Processing
+# ========================================
+markdown>=3.5.0
+pymdown-extensions>=10.7.0
+beautifulsoup4>=4.12.0  # For HTML parsing
+lxml>=5.0.0  # XML parsing for Doxygen
+
+# ========================================
+# Utilities
+# ========================================
+pyyaml>=6.0.1
+python-dotenv>=1.0.0  # For environment variables
+tqdm>=4.66.0  # Progress bars
+colorama>=0.4.6  # Colored terminal output
+rich>=13.7.0  # Rich terminal UI
+
+# ========================================
+# Testing (optional but recommended)
+# ========================================
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+
+# ========================================
+# Optional: Advanced Features
+# ========================================
+# For n8n integration
+# n8n-client>=0.1.0
+
+# For advanced NLP
+# spacy>=3.7.0
+# en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0.tar.gz
+
+# For PDF documentation generation
+# reportlab>=4.0.0
+# weasyprint>=60.0
+
+# ========================================
+# Development Dependencies
+# ========================================
+# black>=24.0.0  # Code formatting
+# flake8>=7.0.0  # Linting
+# mypy>=1.8.0  # Type checking
+# isort>=5.13.0  # Import sorting
+
+# ========================================
+# Installation Notes
+# ========================================
+#
+# Minimal Installation (Core features only):
+#   pip install mkdocs mkdocs-material anthropic chromadb sentence-transformers flask flask-cors
+#
+# Full Installation (All features):
+#   pip install -r requirements.txt
+#
+# Platform-Specific Notes:
+#
+# 1. libclang (C++ parsing):
+#    - Windows: May need Visual Studio Build Tools
+#    - Linux: sudo apt-get install libclang-dev
+#    - macOS: brew install llvm
+#
+# 2. ChromaDB:
+#    - Requires SQLite3
+#    - Windows: Usually pre-installed
+#    - Linux: sudo apt-get install libsqlite3-dev
+#
+# 3. sentence-transformers:
+#    - First run downloads models (~100MB)
+#    - Models cached in ~/.cache/torch/sentence_transformers/
+#
+# ========================================
+# Docker Setup (Alternative)
+# ========================================
+#
+# If you prefer Docker, create a docker-compose.yml:
+#
+# version: '3.8'
+# services:
+#   mkdocs:
+#     image: python:3.11
+#     working_dir: /docs
+#     volumes:
+#       - .:/docs
+#     ports:
+#       - "8000:8000"
+#     command: >
+#       bash -c "pip install -r requirements.txt && mkdocs serve -a 0.0.0.0:8000"
+#
+#   qdrant:
+#     image: qdrant/qdrant
+#     ports:
+#       - "6333:6333"
+#     volumes:
+#       - qdrant_storage:/qdrant/storage
+#
+#   minio:
+#     image: minio/minio
+#     ports:
+#       - "9000:9000"
+#       - "9001:9001"
+#     environment:
+#       MINIO_ROOT_USER: admin
+#       MINIO_ROOT_PASSWORD: password
+#     command: server /data --console-address ":9001"
+#     volumes:
+#       - minio_data:/data
+#
+# volumes:
+#   qdrant_storage:
+#   minio_data:
+#
+# Run with: docker-compose up
+#
+# ========================================

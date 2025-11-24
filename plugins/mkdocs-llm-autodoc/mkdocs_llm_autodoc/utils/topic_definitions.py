@@ -332,9 +332,9 @@ class TopicRegistry:
             ),
 
             Topic(
-                id="code_quality",
-                name="Code Quality & Standards",
-                description="Coding standards and quality measures",
+                id="coding_standards",
+                name="Coding Standards & Tools",
+                description="Coding standards, linting, formatting, and quality tools",
                 questions=[
                     "What coding standards are followed?",
                     "What linting tools are used?",
@@ -343,7 +343,7 @@ class TopicRegistry:
                     "What is the code review process?",
                     "How is technical debt tracked?"
                 ],
-                keywords=["lint", "format", "standard", "style", "quality", "review"],
+                keywords=["lint", "format", "standard", "style", "quality", "review", "pre-commit"],
                 priority=3
             ),
 
@@ -621,6 +621,38 @@ class TopicRegistry:
                 priority=5
             ),
 
+            Topic(
+                id="code_quality",
+                name="Code Quality & Maintainability",
+                description="Analysis of code quality, dead code, complexity, and maintenance issues",
+                questions=[
+                    "Which functions or classes are never used (dead code)?",
+                    "Which code has high cyclomatic complexity?",
+                    "Which functions are too long (>100 LOC)?",
+                    "Which code violates SOLID principles?",
+                    "Which code has poor naming conventions?",
+                    "Which code lacks error handling?",
+                    "Which code has too many responsibilities (God classes)?",
+                    "Which code is difficult to test?",
+                    "Which code has duplicated logic?",
+                    "Which code contains magic numbers or strings?",
+                    "Where is technical debt accumulating?",
+                    "Which code needs refactoring?"
+                ],
+                keywords=[
+                    "unused", "dead code", "unreachable",
+                    "complexity", "cyclomatic", "maintainability",
+                    "code smell", "anti-pattern", "refactor",
+                    "SOLID", "coupling", "cohesion",
+                    "naming", "convention", "style",
+                    "duplicate", "copy-paste", "DRY",
+                    "magic number", "magic string",
+                    "technical debt", "god class",
+                    "long method", "long parameter list",
+                    "error handling", "exception"
+                ],
+                priority=2
+            ),
             Topic(
                 id="roadmap",
                 name="Future Roadmap",

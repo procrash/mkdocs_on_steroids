@@ -12,6 +12,8 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Any
 
+from ..utils.prompt_manager import get_prompt_manager
+
 logger = logging.getLogger('mkdocs.plugins.llm-autodoc.detailed')
 
 
@@ -31,6 +33,7 @@ class DetailedLevelAgent:
         self.llm = llm_provider
         self.cache = cache_manager
         self.cross_ref = cross_ref_manager
+        self.prompt_manager = get_prompt_manager()
 
     def generate(self, file_info: Dict[str, Any], project_structure: Dict[str, Any], output_dir: str) -> List[str]:
         """

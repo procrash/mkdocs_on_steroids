@@ -16,6 +16,7 @@ from ..utils.state_manager import StateManager, AnalysisPhase
 from ..utils.dependency_analyzer import DependencyAnalyzer
 from ..utils.cross_linker import CrossLinker
 from ..utils.nav_updater import NavUpdater, SmartNavBuilder
+from ..utils.prompt_manager import get_prompt_manager
 
 
 logger = logging.getLogger('mkdocs.plugins.llm-autodoc.overview')
@@ -41,6 +42,7 @@ class HighLevelOverviewAgent:
         self.cross_linker = CrossLinker(llm_provider=llm_provider)
         self.nav_updater = NavUpdater(mkdocs_yml_path, docs_dir) if mkdocs_yml_path and docs_dir else None
         self.topics = TopicRegistry.get_all_topics()
+        self.prompt_manager = get_prompt_manager()  # Initialize prompt manager
 
     def generate(
         self,
@@ -87,53 +89,97 @@ class HighLevelOverviewAgent:
         self.state.start_analysis(len(all_files), project_hash)
 
         generated_files = []
+        extraction_results = {}
+        synthesis_files = []
+        index_file = None  # Initialize to avoid NameError
+        dep_file = None  # Initialize to avoid NameError
+
+        # Determine starting phase
+        current_phase = self.state.get_current_phase()
+        logger.info(f"📍 Current phase: {current_phase.value}")
 
         # Phase 1: Topic Extraction (from both source and docs)
-        logger.info("=" * 70)
-        logger.info("PHASE 1: TOPIC EXTRACTION (Hybrid: Source + Docs)")
-        logger.info("=" * 70)
-        extraction_results = self._phase_1_topic_extraction(
-            all_files, all_docs, project_structure, max_workers
-        )
+        if self.state.is_phase_complete(AnalysisPhase.TOPIC_EXTRACTION):
+            logger.info("⏭️  PHASE 1: TOPIC EXTRACTION - Already complete, skipping...")
+            # Load extraction results from state
+            for topic in self.topics:
+                cached_results = self.state.get_intermediate_result(topic.id, 'extraction_results')
+                if cached_results:
+                    extraction_results[topic.id] = cached_results
+        else:
+            logger.info("=" * 70)
+            logger.info("PHASE 1: TOPIC EXTRACTION (Hybrid: Source + Docs)")
+            logger.info("=" * 70)
+            extraction_results = self._phase_1_topic_extraction(
+                all_files, all_docs, project_structure, max_workers
+            )
 
         # Phase 2: Topic Synthesis
-        logger.info("=" * 70)
-        logger.info("PHASE 2: TOPIC SYNTHESIS")
-        logger.info("=" * 70)
-        self.state.set_current_phase(AnalysisPhase.TOPIC_SYNTHESIS)
-        synthesis_files = self._phase_2_topic_synthesis(
-            extraction_results, project_structure, output_path, max_workers
-        )
-        generated_files.extend(synthesis_files)
+        if self.state.is_phase_complete(AnalysisPhase.TOPIC_SYNTHESIS):
+            logger.info("⏭️  PHASE 2: TOPIC SYNTHESIS - Already complete, skipping...")
+            # Load synthesis files from state (reconstruct file list)
+            for topic in self.topics:
+                output_file = self.state.get_topic_output_file(topic.id)
+                if output_file:
+                    synthesis_files.append(output_file)
+                    generated_files.append(output_file)
+        else:
+            logger.info("=" * 70)
+            logger.info("PHASE 2: TOPIC SYNTHESIS")
+            logger.info("=" * 70)
+            self.state.set_current_phase(AnalysisPhase.TOPIC_SYNTHESIS)
+            synthesis_files = self._phase_2_topic_synthesis(
+                extraction_results, project_structure, output_path, max_workers
+            )
+            generated_files.extend(synthesis_files)
 
         # Phase 3: Topic Refinement
-        logger.info("=" * 70)
-        logger.info("PHASE 3: TOPIC REFINEMENT")
-        logger.info("=" * 70)
-        self.state.set_current_phase(AnalysisPhase.TOPIC_REFINEMENT)
-        self._phase_3_topic_refinement(synthesis_files, max_workers)
+        if self.state.is_phase_complete(AnalysisPhase.TOPIC_REFINEMENT):
+            logger.info("⏭️  PHASE 3: TOPIC REFINEMENT - Already complete, skipping...")
+        else:
+            logger.info("=" * 70)
+            logger.info("PHASE 3: TOPIC REFINEMENT")
+            logger.info("=" * 70)
+            self.state.set_current_phase(AnalysisPhase.TOPIC_REFINEMENT)
+            self._phase_3_topic_refinement(synthesis_files, max_workers)
 
         # Phase 4: Dependency Analysis
-        logger.info("=" * 70)
-        logger.info("PHASE 4: DEPENDENCY ANALYSIS")
-        logger.info("=" * 70)
-        self.state.set_current_phase(AnalysisPhase.DEPENDENCY_ANALYSIS)
-        dep_file = self._phase_4_dependency_analysis(
-            project_structure, all_files, output_path
-        )
-        if dep_file:
-            generated_files.append(dep_file)
+        if self.state.is_phase_complete(AnalysisPhase.DEPENDENCY_ANALYSIS):
+            logger.info("⏭️  PHASE 4: DEPENDENCY ANALYSIS - Already complete, skipping...")
+            # Try to load existing dependency file
+            dep_file_path = output_path / 'overview' / 'dependencies-graph.md'
+            if dep_file_path.exists():
+                dep_file = str(dep_file_path)
+                generated_files.append(dep_file)
+        else:
+            logger.info("=" * 70)
+            logger.info("PHASE 4: DEPENDENCY ANALYSIS")
+            logger.info("=" * 70)
+            self.state.set_current_phase(AnalysisPhase.DEPENDENCY_ANALYSIS)
+            dep_file = self._phase_4_dependency_analysis(
+                project_structure, all_files, output_path
+            )
+            if dep_file:
+                generated_files.append(dep_file)
 
         # Phase 5: Index Generation
-        logger.info("=" * 70)
-        logger.info("PHASE 5: INDEX GENERATION")
-        logger.info("=" * 70)
-        self.state.set_current_phase(AnalysisPhase.INDEX_GENERATION)
-        index_file = self._phase_5_index_generation(
-            synthesis_files, project_structure, output_path
-        )
-        if index_file:
-            generated_files.append(index_file)
+        if self.state.is_phase_complete(AnalysisPhase.INDEX_GENERATION):
+            logger.info("⏭️  PHASE 5: INDEX GENERATION - Already complete, skipping...")
+            # Try to load existing index file
+            index_file_path = output_path / '00-overview-index.md'
+            if index_file_path.exists():
+                index_file = str(index_file_path)
+                generated_files.append(index_file)
+        else:
+            logger.info("=" * 70)
+            logger.info("PHASE 5: INDEX GENERATION")
+            logger.info("=" * 70)
+            self.state.set_current_phase(AnalysisPhase.INDEX_GENERATION)
+            index_file = self._phase_5_index_generation(
+                synthesis_files, project_structure, output_path
+            )
+            if index_file:
+                generated_files.append(index_file)
 
         # Phase 6: Cross-Linking
         logger.info("=" * 70)
@@ -381,63 +427,17 @@ class HighLevelOverviewAgent:
         if len(doc_content) > max_chars:
             doc_content = doc_content[:max_chars] + "\n\n... (truncated)"
 
-        prompt = f"""Analyze both the source code AND its generated documentation to extract information relevant to: **{topic.name}**
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'overview', 'extraction_hybrid',
+            topic_name=topic.name,
+            topic_description=topic.description,
+            topic_questions=self._format_questions(topic.questions),
+            file_path=file_path,
+            source_content=source_content if source_content else "No source code available",
+            doc_content=doc_content if doc_content else "No documentation generated yet"
+        )
 
-# Topic Description
-{topic.description}
-
-# Specific Questions to Answer
-{self._format_questions(topic.questions)}
-
-# File Information
-**Path**: {file_path}
-
-# Source Code
-```
-{source_content if source_content else "No source code available"}
-```
-
-# Generated Documentation
-```markdown
-{doc_content if doc_content else "No documentation generated yet"}
-```
-
-# Your Task
-Analyze BOTH the source code and its documentation to extract information relevant to the topic "{topic.name}".
-
-**Prioritize information from the generated documentation** as it already contains:
-- Structured explanations
-- Code reviews and improvements
-- Best practices
-- Examples
-
-**Supplement with source code** for:
-- Implementation patterns not explained in docs
-- Specific technical details
-- Additional context
-
-Answer these specific questions based on what you find:
-{self._format_questions(topic.questions)}
-
-# Output Format
-Provide a concise summary (max 200 words) of what you found relevant to this topic.
-
-**CRITICAL: Include Code References**:
-- **ALWAYS** cite specific files, line numbers, classes, functions, or variables
-- Format: `[ClassName](file.cpp:123)` or `[functionName](file.h:45-67)`
-- For every claim, provide the source: "According to `[MyClass::init](main.cpp:34)`..."
-- Example: "The build system uses CMake (see `[CMakeLists.txt](CMakeLists.txt:1)`)"
-- Example: "Thread pool initialized in `[ThreadPool::start](threadpool.cpp:56-89)`"
-
-**Format**:
-- Use bullet points
-- Be specific and reference code elements
-- **Always include file:line references** for traceability
-- Cite whether information comes from source code or documentation
-- If nothing relevant found, respond with: "No relevant information found."
-
-Generate ONLY the extracted information, no additional commentary.
-"""
         return prompt
 
     def _build_extraction_prompt(self, topic: Topic, file_path: str, content: str) -> str:
@@ -448,38 +448,16 @@ Generate ONLY the extracted information, no additional commentary.
         if len(content) > max_chars:
             content = content[:max_chars] + "\n\n... (truncated)"
 
-        prompt = f"""Analyze this source file and extract information relevant to the topic: **{topic.name}**
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'overview', 'extraction',
+            topic_name=topic.name,
+            topic_description=topic.description,
+            topic_questions=self._format_questions(topic.questions),
+            file_path=file_path,
+            content=content
+        )
 
-# Topic Description
-{topic.description}
-
-# Specific Questions to Answer
-{self._format_questions(topic.questions)}
-
-# File Information
-**Path**: {file_path}
-**Content**:
-```
-{content}
-```
-
-# Your Task
-Analyze this file and extract ONLY information relevant to the topic "{topic.name}".
-
-Answer these specific questions based on what you find in the code:
-{self._format_questions(topic.questions)}
-
-# Output Format
-Provide a concise summary (max 200 words) of what you found relevant to this topic.
-
-**Format**:
-- Use bullet points
-- Be specific and reference code elements (classes, functions, variables)
-- Include file paths or line references where applicable
-- If nothing relevant found, respond with: "No relevant information found."
-
-Generate ONLY the extracted information, no additional commentary.
-"""
         return prompt
 
     def _format_questions(self, questions: List[str]) -> str:
@@ -565,79 +543,16 @@ Generate ONLY the extracted information, no additional commentary.
             for e in extractions
         ])
 
-        prompt = f"""Create a comprehensive documentation section about: **{topic.name}**
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'overview', 'synthesis',
+            topic_name=topic.name,
+            topic_description=topic.description,
+            topic_questions=self._format_questions(topic.questions),
+            extractions_count=len(extractions),
+            combined_info=combined_info
+        )
 
-# Topic Overview
-{topic.description}
-
-# Key Questions to Address
-{self._format_questions(topic.questions)}
-
-# Information Extracted from Codebase
-The following information was extracted from {len(extractions)} files:
-
-{combined_info}
-
-# Your Task
-Create a well-structured, comprehensive documentation section about "{topic.name}" for this project.
-
-## Requirements
-1. **Answer all key questions** listed above based on the extracted information
-2. **Organize information logically** with clear headings and subheadings
-3. **Be specific**: Reference actual files, classes, functions, and code elements
-4. **Include examples**: Show code snippets where relevant
-5. **Remove duplicates**: Consolidate repeated information
-6. **Add context**: Explain why things are done this way
-7. **Use Mermaid diagrams** where helpful (architecture, flow, etc.)
-8. **CRITICAL: Always include code references** for traceability
-
-## Code References (MANDATORY)
-**Every statement must be traceable to source code:**
-- Format: `[ClassName](file.cpp:123)` or `[functionName](file.h:45-67)` or `[file.cpp](file.cpp:1)`
-- Examples:
-  - "The application starts in `[main()](src/main.cpp:15)`"
-  - "Build configuration is in `[CMakeLists.txt](CMakeLists.txt:1)`"
-  - "Thread pool is initialized via `[ThreadPool::init](threadpool.cpp:45-78)`"
-  - "Error handling uses exceptions (see `[ErrorHandler](errors.h:23)`)"
-- **For every feature mentioned, cite the code location**
-- **For every claim, provide evidence with file:line references**
-- This ensures documentation is always verifiable and maintainable
-
-## Structure
-Use this general structure (adapt as needed):
-
-# {topic.name}
-
-## Overview
-Brief introduction (2-3 sentences)
-
-## [Relevant Section 1]
-Content...
-
-## [Relevant Section 2]
-Content...
-
-## Key Files
-List of important files related to this topic
-
-## Examples
-Practical examples or code snippets
-
-## Best Practices
-Recommendations for developers
-
-## See Also
-Links to related topics (use format: `[Topic Name](topic-id.md)`)
-
-# Output Format
-- Use Markdown with proper headings
-- Include code blocks with syntax highlighting
-- Use Mermaid diagrams where appropriate
-- Keep it practical and developer-focused
-- Aim for 300-500 words per topic
-
-Generate ONLY the markdown content, no additional commentary.
-"""
         return prompt
 
     def _phase_3_topic_refinement(self, topic_files: List[str], max_workers: int):
@@ -681,30 +596,13 @@ Generate ONLY the markdown content, no additional commentary.
     def _build_refinement_prompt(self, content: str, file_path: str) -> str:
         """Build prompt for refining a topic document"""
 
-        prompt = f"""Review and refine this documentation section.
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'overview', 'refinement',
+            content=content,
+            file_path=file_path
+        )
 
-# Current Content
-```markdown
-{content}
-```
-
-# Your Task
-Refine this documentation by:
-
-1. **Remove duplicates**: Eliminate repeated information
-2. **Improve structure**: Ensure logical flow and clear hierarchy
-3. **Fix formatting**: Ensure proper Markdown syntax
-4. **Enhance clarity**: Make explanations clearer and more concise
-5. **Add missing sections**: If key information is missing, note it
-6. **Improve examples**: Make code examples more practical
-7. **Cross-reference**: Add links to related topics where relevant
-
-# Output Format
-Return the refined version of the document in Markdown format.
-Keep the same general structure but improve quality.
-
-Generate ONLY the refined markdown content, no additional commentary.
-"""
         return prompt
 
     def _phase_4_dependency_analysis(

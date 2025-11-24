@@ -12,6 +12,8 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Any
 
+from ..utils.prompt_manager import get_prompt_manager
+
 logger = logging.getLogger('mkdocs.plugins.llm-autodoc.mid-level')
 
 
@@ -30,6 +32,7 @@ class MidLevelAgent:
         self.llm = llm_provider
         self.cache = cache_manager
         self.cross_ref = cross_ref_manager
+        self.prompt_manager = get_prompt_manager()
 
     def generate(self, module: Dict[str, Any], project_structure: Dict[str, Any], output_dir: str) -> List[str]:
         """
@@ -86,86 +89,24 @@ class MidLevelAgent:
 
         module_name = module['name']
         module_files = module.get('files', [])
+        module_files_str = ', '.join([str(Path(f).name) for f in module_files[:10]])
+        if len(module_files) > 10:
+            module_files_str += f" (and {len(module_files) - 10} more)"
+
         classes = module.get('classes', [])
-        dependencies = module.get('dependencies', [])
+        module_classes_str = ', '.join([c.get('name', 'unknown') for c in classes[:10]])
+        if len(classes) > 10:
+            module_classes_str += f" (and {len(classes) - 10} more)"
 
-        prompt = f"""Analyze this C++ module and create comprehensive mid-level documentation.
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'mid_level', 'module',
+            module_name=module_name,
+            module_files=module_files_str,
+            module_classes=module_classes_str,
+            project_structure=str(project_structure)
+        )
 
-# Module Information
-**Name**: {module_name}
-**Path**: {module.get('path', 'N/A')}
-**Files**: {len(module_files)} files
-
-## Files in Module
-{self._format_file_list(module_files)}
-
-## Classes Identified
-{self._format_class_list(classes)}
-
-## Dependencies
-{self._format_dependencies(dependencies)}
-
-# Project Context
-{self._format_project_context(project_structure, module_name)}
-
-# Your Task
-Create comprehensive module documentation with the following sections:
-
-## 1. Overview (100-150 words)
-- What is the primary purpose of this module?
-- What problems does it solve?
-- How does it fit into the overall system?
-
-## 2. Main Classes and Responsibilities
-For each major class in the module:
-- Class name and brief description
-- Primary responsibilities
-- Key methods (just names, not full API)
-- Relationships with other classes (inheritance, composition, etc.)
-
-## 3. Module Interactions
-- Which other modules does this depend on?
-- Which modules depend on this one?
-- Key interfaces exposed to other modules
-- Data flow in/out of the module
-
-## 4. Typical Usage Scenarios
-Provide 2-3 common usage patterns:
-- When would you use this module?
-- Example workflows
-- Simple code snippets showing typical usage
-
-## 5. Design Patterns and Principles
-- Identify any design patterns used
-- Key architectural decisions
-- Why this approach was chosen
-
-# Output Format
-Generate a complete Markdown document with:
-- Clear section headings
-- Mermaid diagrams showing:
-  - Class relationships within the module
-  - Module dependencies
-  - Typical workflow/sequence diagrams
-- Code examples (can be simplified/pseudo-code if actual code is complex)
-- Cross-references to related modules (use `[ModuleName](../modules/modulename.md)` format)
-
-Example class diagram:
-```mermaid
-classDiagram
-    class Parser {{
-        +parse() void
-        +validate() bool
-        -tokens List~Token~
-    }}
-    class Lexer {{
-        +tokenize() List~Token~
-    }}
-    Parser --> Lexer : uses
-```
-
-Generate ONLY the markdown content, no additional commentary.
-"""
         return prompt
 
     def _format_file_list(self, files: List[str]) -> str:

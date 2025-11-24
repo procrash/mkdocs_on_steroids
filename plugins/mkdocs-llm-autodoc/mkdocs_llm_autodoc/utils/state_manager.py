@@ -111,15 +111,31 @@ class StateManager:
 
     def start_analysis(self, total_files: int, project_hash: str):
         """Start a new analysis session"""
+        # Remember if this is a fresh start (before we potentially reset state)
+        old_hash = self.state['global_data'].get('project_hash')
+        current_phase = self.get_current_phase()
+        is_fresh_start = (current_phase == AnalysisPhase.NOT_STARTED) or (old_hash != project_hash)
+
         # Check if we need to restart due to project changes
-        if self.state['global_data']['project_hash'] != project_hash:
+        if old_hash and old_hash != project_hash:
             logger.info("Project structure changed, restarting analysis")
             self.state = self._create_empty_state()
+            is_fresh_start = True
 
         self.state['global_data']['total_files'] = total_files
         self.state['global_data']['project_hash'] = project_hash
-        self.state['started_at'] = datetime.now().isoformat()
-        self.set_current_phase(AnalysisPhase.TOPIC_EXTRACTION)
+
+        # Only set started_at if not already set
+        if not self.state.get('started_at'):
+            self.state['started_at'] = datetime.now().isoformat()
+
+        # Only set phase to TOPIC_EXTRACTION if we're starting fresh
+        if is_fresh_start:
+            logger.info("Starting new analysis from TOPIC_EXTRACTION phase")
+            self.set_current_phase(AnalysisPhase.TOPIC_EXTRACTION)
+        else:
+            logger.info(f"Resuming analysis from existing phase: {current_phase.value}")
+            self._save_state()
 
     def init_topic(self, topic_id: str):
         """Initialize state for a topic"""

@@ -40,7 +40,20 @@
       "Bash(nul)",
       "Bash(venvWindows\\Scripts\\python.exe -m pip:*)",
       "Bash(python -m pytest:*)",
-      "Bash(python -m unittest:*)"
+      "Bash(python -m unittest:*)",
+      "Bash(find:*)",
+      "Bash(if [ -f \".cache/llm-autodoc/overview_state.json\" ])",
+      "Bash(then echo \"EXISTS: overview_state.json\")",
+      "Bash(else echo \"MISSING: overview_state.json\")",
+      "Bash(if [ -f \".cache/llm-autodoc/file_hashes.json\" ])",
+      "Bash(then echo \"EXISTS: file_hashes.json\")",
+      "Bash(else echo \"MISSING: file_hashes.json\")",
+      "Bash(python test_resume.py:*)",
+      "Bash(python:*)",
+      "Bash(node:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

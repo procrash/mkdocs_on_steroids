@@ -8,6 +8,9 @@ Creates 300-word introductions with architecture diagrams.
 import logging
 from pathlib import Path
 from typing import Dict, List, Any
+from collections import Counter
+
+from ..utils.prompt_manager import get_prompt_manager
 
 logger = logging.getLogger('mkdocs.plugins.llm-autodoc.high-level')
 
@@ -19,6 +22,7 @@ class HighLevelAgent:
     Creates:
     - Project overview (00-getting-started.md)
     - Architecture documentation (01-architecture.md)
+    - Filesystem structure (02-filesystem-structure.md)
     - Technology stack overview
     - Entry points for new developers
     """
@@ -26,6 +30,7 @@ class HighLevelAgent:
     def __init__(self, llm_provider, cache_manager):
         self.llm = llm_provider
         self.cache = cache_manager
+        self.prompt_manager = get_prompt_manager()
 
     def generate(self, project_structure: Dict[str, Any], output_dir: str) -> List[str]:
         """
@@ -54,6 +59,13 @@ class HighLevelAgent:
         architecture_file.write_text(content, encoding='utf-8')
         generated_files.append(str(architecture_file))
         logger.info(f"Generated: {architecture_file}")
+
+        # Generate Filesystem Structure Documentation
+        filesystem_file = output_path / '02-filesystem-structure.md'
+        content = self._generate_filesystem_structure(project_structure)
+        filesystem_file.write_text(content, encoding='utf-8')
+        generated_files.append(str(filesystem_file))
+        logger.info(f"Generated: {filesystem_file}")
 
         return generated_files
 
@@ -101,47 +113,15 @@ class HighLevelAgent:
         """Build prompt for getting started documentation"""
 
         structure_summary = self._summarize_structure(project_structure)
+        entry_points = ', '.join(project_structure.get('entry_points', ['main.cpp']))
 
-        prompt = f"""Analyze this C++ project structure and create a comprehensive getting started guide.
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'high_level', 'getting_started',
+            project_structure=structure_summary,
+            entry_points=entry_points
+        )
 
-# Project Structure
-{structure_summary}
-
-# Your Task
-Create a 300-word introduction that includes:
-
-1. **Main Purpose**: What is this project for? What problems does it solve?
-2. **Core Architecture**: Identify 3-5 main components/modules and briefly describe each
-3. **Entry Points for New Developers**:
-   - Where should a new developer start reading the code?
-   - Which are the most important files/classes to understand first?
-   - Common workflows or usage patterns
-4. **Technology Stack**:
-   - C++ standard version used
-   - Key libraries and dependencies
-   - Build system (CMake, Make, etc.)
-   - Testing framework
-
-# Output Format
-Generate a complete Markdown document with:
-- Clear headings
-- Bullet points for easy scanning
-- A Mermaid diagram showing the high-level architecture
-- Code examples if relevant
-- Links to important files (use relative paths)
-
-# Example Mermaid Diagram
-```mermaid
-graph TB
-    A[Main Application] --> B[Core Library]
-    A --> C[Utilities]
-    B --> D[Data Structures]
-    B --> E[Algorithms]
-```
-
-Write in a clear, welcoming tone for developers new to the project.
-Generate ONLY the markdown content, no additional commentary.
-"""
         return prompt
 
     def _build_architecture_prompt(self, project_structure: Dict[str, Any]) -> str:
@@ -149,66 +129,202 @@ Generate ONLY the markdown content, no additional commentary.
 
         structure_summary = self._summarize_structure(project_structure)
         modules = project_structure.get('modules', [])
-        dependencies = project_structure.get('dependencies', {})
+        modules_str = ', '.join([m.get('name', 'unknown') for m in modules[:10]])
 
-        prompt = f"""Analyze this C++ project and create comprehensive architecture documentation.
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'high_level', 'architecture',
+            project_structure=structure_summary,
+            modules=modules_str
+        )
 
-# Project Structure
-{structure_summary}
-
-# Modules
-{self._format_modules(modules)}
-
-# Dependencies
-{self._format_dependencies(dependencies)}
-
-# Your Task
-Create detailed architecture documentation covering:
-
-1. **Architecture Overview** (150 words)
-   - High-level architectural pattern (monolithic, layered, microservices-style, etc.)
-   - Design principles evident in the codebase
-   - Key architectural decisions
-
-2. **Component Breakdown**
-   - For each major component/module:
-     - Purpose and responsibilities
-     - Key classes and interfaces
-     - Interactions with other components
-
-3. **Data Flow**
-   - How data moves through the system
-   - Key data structures
-   - Data transformation points
-
-4. **Design Patterns**
-   - Identify design patterns used (Factory, Singleton, Observer, etc.)
-   - Where and why they're applied
-
-5. **Threading and Concurrency** (if applicable)
-   - Threading model
-   - Synchronization mechanisms
-   - Concurrent data structures
-
-# Output Format
-Generate a complete Markdown document with:
-- Multiple Mermaid diagrams (architecture, data flow, component relationships)
-- Clear sections with headings
-- Code snippets showing key patterns
-- Cross-references to detailed documentation
-
-Example diagrams:
-```mermaid
-flowchart LR
-    User[User Input] --> Parser[Parser]
-    Parser --> Validator[Validator]
-    Validator --> Executor[Executor]
-    Executor --> Output[Output Handler]
-```
-
-Generate ONLY the markdown content, no additional commentary.
-"""
         return prompt
+
+    def _generate_filesystem_structure(self, project_structure: Dict[str, Any]) -> str:
+        """Generate filesystem structure documentation"""
+
+        prompt = self._build_filesystem_structure_prompt(project_structure)
+
+        # Check cache
+        cache_key = f"high_level_filesystem_{hash(str(project_structure))}"
+        cached = self.cache.get(cache_key)
+        if cached:
+            logger.info("Using cached filesystem structure documentation")
+            return cached
+
+        # Generate with LLM
+        response = self.llm.generate(prompt)
+
+        # Cache result
+        self.cache.set(cache_key, response)
+
+        return response
+
+    def _build_filesystem_structure_prompt(self, project_structure: Dict[str, Any]) -> str:
+        """Build prompt for filesystem structure documentation"""
+
+        all_files = project_structure.get('all_files', [])
+
+        # Build directory tree
+        directory_tree = self._build_directory_tree(all_files)
+
+        # Calculate file statistics
+        file_statistics = self._calculate_file_statistics(all_files)
+
+        # Identify key directories
+        key_directories = self._identify_key_directories(all_files)
+
+        # Count unique directories
+        unique_dirs = set()
+        for file_path in all_files:
+            unique_dirs.add(str(Path(file_path).parent))
+
+        # Get project root
+        project_root = project_structure.get('root_path', './')
+
+        # Use PromptManager to get template
+        prompt = self.prompt_manager.get_prompt(
+            'high_level', 'filesystem_structure',
+            project_root=project_root,
+            total_files=len(all_files),
+            total_directories=len(unique_dirs),
+            directory_tree=directory_tree,
+            file_statistics=file_statistics,
+            key_directories=key_directories
+        )
+
+        return prompt
+
+    def _build_directory_tree(self, all_files: List[str]) -> str:
+        """Build ASCII directory tree from file list"""
+        if not all_files:
+            return "No files found"
+
+        # Group files by directory
+        dir_structure = {}
+        for file_path in all_files:
+            path = Path(file_path)
+            parts = path.parts
+
+            current = dir_structure
+            for part in parts[:-1]:  # Directories
+                if part not in current:
+                    current[part] = {}
+                current = current[part]
+
+            # Add file
+            if '__files__' not in current:
+                current['__files__'] = []
+            current['__files__'].append(parts[-1])
+
+        # Build tree string
+        def build_tree_recursive(structure: Dict, prefix: str = "", is_last: bool = True) -> List[str]:
+            lines = []
+            items = [(k, v) for k, v in structure.items() if k != '__files__']
+            files = structure.get('__files__', [])
+
+            # Process directories
+            for idx, (name, subtree) in enumerate(items):
+                is_last_item = (idx == len(items) - 1) and not files
+                connector = "└── " if is_last_item else "├── "
+                lines.append(f"{prefix}{connector}{name}/")
+
+                extension = "    " if is_last_item else "│   "
+                lines.extend(build_tree_recursive(subtree, prefix + extension, is_last_item))
+
+            # Process files (show first 10)
+            for idx, file_name in enumerate(files[:10]):
+                is_last_file = idx == len(files[:10]) - 1
+                connector = "└── " if is_last_file else "├── "
+                lines.append(f"{prefix}{connector}{file_name}")
+
+            if len(files) > 10:
+                lines.append(f"{prefix}... ({len(files) - 10} more files)")
+
+            return lines
+
+        tree_lines = build_tree_recursive(dir_structure)
+        return '\n'.join(tree_lines[:100])  # Limit to 100 lines
+
+    def _calculate_file_statistics(self, all_files: List[str]) -> str:
+        """Calculate file type statistics"""
+        if not all_files:
+            return "No files to analyze"
+
+        # Count by extension
+        extensions = Counter()
+        for file_path in all_files:
+            ext = Path(file_path).suffix
+            if ext:
+                extensions[ext] += 1
+            else:
+                extensions['(no extension)'] += 1
+
+        # Build statistics table
+        lines = ["| File Type | Count | Percentage |"]
+        lines.append("|-----------|-------|------------|")
+
+        total = len(all_files)
+        for ext, count in extensions.most_common(10):
+            percentage = (count / total) * 100
+            lines.append(f"| `{ext}` | {count} | {percentage:.1f}% |")
+
+        if len(extensions) > 10:
+            lines.append(f"| _(others)_ | {sum(c for e, c in extensions.most_common()[10:])} | ... |")
+
+        return '\n'.join(lines)
+
+    def _identify_key_directories(self, all_files: List[str]) -> str:
+        """Identify and describe key directories"""
+        if not all_files:
+            return "No directories to analyze"
+
+        # Count files per directory
+        dir_counts = Counter()
+        for file_path in all_files:
+            dir_path = str(Path(file_path).parent)
+            dir_counts[dir_path] += 1
+
+        # Build key directories table
+        lines = ["| Directory | Files | Description |"]
+        lines.append("|-----------|-------|-------------|")
+
+        for dir_path, count in dir_counts.most_common(10):
+            dir_name = Path(dir_path).name or "root"
+
+            # Infer description from directory name
+            description = self._infer_directory_purpose(dir_name)
+
+            lines.append(f"| `{dir_name}/` | {count} | {description} |")
+
+        return '\n'.join(lines)
+
+    def _infer_directory_purpose(self, dir_name: str) -> str:
+        """Infer directory purpose from name"""
+        dir_lower = dir_name.lower()
+
+        if dir_lower in ['src', 'source', 'sources']:
+            return "Source code"
+        elif dir_lower in ['include', 'includes', 'headers']:
+            return "Header files"
+        elif dir_lower in ['test', 'tests', 'testing']:
+            return "Unit tests"
+        elif dir_lower in ['doc', 'docs', 'documentation']:
+            return "Documentation"
+        elif dir_lower in ['build', 'bin', 'out', 'output']:
+            return "Build output"
+        elif dir_lower in ['lib', 'libs', 'library', 'libraries']:
+            return "Libraries"
+        elif dir_lower in ['tools', 'utils', 'utilities']:
+            return "Utilities"
+        elif dir_lower in ['examples', 'samples', 'demo']:
+            return "Examples/demos"
+        elif dir_lower in ['third_party', 'external', 'vendor']:
+            return "Third-party code"
+        elif dir_lower in ['cmake', 'config', 'conf']:
+            return "Configuration"
+        else:
+            return "Project files"
 
     def _summarize_structure(self, project_structure: Dict[str, Any]) -> str:
         """Create a text summary of the project structure"""
