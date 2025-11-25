@@ -2,6 +2,9 @@
 site/
 .cache/
 
+# LLM-generierte Dokumentation (wird bei jedem Build neu erstellt)
+docs/generated/
+
 # Python
 __pycache__/
 *.py[cod]

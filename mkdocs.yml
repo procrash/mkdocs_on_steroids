@@ -90,7 +90,7 @@ theme:
 
 # Hooks
 hooks:
-  - hooks/build_control.py
+  - scripts/build_control.py
 
 # Plugins
 plugins:
@@ -263,11 +263,12 @@ nav:
     - Build System: getting-started/build-system.md
     - Dependencies: getting-started/dependencies.md
 
-  - LLM Generated Documentation:
-    - Getting Started (Generated): generated/00-getting-started.md
-    - Architecture (Generated): generated/01-architecture.md
-    - Modules:
-      - libtorrent Module: generated/modules/libtorrent.md
+  - Guides:
+    - guides/index.md
+    - MkDocs Schnellstart: guides/quickstart-mkdocs.md
+    - LLM AutoDoc:
+      - Setup: guides/llm-autodoc-setup.md
+      - Verwendung: guides/llm-autodoc-usage.md
 
   - Tutorials:
     - tutorials/index.md
