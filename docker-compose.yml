@@ -1,153 +1,32 @@
 version: '3.8'
 
 services:
-  # ============================================
-  # MkDocs - Documentation Builder with Auto RAG Upload
-  # ============================================
-  mkdocs:
-    image: python:3.11-slim
-    container_name: mkdocs-builder
-    working_dir: /workspace
+  doc-gen:
+    build: .
+    container_name: llm-autodoc
     volumes:
-      # Mount project root
-      - .:/workspace
-      # Mount source code (configure this path)
-      - ${SOURCE_CODE_PATH:-./src}:/workspace/source_code:ro
-      # Cache volumes for faster builds
-      - pip_cache:/root/.cache/pip
-      - sentence_transformers_cache:/root/.cache/torch
+      - .:/app
     ports:
-      - "8000:8000"  # MkDocs serve
-      - "8765:8765"  # Chatbot API
+      - "8000:8000"
     environment:
-      # LLM Configuration
-      - LLM_PROVIDER=${LLM_PROVIDER:-lmstudio}
-      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.docker.internal:1234/v1}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE=${OPENAI_API_BASE}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - PROXY_TARGET_URL=${PROXY_TARGET_URL}
+      - PROXY_PORT=${PROXY_PORT:-8080}
+    # Keep container running if we want to exec into it, or run serve by default
+    command: mkdocs serve -a 0.0.0.0:8000
 
-      # RAG Configuration
-      - QDRANT_URL=http://qdrant:6333
-      - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=admin
-      - MINIO_SECRET_KEY=password123
-
-      # Feature Flags
-      - ENABLE_RAG_UPLOAD=true
-      - ENABLE_AUTO_CHUNKING=true
-    command: >
-      bash -c "
-      echo '🚀 Installing dependencies...';
-      pip install -q -r requirements.txt 2>/dev/null || pip install -q mkdocs mkdocs-material;
-      echo '✅ Dependencies installed';
-      echo '';
-      echo '📚 Starting MkDocs server...';
-      echo '   - Documentation: http://localhost:8000';
-      echo '   - Chatbot API: http://localhost:8765';
-      echo '';
-      mkdocs serve -a 0.0.0.0:8000
-      "
-    depends_on:
-      qdrant:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    networks:
-      - mkdocs-network
-    restart: unless-stopped
-
-  # ============================================
-  # Qdrant - Vector Database for RAG
-  # ============================================
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: mkdocs-qdrant
+  # ChromaDB for RAG (Phase 6)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
     ports:
-      - "6333:6333"  # REST API
-      - "6334:6334"  # gRPC API
+      - "8001:8000" # Map container 8000 to host 8001 to avoid conflict
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - chroma-data:/chroma/chroma
     environment:
-      - QDRANT__SERVICE__GRPC_PORT=6334
-    networks:
-      - mkdocs-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - IS_PERSISTENT=TRUE
 
-  # ============================================
-  # MinIO - S3-Compatible Object Storage
-  # ============================================
-  minio:
-    image: minio/minio:latest
-    container_name: mkdocs-minio
-    ports:
-      - "9000:9000"  # API
-      - "9001:9001"  # Console
-    volumes:
-      - minio_data:/data
-    environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=password123
-      - MINIO_BROWSER_REDIRECT_URL=http://localhost:9001
-    command: server /data --console-address ":9001"
-    networks:
-      - mkdocs-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # ============================================
-  # MinIO Client - Initialize buckets
-  # ============================================
-  minio-init:
-    image: minio/mc:latest
-    container_name: mkdocs-minio-init
-    depends_on:
-      - minio
-    networks:
-      - mkdocs-network
-    entrypoint: >
-      /bin/sh -c "
-      sleep 10;
-      mc alias set myminio http://minio:9000 admin password123;
-      mc mb myminio/mkdocs-documentation --ignore-existing;
-      mc mb myminio/mkdocs-source --ignore-existing;
-      mc mb myminio/mkdocs-generated --ignore-existing;
-      mc anonymous set download myminio/mkdocs-documentation;
-      echo 'Buckets created successfully';
-      exit 0;
-      "
-
-# ============================================
-# Volumes
-# ============================================
 volumes:
-  qdrant_storage:
-    driver: local
-    name: mkdocs-qdrant-storage
-  minio_data:
-    driver: local
-    name: mkdocs-minio-data
-  pip_cache:
-    driver: local
-    name: mkdocs-pip-cache
-  sentence_transformers_cache:
-    driver: local
-    name: mkdocs-transformers-cache
-
-# ============================================
-# Networks
-# ============================================
-networks:
-  mkdocs-network:
-    driver: bridge
-    name: mkdocs-network
+  chroma-data:

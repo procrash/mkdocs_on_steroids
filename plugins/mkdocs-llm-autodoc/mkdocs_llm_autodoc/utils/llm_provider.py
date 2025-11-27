@@ -55,15 +55,16 @@ class AnthropicProvider(LLMProvider):
 class OpenAIProvider(LLMProvider):
     """OpenAI GPT provider"""
 
-    def __init__(self, api_key: str, model: str = 'gpt-4', timeout: float = 600.0):
+    def __init__(self, api_key: str, model: str = 'gpt-4', base_url: Optional[str] = None, timeout: float = 600.0):
         try:
             import openai
             self.client = openai.OpenAI(
                 api_key=api_key,
+                base_url=base_url,
                 timeout=timeout
             )
             self.model = model
-            logger.info(f"Initialized OpenAI provider with model: {model}, timeout: {timeout}s")
+            logger.info(f"Initialized OpenAI provider with model: {model}, base_url: {base_url}, timeout: {timeout}s")
         except ImportError:
             raise ImportError("openai package not installed. Run: pip install openai")
 
@@ -187,6 +188,7 @@ class LLMProviderFactory:
             return OpenAIProvider(
                 api_key=api_key,
                 model=model or 'gpt-4',
+                base_url=base_url,
                 timeout=timeout
             )
 

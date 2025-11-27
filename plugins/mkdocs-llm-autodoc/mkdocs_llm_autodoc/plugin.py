@@ -230,6 +230,14 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
             cache_manager=self.cache_manager,
             cross_ref_manager=self.cross_ref_manager
         )
+        
+        # Initialize DevX Agent
+        from .agents.devx_agent import DevXAgent
+        self.devx_agent = DevXAgent(
+            llm_provider=self.llm_provider,
+            cache_manager=self.cache_manager
+        )
+
         # Get mkdocs.yml path (plugin has access to config file path)
         mkdocs_yml_path = config.config_file_path if hasattr(config, 'config_file_path') else 'mkdocs.yml'
 
@@ -393,23 +401,6 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
 
                 # Check if high-level docs already exist and project hasn't changed
                 existing_high_level_files = list(output_dir.rglob('*.md')) if output_dir.exists() else []
-
-                if existing_high_level_files and len(changed_files) == 0 and not self.config.force_regenerate:
-                    logger.info(f"⏭️  High-level documentation already exists ({len(existing_high_level_files)} files) and no files changed - skipping generation")
-                    with self.files_lock:
-                        self.generated_files.extend([str(f) for f in existing_high_level_files])
-                else:
-                    logger.info("Generating high-level documentation...")
-                    high_level_files = self.high_level_agent.generate(
-                        project_structure=project_structure,
-                        output_dir=str(output_dir)
-                    )
-                    with self.files_lock:
-                        self.generated_files.extend(high_level_files)
-                    logger.info(f"✓ Generated {len(high_level_files)} high-level documentation files")
-
-                    # Upload to RAG
-                    if self.rag_uploader and self.rag_uploader.enabled:
                         logger.info("📤 Uploading high-level documentation to RAG...")
                         self._upload_to_rag(doc_files=high_level_files)
 
@@ -428,25 +419,15 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                 total_modules = len(modules_to_process)
                 logger.info(f"📦 Processing {total_modules} modules...")
 
-                desc = "📦 Generating Module Docs" if self.config.show_generation_progress else None
-                for idx, module in enumerate(tqdm(modules_to_process, desc=desc, unit="module", disable=not self.config.show_generation_progress), 1):
-                    module_name = module.get('name', 'unknown')
-                    try:
-                        logger.info(f"📦 [{idx}/{total_modules}] Processing module: {module_name}")
-                        files = self.mid_level_agent.generate(
-                            module=module,
-                            project_structure=project_structure,
-                            output_dir=str(output_dir)
-                        )
-                        mid_level_files.extend(files)
-                        # Mark module files as successfully processed
-                        successfully_processed_files.extend(module['files'])
-                        logger.info(f"   ✓ Module {module_name} completed ({len(files)} files generated)")
-
-                        # Upload module files and docs to RAG
                         if self.rag_uploader and self.rag_uploader.enabled:
                             for source_file in module['files']:
                                 self._upload_to_rag(source_file=source_file, doc_files=files)
+                        
+                        # Incremental cache update for this module
+                        self.cache_manager.update_cache(
+                            str(project_path),
+                            module['files']
+                        )
                     except Exception as e:
                         logger.error(f"   ✗ Failed to generate docs for module {module_name}: {e}")
 
@@ -545,6 +526,24 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
                                         log_interval = max(1, min(5, total_api_files // 10))
                                         if processed_count % log_interval == 0 or processed_count == total_api_files:
                                             logger.info(f"📄 Progress: {processed_count}/{total_api_files} files ({success_count} success, {error_count} errors)")
+                                        
+                                        # Incremental cache update (every 5 files or on completion)
+                                        if processed_count % 5 == 0 or processed_count == total_api_files:
+                                            # Get files processed since last update
+                                            # Note: successfully_processed_files grows, so we need to be careful not to re-update everything if update_cache is slow.
+                                            # However, update_cache just updates the hash map and saves to disk. 
+                                            # For safety and simplicity, we can just update with the latest batch or all.
+                                            # Let's update with the most recent ones to avoid massive list passing if possible, 
+                                            # but successfully_processed_files is a simple list.
+                                            # To be safe and ensure persistence, we'll just pass the whole list for now 
+                                            # as the cache manager handles the dictionary update efficiently.
+                                            # A better optimization would be to keep a "pending_cache_update" list.
+                                            
+                                            self.cache_manager.update_cache(
+                                                str(project_path),
+                                                successfully_processed_files
+                                            )
+
 
                                     if error:
                                         error_count += 1

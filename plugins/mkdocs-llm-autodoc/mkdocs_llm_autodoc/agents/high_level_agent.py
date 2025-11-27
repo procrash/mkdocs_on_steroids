@@ -32,13 +32,14 @@ class HighLevelAgent:
         self.cache = cache_manager
         self.prompt_manager = get_prompt_manager()
 
-    def generate(self, project_structure: Dict[str, Any], output_dir: str) -> List[str]:
+    def generate(self, project_structure: Dict[str, Any], output_dir: str, module_docs_dir: str = None) -> List[str]:
         """
         Generate high-level documentation files.
 
         Args:
             project_structure: Parsed C++ project structure
             output_dir: Directory to write documentation files
+            module_docs_dir: Directory containing module docs (optional)
 
         Returns:
             List of generated file paths
@@ -55,7 +56,7 @@ class HighLevelAgent:
 
         # Generate Architecture Documentation
         architecture_file = output_path / '01-architecture.md'
-        content = self._generate_architecture(project_structure)
+        content = self._generate_architecture(project_structure, module_docs_dir)
         architecture_file.write_text(content, encoding='utf-8')
         generated_files.append(str(architecture_file))
         logger.info(f"Generated: {architecture_file}")
@@ -89,13 +90,17 @@ class HighLevelAgent:
 
         return response
 
-    def _generate_architecture(self, project_structure: Dict[str, Any]) -> str:
+    def _generate_architecture(self, project_structure: Dict[str, Any], module_docs_dir: str = None) -> str:
         """Generate architecture documentation"""
 
-        prompt = self._build_architecture_prompt(project_structure)
+        module_summaries = ""
+        if module_docs_dir:
+            module_summaries = self._collect_module_summaries(project_structure, module_docs_dir)
+
+        prompt = self._build_architecture_prompt(project_structure, module_summaries)
 
         # Check cache
-        cache_key = f"high_level_architecture_{hash(str(project_structure))}"
+        cache_key = f"high_level_architecture_{hash(str(project_structure))}_{hash(module_summaries)}"
         cached = self.cache.get(cache_key)
         if cached:
             logger.info("Using cached architecture documentation")
@@ -108,6 +113,41 @@ class HighLevelAgent:
         self.cache.set(cache_key, response)
 
         return response
+
+    def _collect_module_summaries(self, project_structure: Dict[str, Any], module_docs_dir: str) -> str:
+        """Collect summaries from module documentation"""
+        summaries = []
+        docs_path = Path(module_docs_dir)
+        
+        modules = project_structure.get('modules', [])
+        for module in modules:
+            module_name = module.get('name')
+            if not module_name:
+                continue
+            
+            # Sanitize name as MidLevelAgent does
+            safe_name = module_name.lower().replace(' ', '-').replace('_', '-')
+            safe_name = ''.join(c for c in safe_name if c.isalnum() or c == '-')
+            
+            module_doc_path = docs_path / f"{safe_name}.md"
+            
+            if module_doc_path.exists():
+                content = module_doc_path.read_text(encoding='utf-8')
+                summary = f"## Module: {module_name}\n"
+                # Extract Executive Summary and Component Interaction
+                lines = content.split('\n')
+                capture = False
+                for line in lines:
+                    if "Executive Summary" in line or "Component Interaction" in line:
+                        capture = True
+                        summary += line + "\n"
+                    elif line.startswith('## ') and "Executive Summary" not in line and "Component Interaction" not in line:
+                        capture = False
+                    elif capture:
+                        summary += line + "\n"
+                summaries.append(summary)
+                
+        return "\n".join(summaries)
 
     def _build_getting_started_prompt(self, project_structure: Dict[str, Any]) -> str:
         """Build prompt for getting started documentation"""
@@ -124,20 +164,53 @@ class HighLevelAgent:
 
         return prompt
 
-    def _build_architecture_prompt(self, project_structure: Dict[str, Any]) -> str:
+    def _build_architecture_prompt(self, project_structure: Dict[str, Any], module_summaries: str = "") -> str:
         """Build prompt for architecture documentation"""
 
         structure_summary = self._summarize_structure(project_structure)
         modules = project_structure.get('modules', [])
         modules_str = ', '.join([m.get('name', 'unknown') for m in modules[:10]])
 
-        # Use PromptManager to get template
-        prompt = self.prompt_manager.get_prompt(
-            'high_level', 'architecture',
-            project_structure=structure_summary,
-            modules=modules_str
-        )
+        prompt = f"""Act as a Chief Software Architect. Synthesize a "System Architecture Report" for this project.
 
+# Project Structure
+{structure_summary}
+
+# Module Intelligence Reports (from mid-level analysis)
+The following are summaries of the modules in this system:
+
+{module_summaries}
+
+# Your Task
+Synthesize this information into a comprehensive Architecture Document.
+Focus on the "Big Picture" and how modules interact.
+
+## 1. System Overview
+- **High-Level Goal**: What does this entire system do?
+- **Core Architecture**: Is it Layered? Microservices? Monolithic? Event-driven?
+
+## 2. System Context (C4 Level 1)
+- Who uses this system?
+- What external systems does it interact with?
+
+## 3. Container/Component Architecture (C4 Level 2)
+- How are the modules organized?
+- **Mermaid Diagram**: Create a system-level diagram showing MODULE relationships.
+```mermaid
+graph TD
+    %% Add module relationships based on the summaries
+```
+
+## 4. Cross-Cutting Concerns
+- **Error Handling Strategy**: How are errors propagated?
+- **Data Flow**: How does data move through the system?
+- **Security**: Authentication/Authorization patterns?
+
+# Output Format
+- Markdown with clear headings.
+- **Embed Mermaid diagrams**.
+- Be professional and architectural.
+"""
         return prompt
 
     def _generate_filesystem_structure(self, project_structure: Dict[str, Any]) -> str:

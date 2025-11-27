@@ -393,37 +393,45 @@ high_level:
 
   # Architecture Documentation
   architecture: |
-    Create comprehensive architecture documentation for this C++ project.
+    Act as a Chief Software Architect. Synthesize a "System Architecture Report" for this project.
 
     # Project Structure
     {project_structure}
 
+    # Module Intelligence Reports (from mid-level analysis)
+    The following are summaries of the modules in this system:
+
+    {module_summaries}
+
     # Your Task
-    Document the high-level architecture and design of this project.
+    Synthesize this information into a comprehensive Architecture Document.
+    Focus on the "Big Picture" and how modules interact.
 
-    ## Topics to Cover
-    1. **System Overview**: High-level description of the system
-    2. **Architecture Patterns**: Design patterns used (MVC, layered, etc.)
-    3. **Module Organization**: How code is organized into modules
-       - List key modules: {modules}
-    4. **Component Interaction**: How components communicate
-    5. **Data Flow**: How data moves through the system
-    6. **Key Design Decisions**: Important architectural choices and why
-    7. **Dependencies**: External and internal dependencies
-    8. **Extension Points**: Where/how to extend the system
+    ## 1. System Overview
+    - **High-Level Goal**: What does this entire system do?
+    - **Core Architecture**: Is it Layered? Microservices? Monolithic? Event-driven?
 
-    ## Requirements
-    - Be technical but clear
-    - Use Mermaid diagrams extensively:
-      - System overview diagram
-      - Component interaction diagram
-      - Data flow diagram
-    - Reference specific files and classes
-    - Explain WHY decisions were made, not just WHAT
-    - Aim for 700-1000 words
+    ## 2. System Context (C4 Level 1)
+    - Who uses this system?
+    - What external systems does it interact with?
+
+    ## 3. Container/Component Architecture (C4 Level 2)
+    - How are the modules organized?
+    - **Mermaid Diagram**: Create a system-level diagram showing MODULE relationships.
+    ```mermaid
+    graph TD
+        %% Add module relationships based on the summaries
+    ```
+
+    ## 4. Cross-Cutting Concerns
+    - **Error Handling Strategy**: How are errors propagated?
+    - **Data Flow**: How does data move through the system?
+    - **Security**: Authentication/Authorization patterns?
 
     # Output Format
-    Generate a complete Markdown document with proper headings and formatting.
+    - Markdown with clear headings.
+    - **Embed Mermaid diagrams**.
+    - Be professional and architectural.
 
     Generate ONLY the markdown content, no additional commentary.
 
@@ -548,198 +556,320 @@ high_level:
 mid_level:
   # Module Documentation
   module: |
-    Create comprehensive documentation for this module.
+    Act as a Lead Technical Writer. Synthesize a "Module Intelligence Report" for **{module_name}**.
 
     # Module Information
     **Name**: {module_name}
     **Files**: {module_files}
-    **Classes**: {module_classes}
+
+    # Atomic Intelligence Reports (from detailed analysis)
+    The following are summaries of the classes and files within this module:
+
+    {detailed_summaries}
 
     # Project Context
     {project_structure}
 
     # Your Task
-    Document this module in detail, explaining its purpose, components, and how it fits into the larger project.
+    Synthesize this information into a high-level Module Overview.
+    Do NOT just list the classes. Explain how they work TOGETHER.
 
-    ## Topics to Cover
-    1. **Module Overview**: Purpose and responsibility
-    2. **Key Components**:
-       - Main classes and their roles
-       - Important functions
-       - Data structures
-    3. **Architecture**: Internal organization
-    4. **Dependencies**:
-       - What this module depends on
-       - What depends on this module
-    5. **Usage Examples**: How to use this module
-    6. **API Summary**: Key public interfaces
-    7. **Design Patterns**: Patterns used in this module
-    8. **Best Practices**: How to work with this module
+    ## 1. Module Executive Summary
+    - **Purpose**: What problem does this module solve?
+    - **Key Capabilities**: High-level features.
+    - **Architecture**: How is it organized?
 
-    ## Requirements
-    - Reference specific classes and functions
-    - Include code examples
-    - Use Mermaid diagrams for module structure
-    - Link to related files: `[ClassName](path/to/file.h)`
-    - Explain relationships with other modules
-    - Aim for 400-600 words
+    ## 2. Component Interaction
+    - How do the classes identified above interact?
+    - **Mermaid Diagram**: Create a component diagram showing relationships.
+    ```mermaid
+    classDiagram
+        %% Add relationships based on the summaries
+    ```
+
+    ## 3. Key Workflows
+    Describe 1-2 primary workflows this module enables (e.g., "User Login Flow", "Data Processing Pipeline").
+
+    ## 4. Dependencies & Integration
+    - What does this module need to work?
+    - How should other modules use this?
 
     # Output Format
-    Generate a complete Markdown document with proper headings and formatting.
-
-    Generate ONLY the markdown content, no additional commentary.
-
-# ====================
-# DETAILED-LEVEL AGENT PROMPTS
+    - Markdown with clear headings.
+    - **Embed Mermaid diagrams**.
+# DETAILED LEVEL AGENT PROMPTS
 # ====================
 
 detailed_level:
   # Class Documentation
-  class: |
-    Generate comprehensive API documentation for this C++ class.
+  class_prompt: |
+    Act as a Senior Software Architect and QA Lead. Analyze this C++ class to create a "Deep Atomic Intelligence Report".
 
     # Class Information
     **Name**: {class_name}
     **File**: {file_path}
-    **Namespace**: {namespace}
+    **Base Classes**: {', '.join(base_classes) if base_classes else 'None'}
+    **Methods**: {len(methods)} methods
 
-    # Class Definition
+    ## Header Code
     ```cpp
-    {class_code}
+    {header_code}
     ```
 
-    # Members
-    {members}
-
-    # Methods
-    {methods}
-
-    # Project Context
-    {project_structure}
+    ## Methods
+    {self._format_methods(methods)}
 
     # Your Task
-    Create detailed API documentation for this class.
+    Create a comprehensive developer-centric report. Do NOT just list methods. Analyze the code deeply.
 
-    ## Topics to Cover
-    1. **Class Overview**: Purpose and responsibility (2-3 sentences)
-    2. **Class Diagram**: Mermaid class diagram showing relationships
-    3. **Constructor/Destructor**: How to create and destroy instances
-    4. **Public Interface**:
-       - Document each public method
-       - Include parameters, return values, exceptions
-       - Provide usage examples
-    5. **Member Variables**: Document public/protected members
-    6. **Usage Examples**: Real-world usage scenarios
-    7. **Thread Safety**: Is this class thread-safe?
-    8. **Performance Considerations**: Any performance notes
-    9. **Best Practices**: Recommended usage patterns
-    10. **Common Pitfalls**: Things to avoid
+    ## 1. Class Overview & Topics
+    - **High-Level Topic**: What broad category does this fit? (e.g., "Authentication", "Data Storage")
+    - **Low-Level Topics**: Specific implementation details (e.g., "AES Encryption", "File I/O")
+    - **Responsibility**: What is its SINGLE primary responsibility?
+    - **Relationships**: How does it fit into the larger system?
 
-    ## Method Documentation Format
-    For each method:
-    ```markdown
-    ### `methodName()`
+    ## 2. Visual Documentation (Mermaid)
+    Create Mermaid diagrams to visualize this class.
+    - **Class Diagram**: Show inheritance and key relationships.
+    ```mermaid
+    classDiagram
+        class {class_name} {{
+            +publicMethod()
+            -privateMember
+        }}
+        %% Add relationships here
+    ```
+    - **State Chart** (If applicable): If the class manages state (enums, flags), show transitions.
+    ```mermaid
+    stateDiagram-v2
+        [*] --> Idle
+        Idle --> Processing : start()
+        Processing --> Idle : finish()
+    ```
+    - **Sequence Diagram** (If applicable): If the class interacts with other components in a complex way.
+    ```mermaid
+    sequenceDiagram
+        User->>{class_name}: callMethod()
+        {class_name}->>Dependency: fetchData()
+        Dependency-->>{class_name}: data
+        {class_name}-->>User: result
+    ```
 
-    **Signature**: `ReturnType methodName(ParamType param)`
-
-    **Description**: What this method does
-
-    **Parameters**:
-    - `param`: Description
-
-    **Returns**: Description of return value
-
-    **Throws**: Exceptions that may be thrown
-
-    **Example**:
+    ## 3. Usage Examples
+    Provide realistic, copy-pasteable code snippets.
+    - **Instantiation**: How to create this object.
+    - **Common Use Case**: How to call the main methods.
     ```cpp
-    // Usage example
-    MyClass obj;
-    obj.methodName(value);
-    ```
+    // Example
+    auto obj = {class_name}();
+    obj.doSomething();
     ```
 
-    ## Requirements
-    - Be thorough and precise
-    - Include code examples for complex APIs
-    - Use Mermaid diagrams
-    - Reference related classes
-    - Highlight important details
-    - Aim for 600-1000 words
+    ## 4. Code Quality & Health Analysis
+    Analyze the code for potential issues. Be critical.
+    - **Documentation Quality**: Are comments sufficient? Are names descriptive?
+    - **Implementation Gaps**: Are there TODOs, missing error handling, or incomplete logic?
+    - **Complexity**: Identify "God Methods" or high cyclomatic complexity.
+    - **Enhancement Proposals**: Concrete suggestions (e.g., "Extract method X", "Add null check").
+
+    ## 5. Tester's Intelligence Report
+    Crucial for QA and Unit Testing.
+    - **Test Scenarios**: List specific positive and negative test cases.
+    - **Edge Cases**: What happens with empty inputs, null pointers, max values?
+    - **Mocking Requirements**: What external dependencies need to be mocked to test this isolated?
+
+    ## 6. Public Interface (Detailed)
+    For EACH public method:
+    ### `methodName`
+    - **Signature**: `ReturnType methodName(...)`
+    - **Source Link**: `[View Source]({file_path})`
+    - **Description**: Clear explanation.
+    - **Parameters**: Details with constraints.
+    - **Returns**: Meaning of values.
+    - **Complexity**: Time/Space estimate.
 
     # Output Format
-    Generate a complete Markdown document with proper headings and formatting.
+    - Use Markdown with clear headings.
+    - **Embed Mermaid diagrams** directly.
+    - **Use Icons** for warnings/tips.
+    - **Be concise but deep**.
 
-    Generate ONLY the markdown content, no additional commentary.
-
-  # Functions Documentation
-  functions: |
-    Generate comprehensive API documentation for these C++ functions.
+  # Function Documentation
+  function_prompt: |
+    Act as a Senior Software Architect and QA Lead. Analyze these C++ functions to create a "Deep Atomic Intelligence Report".
 
     # File Information
     **File**: {file_path}
-    **Namespace**: {namespace}
+    **Functions**: {len(functions)} functions
 
-    # Functions
-    {functions_list}
-
-    # Project Context
-    {project_structure}
+    ## Functions
+    {self._format_functions_detailed(functions)}
 
     # Your Task
-    Create detailed API documentation for these functions.
+    Create a comprehensive developer-centric report.
 
-    ## Topics to Cover
-    1. **File Overview**: Purpose of this file (2-3 sentences)
-    2. **Functions Summary**: Table of all functions
-    3. **Detailed Documentation**: For each function:
-       - Purpose and behavior
-       - Parameters with descriptions
-       - Return value
-       - Exceptions/error handling
-       - Complexity (time/space)
-       - Usage examples
-       - Related functions
+    ## 1. File Overview & Topics
+    - **High-Level Topic**: Broad category.
+    - **Low-Level Topics**: Specific details.
+    - **Responsibility**: Primary purpose.
 
-    ## Function Documentation Format
-    For each function:
-    ```markdown
-    ### `functionName()`
+    ## 2. Visual Documentation (Mermaid)
+    - **Flowchart**: If logic is complex (branches/loops).
+    ```mermaid
+    graph TD
+        Start --> Check
+        Check -- Yes --> DoWork
+        Check -- No --> Error
+    ```
 
-    **Signature**: `ReturnType functionName(ParamType param)`
-
-    **Description**: What this function does
-
-    **Parameters**:
-    - `param`: Description with type details
-
-    **Returns**: Description of return value
-
-    **Complexity**: O(n) time, O(1) space (if applicable)
-
-    **Throws**: Exceptions that may be thrown
-
-    **Example**:
+    ## 3. Usage Examples
+    - **How to Call**: Realistic examples.
     ```cpp
-    // Usage example
-    auto result = functionName(value);
+    // Example
+    auto result = functionName(args);
     ```
 
-    **See Also**: Related functions
-    ```
+    ## 4. Code Quality & Health Analysis
+    - **Documentation Quality**: Comments/Naming.
+    - **Implementation Gaps**: TODOs, error handling.
+    - **Efficiency**: O(n^2) algorithms?
+    - **Enhancement Proposals**: Refactoring ideas.
 
-    ## Requirements
-    - Document each function thoroughly
-    - Include practical examples
-    - Mention edge cases
-    - Note thread safety if relevant
-    - Reference related functions
-    - Aim for 400-800 words
+    ## 5. Tester's Intelligence Report
+    - **Test Scenarios**: Positive/Negative.
+    - **Edge Cases**: Nulls, boundaries.
+    - **Mocking Requirements**: Dependencies.
+
+    ## 6. Functions (Detailed)
+    For EACH function:
+    ### `functionName`
+    - **Signature**: `ReturnType functionName(...)`
+    - **Source Link**: `[View Source]({file_path})`
+    - **Description**: Explanation.
+    - **Parameters**: Constraints.
+    - **Returns**: Values.
+    - **Complexity**: Time/Space.
 
     # Output Format
-    Generate a complete Markdown document with proper headings and formatting.
+    - Markdown with clear headings.
+    - **Embed Mermaid diagrams**.
 
-    Generate ONLY the markdown content, no additional commentary.
+# ====================
+# MID-LEVEL AGENT PROMPTS
+# ====================
+
+mid_level:
+  # Module Documentation
+  module: |
+    Act as a Lead Technical Writer. Synthesize a "Module Intelligence Report" for **{module_name}**.
+
+    # Module Information
+    **Name**: {module_name}
+    **Files**: {module_files_str}
+
+    # Atomic Intelligence Reports (from detailed analysis)
+    The following are summaries of the classes and files within this module:
+
+    {detailed_summaries}
+
+    # Project Context
+    {self._format_project_context(project_structure, module_name)}
+
+    # Your Task
+    Synthesize this information into a high-level Module Overview.
+    Do NOT just list the classes. Explain how they work TOGETHER.
+
+    ## 1. Module Executive Summary
+    - **Purpose**: What problem does this module solve?
+    - **Key Capabilities**: High-level features.
+    - **Architecture**: How is it organized?
+
+    ## 2. Component Interaction
+    - How do the classes identify in the summaries interact?
+    - **Mermaid Diagram**: Show the relationship between classes in this module.
+    ```mermaid
+    classDiagram
+        %% Add relationships
+    ```
+
+    ## 3. Usage Tutorial
+    - **Getting Started**: How to use this module in a larger application.
+    - **Code Example**: A realistic snippet showing the module in action.
+    ```cpp
+    // Module Usage Example
+    ```
+
+    ## 4. Key Workflows
+    - Describe the main data flows or processes.
+
+    # Output Format
+    - Markdown with clear headings.
+    - **Embed Mermaid diagrams**.
+    - Focus on synthesis, not repetition.
+
+# ====================
+# DEVX AGENT PROMPTS
+# ====================
+
+devx:
+  # Smart Onboarding Guide
+  onboarding: |
+    Act as a Developer Advocate. Create a "Smart Onboarding Guide" for this project.
+
+    # Build Context
+    I have analyzed the project and found these build files:
+
+    {build_context}
+
+    # Your Task
+    Create a "Day 1" guide for a new developer.
+    Infer the build and run steps from the files above.
+
+    ## 1. Quick Start
+    - **Prerequisites**: What needs to be installed? (C++ compiler, CMake, Python, etc.)
+    - **Build Command**: Exact command to build.
+    - **Run Command**: Exact command to run the app/tests.
+
+    ## 2. Environment Setup
+    - Recommended IDE (VS Code, CLion) and extensions.
+    - How to configure the debugger.
+
+    ## 3. Common Issues
+    - Potential pitfalls based on the dependencies seen.
+
+    # Output Format
+    - Markdown with code blocks for commands.
+    - **Be specific**. Don't say "run the build script". Say `./build.sh` or `cmake --build .`.
+
+  # Tester's Handbook
+  testing: |
+    Act as a QA Lead. Synthesize a "Tester's Handbook" for this project.
+
+    # Atomic Test Intelligence
+    I have collected test scenarios and edge cases from the code analysis:
+
+    {aggregated_insights}
+
+    # Your Task
+    Synthesize this into a cohesive Test Strategy.
+
+    ## 1. Test Strategy Overview
+    - What are the critical areas to test?
+    - What is the recommended balance of Unit vs Integration tests?
+
+    ## 2. Key Test Scenarios
+    - Group the atomic scenarios above into logical categories (e.g., "Authentication Tests", "Data Validation").
+    - Highlight **Edge Cases** that were identified.
+
+    ## 3. Mocking Strategy
+    - Based on the dependencies mentioned, what needs to be mocked? (e.g., Database, Network).
+
+    ## 4. Suggested Test Plan
+    - A checklist for verifying a release.
+
+    # Output Format
+    - Markdown with clear headings.
+    - Use checklists for the Test Plan.
 
 # ====================
 # CROSS-LINKER PROMPTS

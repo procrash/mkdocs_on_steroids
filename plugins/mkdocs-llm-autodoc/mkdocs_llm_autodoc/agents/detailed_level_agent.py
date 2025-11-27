@@ -134,12 +134,13 @@ class DetailedLevelAgent:
         methods = cls.get('methods', [])
         base_classes = cls.get('base_classes', [])
         header_code = cls.get('header_code', '')
+        file_path = file_info.get('path', 'N/A')
 
-        prompt = f"""Analyze this C++ class and create comprehensive API documentation.
+        prompt = f"""Act as a Senior Software Architect and QA Lead. Analyze this C++ class to create a "Deep Atomic Intelligence Report".
 
 # Class Information
 **Name**: {class_name}
-**File**: {file_info.get('path', 'N/A')}
+**File**: {file_path}
 **Base Classes**: {', '.join(base_classes) if base_classes else 'None'}
 **Methods**: {len(methods)} methods
 
@@ -152,378 +153,132 @@ class DetailedLevelAgent:
 {self._format_methods(methods)}
 
 # Your Task
-Create detailed API documentation for this class with the following structure:
+Create a comprehensive developer-centric report. Do NOT just list methods. Analyze the code deeply.
 
-## 1. Class Overview
-- Brief description (2-3 sentences)
-- Purpose and responsibilities
-- When to use this class
-- Relationships to other classes
+## 1. Class Overview & Topics
+- **High-Level Topic**: What broad category does this fit? (e.g., "Authentication", "Data Storage")
+- **Low-Level Topics**: Specific implementation details (e.g., "AES Encryption", "File I/O")
+- **Responsibility**: What is its SINGLE primary responsibility?
+- **Relationships**: How does it fit into the larger system?
 
-## 2. Constructor(s)
-For each constructor:
-- **Signature**: Full C++ signature
-- **Parameters**: Detailed description of each parameter
-  - Name, type, purpose
-  - Valid values/ranges
-  - Default values if any
+## 2. Visual Documentation (Mermaid)
+Create a Mermaid diagram to visualize this class.
+- **Class Diagram**: Show inheritance and key relationships.
+```mermaid
+classDiagram
+    class {class_name} {{
+        +publicMethod()
+        -privateMember
+    }}
+    %% Add relationships here
+```
+
+## 3. Code Quality & Health Analysis
+Analyze the code for potential issues. Be critical.
+- **Complexity**: Identify "God Methods" or high cyclomatic complexity.
+- **Dead Code**: Flag unused members or unreachable logic.
+- **Design Patterns**: Identify patterns used (Singleton, Factory, Observer) or Anti-Patterns.
+- **Maintainability**: Is it easy to extend? Tight coupling?
+
+## 4. Tester's Intelligence Report
+Crucial for QA and Unit Testing.
+- **Test Scenarios**: List specific positive and negative test cases.
+- **Edge Cases**: What happens with empty inputs, null pointers, max values?
+- **Mocking Requirements**: What external dependencies need to be mocked to test this isolated?
+
+## 5. Public Interface (Detailed)
+For EACH public method:
+### `methodName`
+- **Signature**: `ReturnType methodName(...)`
+- **Source Link**: `[View Source]({file_path})` (Note: Link to file)
+- **Description**: Clear explanation.
+- **Parameters**: Details with constraints.
+- **Returns**: Meaning of values.
+- **Complexity**: Time/Space estimate.
 - **Example**:
 ```cpp
-// Example usage
-MyClass obj(param1, param2);
-```
-- **Notes**: Thread safety, exceptions, special considerations
-
-## 3. Public Methods
-For EACH public method, provide:
-
-### MethodName
-- **Signature**: `ReturnType methodName(ParamType1 param1, ParamType2 param2)`
-- **Description**: What does this method do? (2-3 sentences)
-- **Parameters**:
-  - `param1` (ParamType1): Description, valid values
-  - `param2` (ParamType2): Description, valid values
-- **Return Value**: What is returned? Meaning of return value? Possible values?
-- **Exceptions/Errors**: What can go wrong? What exceptions might be thrown?
-- **Example**:
-```cpp
-// Example usage
-auto result = obj.methodName(value1, value2);
-if (result) {{
-    // Handle success
-}}
-```
-- **See Also**: Links to related methods or classes
-- **Thread Safety**: Is this method thread-safe?
-- **Complexity**: Time and space complexity if relevant
-
-## 4. Usage Examples
-Provide 2-3 complete, realistic examples:
-
-### Example 1: Basic Usage
-```cpp
-// Description of what this example demonstrates
-MyClass obj;
-obj.setup();
-auto result = obj.process(data);
+// Usage
+obj.methodName(arg);
 ```
 
-### Example 2: Advanced Usage
-```cpp
-// More complex scenario
-MyClass obj(customConfig);
-try {{
-    obj.complexOperation();
-}} catch (const std::exception& e) {{
-    // Error handling
-}}
-```
-
-## 5. Notes and Best Practices
-- Common pitfalls to avoid
-- Performance considerations
-- Memory management considerations
-- Thread safety guidelines
-
-## 6. Code Review & Improvement Suggestions
-
-Perform a thorough code review of this class and provide:
-
-### 6.1 Potential Issues
-Identify potential problems in the following categories:
-
-**Security Issues:**
-- Buffer overflows, memory leaks
-- Unchecked user input
-- Integer overflows
-- Race conditions
-- Use-after-free vulnerabilities
-
-**Performance Issues:**
-- Unnecessary copies or allocations
-- Inefficient algorithms
-- Missing const-correctness
-- Suboptimal data structures
-- Missing move semantics
-
-**Maintainability Issues:**
-- Overly complex methods (high cyclomatic complexity)
-- Violation of Single Responsibility Principle
-- Tight coupling with other classes
-- Missing error handling
-- Poor naming conventions
-
-**Code Smells:**
-- Long parameter lists
-- God classes (too many responsibilities)
-- Duplicate code
-- Magic numbers
-- Deep nesting
-
-For each issue found, provide:
-- **Issue**: Brief description
-- **Severity**: Critical / High / Medium / Low
-- **Location**: Which method/line (if identifiable)
-- **Impact**: What problems could this cause?
-- **Recommendation**: How to fix it
-
-**Example:**
-```markdown
-**Issue**: Missing bounds checking in array access
-**Severity**: High
-**Location**: `processData()` method
-**Impact**: Could lead to buffer overflow and crash
-**Recommendation**: Add bounds validation before array access:
-```cpp
-if (index >= 0 && index < array.size()) {{
-    // Safe access
-}}
-```
-
-### 6.2 Improvement Suggestions
-
-Provide concrete, actionable improvements:
-
-**Refactoring Opportunities:**
-- Extract methods to reduce complexity
-- Introduce design patterns where beneficial
-- Improve naming for clarity
-
-**Modern C++ Features:**
-- Use smart pointers instead of raw pointers
-- Use std::optional for optional return values
-- Use constexpr where applicable
-- Use range-based for loops
-- Use auto where appropriate
-
-**Performance Optimizations:**
-- Add [[nodiscard]] attributes
-- Use string_view instead of const string&
-- Reserve container capacity when size is known
-- Use emplace instead of push_back
-
-**Code Examples:**
-For each significant suggestion, provide a before/after code example:
-
-```cpp
-// Before
-void processItems(std::vector<Item> items) {{
-    for (int i = 0; i < items.size(); i++) {{
-        // Process item
-    }}
-}}
-
-// After (improved)
-void processItems(const std::vector<Item>& items) {{
-    for (const auto& item : items) {{
-        // Process item
-    }}
-}}
-```
-
-### 6.3 Best Practices Violations
-
-Identify violations of C++ best practices:
-- RAII violations
-- Missing rule of five/zero
-- Inconsistent const usage
-- Missing noexcept specifications
-- Improper exception handling
-
-### 6.4 Testing Recommendations
-
-Suggest what should be tested:
-- Edge cases to cover
-- Error conditions to verify
-- Performance scenarios to benchmark
-
-**Example:**
-- Test with empty containers
-- Test with maximum size inputs
-- Test concurrent access if thread-safe
-- Test exception scenarios
-
-## 7. Related Classes
-- Links to related classes (use `[ClassName](classname.md)` format)
-- How this class interacts with others
+## 6. Cross-Referencing
+- **Dependencies**: List what this class imports/uses and WHY.
+- **See Also**: Links to related classes.
 
 # Output Format
-Generate a complete Markdown document with:
-- Clear hierarchical headings
-- Code blocks with syntax highlighting
-- Mermaid diagrams if helpful for understanding relationships
-- Cross-references to other documentation
-- **Comprehensive code review section with actionable insights**
-
-Generate ONLY the markdown content, no additional commentary.
+- Use Markdown with clear headings.
+- **Embed Mermaid diagrams** directly.
+- **Use Icons** for warnings/tips (e.g., ⚠️ for complexity, 💡 for tips).
+- **Be concise but deep**. Focus on insights, not just restating code.
 """
         return prompt
 
     def _build_functions_prompt(self, functions: List[Dict], file_info: Dict[str, Any], project_structure: Dict[str, Any]) -> str:
         """Build prompt for functions documentation"""
 
-        prompt = f"""Analyze these C++ functions and create comprehensive API documentation.
+        file_path = file_info.get('path', 'N/A')
+
+        prompt = f"""Act as a Senior Software Architect and QA Lead. Analyze these C++ functions to create a "Deep Atomic Intelligence Report".
 
 # File Information
-**File**: {file_info.get('path', 'N/A')}
+**File**: {file_path}
 **Functions**: {len(functions)} functions
 
 ## Functions
 {self._format_functions_detailed(functions)}
 
 # Your Task
-Create detailed API documentation for these functions.
+Create a comprehensive developer-centric report. Do NOT just list functions. Analyze the code deeply.
 
-For EACH function, provide:
+## 1. File Overview & Topics
+- **High-Level Topic**: What broad category does this file fit? (e.g., "Math Utilities", "String Processing")
+- **Low-Level Topics**: Specific implementation details.
+- **Responsibility**: What is the primary purpose of these functions?
 
-## FunctionName
+## 2. Code Quality & Health Analysis
+Analyze the code for potential issues. Be critical.
+- **Complexity**: Identify "God Functions" or high cyclomatic complexity.
+- **Dead Code**: Flag unused parameters or unreachable logic.
+- **Efficiency**: Identify inefficient algorithms (e.g., O(n^2) on large data).
+- **Maintainability**: Is the code readable? Magic numbers?
 
-- **Signature**: `ReturnType functionName(ParamType1 param1, ParamType2 param2)`
-- **Description**: Comprehensive description of what this function does
-- **Parameters**:
-  - `param1` (ParamType1): Detailed description, valid values, constraints
-  - `param2` (ParamType2): Detailed description, valid values, constraints
-- **Return Value**:
-  - What is returned?
-  - Meaning of different return values
-  - Special values (nullptr, -1, etc.)
-- **Exceptions/Errors**:
-  - What can go wrong?
-  - What exceptions might be thrown?
-  - Error codes if applicable
+## 3. Visual Documentation (Mermaid)
+If any function is complex (has multiple branches/loops), create a **Flowchart**.
+```mermaid
+graph TD
+    Start --> CheckCondition
+    CheckCondition -- Yes --> ProcessData
+    CheckCondition -- No --> ReturnError
+    ProcessData --> End
+```
+If functions are simple, you can omit this.
+
+## 4. Tester's Intelligence Report
+Crucial for QA and Unit Testing.
+- **Test Scenarios**: List specific positive and negative test cases.
+- **Edge Cases**: What happens with empty inputs, null pointers, max values?
+- **Mocking Requirements**: Any external dependencies?
+
+## 5. Functions (Detailed)
+For EACH function:
+### `functionName`
+- **Signature**: `ReturnType functionName(...)`
+- **Source Link**: `[View Source]({file_path})` (Note: Link to file)
+- **Description**: Clear explanation.
+- **Parameters**: Details with constraints.
+- **Returns**: Meaning of values.
+- **Complexity**: Time/Space estimate.
 - **Example**:
 ```cpp
-// Practical example of using this function
-auto result = functionName(arg1, arg2);
-if (result != nullptr) {{
-    // Use result
-}}
+// Usage
+auto result = functionName(arg);
 ```
-- **Preconditions**: What must be true before calling this function?
-- **Postconditions**: What is guaranteed after calling this function?
-- **Thread Safety**: Is this function thread-safe?
-- **Complexity**: Time and space complexity
-- **See Also**: Related functions
-
-# Additional Sections
-
-## Usage Examples
-Provide complete, realistic examples showing:
-1. Basic usage
-2. Error handling
-3. Edge cases
-
-## Best Practices
-- How to use these functions effectively
-- Common mistakes to avoid
-- Performance tips
-
-## Code Review & Improvement Suggestions
-
-For each function, perform a thorough code review:
-
-### Potential Issues
-Analyze each function for:
-
-**Security:**
-- Input validation
-- Buffer safety
-- Integer overflow risks
-- Resource leaks
-
-**Performance:**
-- Unnecessary allocations
-- Inefficient algorithms (O(n²) when O(n log n) possible)
-- Missing const-correctness
-- Pass-by-value when pass-by-reference would be better
-
-**Correctness:**
-- Edge case handling
-- Null pointer checks
-- Error return values
-- Exception safety
-
-**Code Quality:**
-- Function complexity (too long, too complex)
-- Unclear naming
-- Magic numbers
-- Duplicate code
-
-For each issue, provide:
-- **Function**: Function name
-- **Issue**: What's wrong
-- **Severity**: Critical/High/Medium/Low
-- **Impact**: Potential consequences
-- **Fix**: How to resolve it (with code example)
-
-**Example:**
-```markdown
-**Function**: `calculateSum()`
-**Issue**: No overflow checking when summing large values
-**Severity**: Medium
-**Impact**: Could produce incorrect results with large inputs
-**Fix**: Use checked arithmetic or larger data type:
-```cpp
-// Before
-int calculateSum(const std::vector<int>& values) {{
-    int sum = 0;
-    for (int val : values) sum += val;
-    return sum;
-}}
-
-// After
-std::optional<int64_t> calculateSum(const std::vector<int>& values) {{
-    int64_t sum = 0;
-    for (int val : values) {{
-        sum += val;
-        // Could add overflow check here
-    }}
-    return sum;
-}}
-```
-
-### Modernization Opportunities
-
-Suggest modern C++ improvements:
-- Use [[nodiscard]] for functions that return important values
-- Use std::span for array parameters
-- Use constexpr for compile-time evaluation
-- Use concepts (C++20) for template constraints
-- Use std::expected (C++23) for error handling
-
-**Example:**
-```cpp
-// Before
-bool processData(const char* data, size_t length);
-
-// After (Modern C++)
-[[nodiscard]] bool processData(std::span<const char> data);
-```
-
-### Refactoring Suggestions
-
-Identify functions that should be:
-- Split into smaller functions
-- Combined with similar functions
-- Made into class methods
-- Moved to a utility namespace
-
-### Performance Optimizations
-
-Specific optimization opportunities:
-- Use move semantics
-- Return by value for RVO
-- Use string_view for read-only strings
-- Add noexcept where applicable
 
 # Output Format
-Generate a complete Markdown document with:
-- Clear section headings
-- Syntax-highlighted code blocks
-- Cross-references to related functions/classes
-- Practical, runnable examples
-
-Generate ONLY the markdown content, no additional commentary.
+- Use Markdown with clear headings.
+- **Embed Mermaid diagrams** directly.
+- **Use Icons** for warnings/tips.
+- **Be concise but deep**.
 """
         return prompt
 
