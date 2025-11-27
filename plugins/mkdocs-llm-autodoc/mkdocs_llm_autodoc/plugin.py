@@ -401,8 +401,16 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
 
                 # Check if high-level docs already exist and project hasn't changed
                 existing_high_level_files = list(output_dir.rglob('*.md')) if output_dir.exists() else []
-                        logger.info("📤 Uploading high-level documentation to RAG...")
-                        self._upload_to_rag(doc_files=high_level_files)
+                mid_level_docs_dir = docs_dir / self.config.mid_level_output
+                
+                high_level_files = self.high_level_agent.generate(
+                    project_structure=project_structure,
+                    output_dir=str(output_dir),
+                    module_docs_dir=str(mid_level_docs_dir)
+                )
+
+                logger.info("📤 Uploading high-level documentation to RAG...")
+                self._upload_to_rag(doc_files=high_level_files)
 
             # Generate Mid-Level Documentation
             if self.config.generate_mid_level and project_structure['modules']:
@@ -418,6 +426,19 @@ class LLMAutoDocPlugin(BasePlugin[LLMAutoDocPluginConfig]):
 
                 total_modules = len(modules_to_process)
                 logger.info(f"📦 Processing {total_modules} modules...")
+
+                for i, module in enumerate(modules_to_process):
+                    module_name = module.get('name', 'unknown')
+                    logger.info(f"   Processing module [{i+1}/{total_modules}]: {module_name}")
+                    
+                    try:
+                        detailed_docs_dir = docs_dir / self.config.detailed_level_output
+                        files = self.mid_level_agent.generate(
+                            module=module,
+                            output_dir=str(output_dir),
+                            detailed_docs_dir=str(detailed_docs_dir)
+                        )
+                        mid_level_files.extend(files)
 
                         if self.rag_uploader and self.rag_uploader.enabled:
                             for source_file in module['files']:
